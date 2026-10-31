@@ -262,13 +262,13 @@ export const PixConfigModal: React.FC<PixConfigModalProps> = ({
               <input
                 type="text"
                 required
-                maxLength={25}
+                maxLength={50}
                 value={beneficiario}
                 onChange={(e) => setBeneficiario(e.target.value)}
                 placeholder="Ex: Alex Dias da Silva"
                 className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-600"
               />
-              <span className="text-[10px] text-slate-400">Nome que aparece no comprovante bancário (máx 25 carac.)</span>
+              <span className="text-[10px] text-slate-400">Nome que aparece no comprovante bancário (máx 50 carac.)</span>
             </div>
 
             {/* Cidade do Beneficiário */}

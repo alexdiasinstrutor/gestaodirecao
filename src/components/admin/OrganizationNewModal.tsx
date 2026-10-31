@@ -289,8 +289,8 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
                   type="text"
                   value={beneficiarioPix}
                   onChange={(e) => setBeneficiarioPix(e.target.value)}
-                  placeholder="Nome do titular no banco (máx 25 carac.)"
-                  maxLength={25}
+                  placeholder="Nome do titular no banco (máx 50 carac.)"
+                  maxLength={50}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl"
                 />
               </div>

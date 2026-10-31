@@ -220,11 +220,10 @@ export default function App() {
                     <button
                       key={item.id}
                       onClick={() => setActiveTab(item.id)}
-                      className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer touch-target ${
-                        isActive
+                      className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer touch-target ${isActive
                           ? 'bg-slate-900 text-white shadow-xs'
                           : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                      }`}
+                        }`}
                     >
                       <Icon className={`w-4 h-4 ${isActive ? 'text-blue-400' : 'text-slate-500'}`} />
                       <span>{item.label}</span>
@@ -319,9 +318,8 @@ export default function App() {
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`flex-1 min-w-[44px] flex flex-col items-center justify-center py-1.5 px-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
-                    isActive ? 'text-blue-600 font-extrabold bg-blue-50/60' : 'text-slate-500 hover:text-slate-800'
-                  }`}
+                  className={`flex-1 min-w-[44px] flex flex-col items-center justify-center py-1.5 px-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${isActive ? 'text-blue-600 font-extrabold bg-blue-50/60' : 'text-slate-500 hover:text-slate-800'
+                    }`}
                 >
                   <Icon className={`w-4 h-4 mb-0.5 shrink-0 ${isActive ? 'text-blue-600 scale-110' : 'text-slate-500'}`} />
                   <span className="text-[10px] whitespace-nowrap leading-tight">{item.label}</span>

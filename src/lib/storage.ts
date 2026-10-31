@@ -1910,7 +1910,7 @@ export const db = {
   // ==========================================
   // FIREBASE / FIRESTORE INTEGRATION & MIGRATION
   // ==========================================
-  
+
   getFirebaseStatus() {
     return {
       configured: true,
@@ -1938,20 +1938,20 @@ export const db = {
       firestorePath: string;
       items: any[];
     }> = [
-      { name: 'Organizações', firestorePath: 'organizations', items: this.getOrganizations() },
-      { name: 'Usuários', firestorePath: 'users', items: this.getUsers() },
-      { name: 'Alunos', firestorePath: 'students', items: readList<Student>(STORAGE_KEYS.STUDENTS) },
-      { name: 'Veículos', firestorePath: 'vehicles', items: readList<Vehicle>(STORAGE_KEYS.VEHICLES) },
-      { name: 'Aulas', firestorePath: 'lessons', items: readList<Lesson>(STORAGE_KEYS.LESSONS) },
-      { name: 'Horários / Slots', firestorePath: 'availableSlots', items: readList<AvailableSlot>(STORAGE_KEYS.SLOTS) },
-      { name: 'Contas a Receber', firestorePath: 'accountsReceivable', items: readList<AccountReceivable>(STORAGE_KEYS.ACCOUNTS) },
-      { name: 'Registros de Pagamento', firestorePath: 'paymentRecords', items: readList<PaymentRecord>(STORAGE_KEYS.PAYMENTS) },
-      { name: 'Despesas', firestorePath: 'expenses', items: readList<Expense>(STORAGE_KEYS.EXPENSES) },
-      { name: 'Investimentos', firestorePath: 'investments', items: readList<Investment>(STORAGE_KEYS.INVESTMENTS) },
-      { name: 'Pacotes de Aulas', firestorePath: 'packages', items: readList<PackageOffer>(STORAGE_KEYS.PACKAGES) },
-      { name: 'Logs de Auditoria', firestorePath: 'auditLogs', items: readList<AuditLog>(STORAGE_KEYS.AUDIT) },
-      { name: 'Logs WhatsApp', firestorePath: 'whatsAppLogs', items: readList<WhatsAppReminderLog>(STORAGE_KEYS.WHATSAPP_LOGS) },
-    ];
+        { name: 'Organizações', firestorePath: 'organizations', items: this.getOrganizations() },
+        { name: 'Usuários', firestorePath: 'users', items: this.getUsers() },
+        { name: 'Alunos', firestorePath: 'students', items: readList<Student>(STORAGE_KEYS.STUDENTS) },
+        { name: 'Veículos', firestorePath: 'vehicles', items: readList<Vehicle>(STORAGE_KEYS.VEHICLES) },
+        { name: 'Aulas', firestorePath: 'lessons', items: readList<Lesson>(STORAGE_KEYS.LESSONS) },
+        { name: 'Horários / Slots', firestorePath: 'availableSlots', items: readList<AvailableSlot>(STORAGE_KEYS.SLOTS) },
+        { name: 'Contas a Receber', firestorePath: 'accountsReceivable', items: readList<AccountReceivable>(STORAGE_KEYS.ACCOUNTS) },
+        { name: 'Registros de Pagamento', firestorePath: 'paymentRecords', items: readList<PaymentRecord>(STORAGE_KEYS.PAYMENTS) },
+        { name: 'Despesas', firestorePath: 'expenses', items: readList<Expense>(STORAGE_KEYS.EXPENSES) },
+        { name: 'Investimentos', firestorePath: 'investments', items: readList<Investment>(STORAGE_KEYS.INVESTMENTS) },
+        { name: 'Pacotes de Aulas', firestorePath: 'packages', items: readList<PackageOffer>(STORAGE_KEYS.PACKAGES) },
+        { name: 'Logs de Auditoria', firestorePath: 'auditLogs', items: readList<AuditLog>(STORAGE_KEYS.AUDIT) },
+        { name: 'Logs WhatsApp', firestorePath: 'whatsAppLogs', items: readList<WhatsAppReminderLog>(STORAGE_KEYS.WHATSAPP_LOGS) },
+      ];
 
     const totalItems = collectionsToMigrate.reduce((acc, c) => acc + c.items.length, 0);
     let processedItems = 0;
