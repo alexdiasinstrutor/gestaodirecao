@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Car,
   Wifi,
@@ -41,6 +41,34 @@ export const Header: React.FC<HeaderProps> = ({
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
   const [showIOSModal, setShowIOSModal] = useState<boolean>(false);
   const [showSwitchMenu, setShowSwitchMenu] = useState<boolean>(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Fecha o menu de perfil automaticamente ao clicar fora ou pressionar ESC
+  useEffect(() => {
+    if (!showSwitchMenu) return;
+
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowSwitchMenu(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowSwitchMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showSwitchMenu]);
 
   const getRoleLabel = (role?: string) => {
     switch (role) {
@@ -70,9 +98,11 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="hidden md:inline-block text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded bg-sky-500/10 text-sky-300 border border-sky-400/20 shrink-0">
                   Auto Direção
                 </span>
-                <span className="text-[11px] text-slate-400 truncate max-w-[200px] lg:max-w-xs">
-                  {currentOrg?.nome ? `· ${currentOrg.nome}` : ''}
-                </span>
+                {currentOrg?.nome && currentOrg.nome !== 'Gestão AD (Auto Direção)' && (
+                  <span className="text-[11px] text-slate-400 truncate max-w-[200px] lg:max-w-xs">
+                    · {currentOrg.nome}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -159,7 +189,7 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* User Profile & Quick Switch Menu */}
             {currentUser && (
-              <div className="relative">
+              <div ref={menuRef} className="relative">
                 <button
                   onClick={() => setShowSwitchMenu(!showSwitchMenu)}
                   className="flex items-center gap-2 pl-2 pr-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-left transition-colors cursor-pointer"
@@ -175,8 +205,17 @@ export const Header: React.FC<HeaderProps> = ({
                       {roleInfo.label}
                     </span>
                   </div>
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                  <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-150 ${showSwitchMenu ? 'rotate-180' : ''}`} />
                 </button>
+
+                {/* Invisible click-away backdrop */}
+                {showSwitchMenu && (
+                  <div
+                    className="fixed inset-0 z-40 bg-transparent cursor-default"
+                    onClick={() => setShowSwitchMenu(false)}
+                    aria-hidden="true"
+                  />
+                )}
 
                 {/* Dropdown Menu */}
                 {showSwitchMenu && (
