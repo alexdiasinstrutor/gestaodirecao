@@ -1,37 +1,44 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#1e40af;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#0f172a;stop-opacity:1" />
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#090d16" />
+      <stop offset="50%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#1e293b" />
     </linearGradient>
-    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#38bdf8;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#2563eb;stop-opacity:1" />
+
+    <linearGradient id="wheelGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="50%" stop-color="#0284c7" />
+      <stop offset="100%" stop-color="#06b6d4" />
+    </linearGradient>
+
+    <linearGradient id="dGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#60a5fa" />
     </linearGradient>
   </defs>
-  <!-- Background with squircle safe zone -->
-  <rect width="512" height="512" rx="112" fill="url(#grad1)" />
+
+  <!-- Squircle Rounded Background -->
+  <rect width="512" height="512" rx="120" fill="url(#bgGrad)" />
+  <rect x="8" y="8" width="496" height="496" rx="112" fill="none" stroke="#38bdf8" stroke-width="3" opacity="0.25" />
+
+  <!-- Outer Steering Wheel Ring with gaps -->
+  <circle cx="256" cy="256" r="175" fill="none" stroke="url(#wheelGrad)" stroke-width="28" stroke-dasharray="1000" stroke-dashoffset="40" stroke-linecap="round" />
   
-  <!-- Outer Steering Wheel Ring -->
-  <circle cx="256" cy="256" r="160" fill="none" stroke="#ffffff" stroke-width="26" stroke-linecap="round" />
-  <circle cx="256" cy="256" r="132" fill="none" stroke="#3b82f6" stroke-width="6" opacity="0.4" />
-  
-  <!-- Center Hub -->
-  <circle cx="256" cy="256" r="54" fill="url(#gold)" stroke="#ffffff" stroke-width="12" />
-  
-  <!-- Spokes -->
-  <!-- Left Spoke -->
-  <path d="M120 256 L202 256" stroke="#ffffff" stroke-width="22" stroke-linecap="round" />
-  <!-- Right Spoke -->
-  <path d="M310 256 L392 256" stroke="#ffffff" stroke-width="22" stroke-linecap="round" />
-  <!-- Bottom Center Spoke -->
-  <path d="M256 310 L256 392" stroke="#ffffff" stroke-width="22" stroke-linecap="round" />
-  
-  <!-- Accent Dots on Grip -->
-  <circle cx="256" cy="116" r="10" fill="#38bdf8" />
-  <circle cx="156" cy="156" r="7" fill="#60a5fa" />
-  <circle cx="356" cy="156" r="7" fill="#60a5fa" />
-  
-  <!-- Mini Speedometer Needle at center -->
-  <path d="M256 256 L278 234" stroke="#ffffff" stroke-width="8" stroke-linecap="round" />
+  <!-- Upper Steering Wheel Accent Grip -->
+  <path d="M156 148 C200 115, 312 115, 356 148" fill="none" stroke="#38bdf8" stroke-width="14" stroke-linecap="round" opacity="0.9" />
+
+  <!-- Central Road Perspective Track -->
+  <path d="M200 375 L242 225 L270 225 L312 375 Z" fill="#0284c7" opacity="0.2" />
+  <line x1="256" y1="250" x2="256" y2="360" stroke="#ffffff" stroke-width="8" stroke-dasharray="16 12" stroke-linecap="round" />
+
+  <!-- Monogram A (Left upright and crossbar) -->
+  <path d="M170 370 L248 155 C252 145, 260 145, 264 155 L300 245" fill="none" stroke="#ffffff" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M205 285 L285 285" fill="none" stroke="#ffffff" stroke-width="18" stroke-linecap="round" />
+
+  <!-- Monogram D (Right curved loop forming the directional wheel rim) -->
+  <path d="M265 180 C340 180, 390 215, 390 270 C390 325, 335 360, 255 360" fill="none" stroke="url(#dGrad)" stroke-width="24" stroke-linecap="round" />
+
+  <!-- Speed direction point -->
+  <circle cx="375" cy="240" r="14" fill="#38bdf8" />
 </svg>

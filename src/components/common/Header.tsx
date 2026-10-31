@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { User, Organization } from '../../types';
 import { db } from '../../lib/storage';
+import { Logo } from './Logo';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { usePWAInstall } from '../../hooks/usePWAInstall';
 
@@ -61,23 +62,18 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="sticky top-0 z-40 bg-slate-900 border-b border-slate-800 text-white shadow-md">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-14 sm:h-16">
-          {/* Logo & App Title - Mobile responsive */}
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-sky-400 flex items-center justify-center shadow-md shadow-blue-500/30 text-white shrink-0">
-              <Car className="w-4 h-4 sm:w-6 sm:h-6" />
-            </div>
+          {/* Logo & App Title - Gestão AD (Auto Direção) */}
+          <div className="flex items-center gap-2 sm:gap-3.5 min-w-0 flex-1">
+            <Logo theme="dark" size="sm" showSubtitle={false} className="shrink-0" />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="font-extrabold text-xs sm:text-base md:text-lg tracking-tight text-white leading-tight truncate block">
-                  Gestão de Direção
+                <span className="hidden md:inline-block text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded bg-sky-500/10 text-sky-300 border border-sky-400/20 shrink-0">
+                  Auto Direção
                 </span>
-                <span className="hidden lg:inline-block text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-400/30 shrink-0">
-                  Sistema de Administração
+                <span className="text-[11px] text-slate-400 truncate max-w-[200px] lg:max-w-xs">
+                  {currentOrg?.nome ? `· ${currentOrg.nome}` : ''}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 hidden sm:block truncate max-w-xs mt-0.5">
-                {currentOrg?.nome || 'Plataforma para Instrutores e CFCs'}
-              </p>
             </div>
           </div>
 

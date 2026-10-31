@@ -15,6 +15,7 @@ import {
 import { db } from '../../lib/storage';
 import { User } from '../../types';
 import { PasswordRecoveryModal } from './PasswordRecoveryModal';
+import { Logo } from '../common/Logo';
 
 interface LoginScreenProps {
   onLoginAttempt: (user: User) => void;
@@ -83,22 +84,30 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 flex flex-col justify-center py-10 px-4 sm:px-6 lg:px-8 selection:bg-blue-600 selection:text-white">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center space-y-3">
-        {/* Brand Icon */}
-        <div className="inline-flex p-3.5 bg-gradient-to-tr from-blue-600 to-sky-400 rounded-2xl shadow-xl shadow-blue-500/20 text-white">
-          <Car className="w-10 h-10" />
+    <div className="min-h-screen bg-radial-[at_top] from-slate-900 via-slate-950 to-slate-950 flex flex-col justify-center py-10 px-4 sm:px-6 lg:px-8 selection:bg-blue-600 selection:text-white relative overflow-hidden">
+      {/* Decorative Automotive Ambient Glows */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-40 right-10 w-[300px] h-[300px] bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center space-y-4 relative z-10">
+        {/* Gestão AD Official Vector Logo */}
+        <div className="flex justify-center py-2">
+          <Logo theme="dark" size="xl" className="justify-center scale-105" />
         </div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-          Sistema de Administração de Gestão de Direção
-        </h1>
-        <p className="text-xs sm:text-sm text-slate-300 max-w-sm mx-auto">
-          Gestão financeira integrada, controle de alunos, agenda prática sem conflitos e cobranças via WhatsApp.
-        </p>
+
+        <div>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/15 text-blue-300 text-[11px] font-semibold border border-blue-400/20 backdrop-blur-xs">
+            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Plataforma Inteligente para Autoescolas & CFCs</span>
+          </span>
+          <p className="text-xs text-slate-300 max-w-sm mx-auto mt-2 leading-relaxed">
+            Gestão financeira, controle de alunos por categoria, agenda prática sem conflitos e cobranças PIX automatizadas.
+          </p>
+        </div>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-6 sm:px-10 shadow-2xl rounded-2xl border border-slate-200 space-y-6">
+      <div className="mt-7 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
+        <div className="bg-white/95 backdrop-blur-md py-7 px-6 sm:px-9 shadow-2xl rounded-3xl border border-white/20 space-y-5">
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs flex items-start gap-2 animate-shake">
               <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
@@ -112,7 +121,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               type="button"
               onClick={() => setShowGoogleModal(true)}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-3 py-2.5 px-4 border border-slate-300 rounded-xl shadow-xs bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer touch-target"
+              className="w-full flex items-center justify-center gap-3 py-2.5 px-4 border border-slate-300/80 rounded-xl shadow-xs bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-all cursor-pointer touch-target"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">
                 <path
@@ -132,7 +141,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                 />
               </svg>
-              <span>Continuar com Google</span>
+              <span>Acessar com Google</span>
             </button>
 
             <div className="relative my-4">
@@ -140,18 +149,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 <div className="w-full border-t border-slate-200" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 text-slate-400 font-semibold tracking-wider text-[10px]">
-                  Ou acesse com e-mail e senha
+                <span className="bg-white px-2.5 text-slate-400 font-bold tracking-wider text-[10px]">
+                  ou com credenciais
                 </span>
               </div>
             </div>
           </div>
 
           {/* Email / Password Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3.5">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                E-mail Cadastrado
+                E-mail de Acesso
               </label>
               <div className="relative">
                 <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
@@ -161,7 +170,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="seuemail@autoescola.com.br"
-                  className="w-full pl-9 pr-3 py-2.5 text-xs border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none"
+                  className="w-full pl-9 pr-3 py-2.5 text-xs border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none bg-slate-50/50 focus:bg-white transition-colors"
                 />
               </div>
             </div>
@@ -187,26 +196,21 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-9 pr-3 py-2.5 text-xs border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none"
+                  className="w-full pl-9 pr-3 py-2.5 text-xs border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none bg-slate-50/50 focus:bg-white transition-colors"
                 />
               </div>
-            </div>
-
-            <div className="p-3 bg-blue-50/70 border border-blue-200/60 rounded-xl text-[11px] text-slate-600 flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0" />
-              <span>Autenticação protegida por 2FA rigoroso via SMS/E-mail.</span>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold shadow-xs text-xs transition-colors cursor-pointer touch-target"
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-blue-600 to-sky-600 hover:from-blue-700 hover:to-sky-700 text-white rounded-xl font-bold shadow-md shadow-blue-500/25 text-xs transition-all cursor-pointer touch-target mt-2"
             >
               {loading ? (
                 'Autenticando...'
               ) : (
                 <>
-                  Entrar no Sistema
+                  <span>Entrar no Gestão AD</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -218,23 +222,23 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             const registeredUsers = db.getUsers();
             if (registeredUsers.length === 0) return null;
             return (
-              <div className="pt-4 border-t border-slate-200">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2 text-center">
-                  Contas Cadastradas no Sistema
+              <div className="pt-3 border-t border-slate-100">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 text-center">
+                  Acesso Rápido — Contas Cadastradas
                 </p>
-                <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">
+                <div className="grid grid-cols-1 gap-1.5 max-h-44 overflow-y-auto">
                   {registeredUsers.map((u) => (
                     <button
                       key={u.id}
                       type="button"
                       onClick={() => handleQuickLogin(u.email)}
-                      className="w-full flex items-center justify-between p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-purple-50 hover:border-purple-300 text-left transition-colors cursor-pointer"
+                      className="w-full flex items-center justify-between p-2 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-sky-50 hover:border-sky-300 text-left transition-colors cursor-pointer"
                     >
-                      <div>
-                        <p className="text-xs font-bold text-slate-900">{u.nome}</p>
-                        <p className="text-[11px] text-purple-700 font-mono font-medium">{u.email}</p>
+                      <div className="truncate">
+                        <p className="text-xs font-bold text-slate-900 truncate">{u.nome}</p>
+                        <p className="text-[11px] text-sky-700 font-mono truncate">{u.email}</p>
                       </div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-900 text-white">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-900 text-white shrink-0 ml-2">
                         {u.papel === 'SUPER_ADMIN' ? 'Master' : u.papel === 'ALUNO' ? 'Aluno' : 'Instrutor'}
                       </span>
                     </button>
@@ -245,11 +249,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           })()}
 
           {/* Registration Links */}
-          <div className="pt-2 border-t border-slate-200 flex flex-col sm:flex-row gap-2">
+          <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row gap-2">
             <button
               type="button"
               onClick={onOpenInstructorRegister}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 border border-slate-300 hover:bg-slate-50 rounded-xl text-xs font-semibold text-slate-700 transition-colors cursor-pointer"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-semibold text-slate-700 transition-colors cursor-pointer"
             >
               <UserPlus className="w-3.5 h-3.5 text-blue-600" />
               Novo Instrutor
@@ -257,19 +261,28 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             <button
               type="button"
               onClick={onOpenStudentRegister}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 border border-slate-300 hover:bg-slate-50 rounded-xl text-xs font-semibold text-slate-700 transition-colors cursor-pointer"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-semibold text-slate-700 transition-colors cursor-pointer"
               title="Auto-cadastro condicionado à indicação de instrutor"
             >
               <GraduationCap className="w-3.5 h-3.5 text-emerald-600" />
-              Auto-Cadastro Aluno
+              Portal do Aluno
             </button>
           </div>
         </div>
 
-        {/* Footer info */}
-        <p className="mt-6 text-center text-[11px] text-slate-400">
-          Auto Gestão de Direção · Em conformidade com a LGPD e Normas CONTRAN
-        </p>
+        {/* Footer info & Security Badges */}
+        <div className="mt-6 text-center space-y-2">
+          <p className="text-[11px] text-slate-400 font-medium">
+            Gestão AD (Auto Direção) · Sistema Oficial em Conformidade com CONTRAN e LGPD
+          </p>
+          <div className="flex items-center justify-center gap-3 text-[10px] text-slate-500 font-mono">
+            <span>✓ Criptografia 256-bit</span>
+            <span>·</span>
+            <span>✓ Cloud Backup</span>
+            <span>·</span>
+            <span>✓ Multi-CFC</span>
+          </div>
+        </div>
       </div>
 
       {/* Password Recovery Modal */}

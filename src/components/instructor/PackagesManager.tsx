@@ -204,9 +204,8 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
           return (
             <div
               key={pkg.id}
-              className={`bg-white rounded-2xl border p-5 shadow-xs flex flex-col justify-between transition-all ${
-                pkg.ativo ? 'border-slate-200 hover:border-blue-300' : 'border-slate-200 bg-slate-50/60 opacity-80'
-              }`}
+              className={`bg-white rounded-2xl border p-5 shadow-xs flex flex-col justify-between transition-all ${pkg.ativo ? 'border-slate-200 hover:border-blue-300' : 'border-slate-200 bg-slate-50/60 opacity-80'
+                }`}
             >
               <div className="space-y-3">
                 {/* Top Badge Row */}
@@ -221,11 +220,10 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
                   </div>
 
                   <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      pkg.ativo
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${pkg.ativo
                         ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                         : 'bg-slate-200 text-slate-700'
-                    }`}
+                      }`}
                   >
                     {pkg.ativo ? 'LIBERADO' : 'PAUSADO'}
                   </span>

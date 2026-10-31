@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 120" width="420" height="120">
+  <defs>
+    <linearGradient id="logoWheel" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="50%" stop-color="#0284c7" />
+      <stop offset="100%" stop-color="#06b6d4" />
+    </linearGradient>
+    <linearGradient id="logoD" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#60a5fa" />
+    </linearGradient>
+    <linearGradient id="textAD" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#06b6d4" />
+    </linearGradient>
+  </defs>
+
+  <!-- Icon Section (Centered at x=60, y=60, r=46) -->
+  <circle cx="60" cy="60" r="46" fill="none" stroke="url(#logoWheel)" stroke-width="7" stroke-dasharray="270" stroke-dashoffset="12" stroke-linecap="round" />
+  <path d="M35 32 C43 24, 77 24, 85 32" fill="none" stroke="#38bdf8" stroke-width="3.5" stroke-linecap="round" />
+  <!-- Road -->
+  <path d="M47 88 L57 54 L63 54 L73 88 Z" fill="#0284c7" opacity="0.25" />
+  <line x1="60" y1="60" x2="60" y2="84" stroke="#ffffff" stroke-width="2.5" stroke-dasharray="5 3" stroke-linecap="round" />
+  <!-- Letter A -->
+  <path d="M39 86 L58 35 C59 32.5, 61 32.5, 62 35 L70 56" fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M46 64 L64 64" fill="none" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round" />
+  <!-- Letter D -->
+  <path d="M62 40 C78 40, 88 48, 88 60 C88 72, 76 80, 60 80" fill="none" stroke="url(#logoD)" stroke-width="6" stroke-linecap="round" />
+  <circle cx="85" cy="54" r="3.5" fill="#38bdf8" />
+
+  <!-- Typography Section -->
+  <text x="125" y="68" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="42" font-weight="900" fill="#0f172a" letter-spacing="-1">Gestão</text>
+  <text x="275" y="68" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="42" font-weight="900" fill="url(#textAD)" letter-spacing="-0.5">AD</text>
+  <text x="127" y="94" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="13" font-weight="800" fill="#0284c7" letter-spacing="4">AUTO DIREÇÃO</text>
+</svg>

@@ -113,7 +113,7 @@ export function seedDemoData() {
 
   const defaultOrg: Organization = {
     id: orgId,
-    nome: 'Sistema de Administração de Gestão de Direção',
+    nome: 'Gestão AD (Auto Direção)',
     tipo: 'INSTRUTOR_AUTONOMO',
     cnpjCpf: '32.194.852/0001-44',
     telefone: '(11) 98765-4321',
@@ -727,7 +727,7 @@ export function seedCleanProductionData(): { org: Organization; user: User } {
 
   const defaultOrg: Organization = {
     id: orgId,
-    nome: 'Sistema de Administração de Gestão de Direção',
+    nome: 'Gestão AD (Auto Direção)',
     tipo: 'INSTRUTOR_AUTONOMO',
     cnpjCpf: '32.194.852/0001-44',
     telefone: '(11) 98765-4321',
@@ -864,8 +864,12 @@ export function initDatabase() {
         const orgs: Organization[] = JSON.parse(orgsRaw);
         let changed = false;
         orgs.forEach((o) => {
-          if (o.nome === 'Autoescola & Instrutoria Direção Segura' || o.nome.includes('Direção Segura')) {
-            o.nome = 'Sistema de Administração de Gestão de Direção';
+          if (
+            o.nome === 'Autoescola & Instrutoria Direção Segura' ||
+            o.nome.includes('Direção Segura') ||
+            o.nome === 'Sistema de Administração de Gestão de Direção'
+          ) {
+            o.nome = 'Gestão AD (Auto Direção)';
             changed = true;
           }
         });
