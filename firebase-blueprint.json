@@ -1,0 +1,249 @@
+{
+  "entities": {
+    "Organization": {
+      "title": "Organization",
+      "description": "Autoescola ou instrutor autônomo cadastrado no sistema",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "nome": { "type": "string", "maxLength": 200 },
+        "tipo": { "type": "string", "enum": ["INSTRUTOR_AUTONOMO", "AUTOESCOLA_CFC"] },
+        "cnpjCpf": { "type": "string", "maxLength": 32 },
+        "telefone": { "type": "string", "maxLength": 32 },
+        "email": { "type": "string", "maxLength": 150 },
+        "cidade": { "type": "string", "maxLength": 100 },
+        "estado": { "type": "string", "maxLength": 10 },
+        "status": { "type": "string", "enum": ["ATIVO", "BLOQUEADO", "TESTE"] },
+        "plano": { "type": "string", "enum": ["BASICO", "PRO", "ENTERPRISE"] },
+        "criadoEm": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "nome", "tipo", "cnpjCpf", "status", "plano", "criadoEm"]
+    },
+    "User": {
+      "title": "User",
+      "description": "Usuário autenticado do sistema com controle RBAC",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "organizacaoId": { "type": "string", "maxLength": 128 },
+        "nome": { "type": "string", "maxLength": 150 },
+        "email": { "type": "string", "maxLength": 150 },
+        "papel": { "type": "string", "enum": ["SUPER_ADMIN", "ADMIN_ORG", "INSTRUTOR", "ALUNO"] },
+        "telefone": { "type": "string", "maxLength": 32 },
+        "cpfUltimos4": { "type": "string", "maxLength": 8 },
+        "cpfFingerprint": { "type": "string", "maxLength": 128 },
+        "twoFactorAtivo": { "type": "boolean" },
+        "ultimoAcesso": { "type": "string", "maxLength": 64 },
+        "avatarUrl": { "type": "string", "maxLength": 500 }
+      },
+      "required": ["id", "organizacaoId", "nome", "email", "papel"]
+    },
+    "Student": {
+      "title": "Student",
+      "description": "Aluno vinculado a uma autoescola e a um instrutor exclusivo",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "organizacaoId": { "type": "string", "maxLength": 128 },
+        "instrutorId": { "type": "string", "maxLength": 128 },
+        "nome": { "type": "string", "maxLength": 150 },
+        "email": { "type": "string", "maxLength": 150 },
+        "telefone": { "type": "string", "maxLength": 32 },
+        "cpfMascarado": { "type": "string", "maxLength": 32 },
+        "cpfFingerprint": { "type": "string", "maxLength": 128 },
+        "dataNascimento": { "type": "string", "maxLength": 32 },
+        "idade": { "type": "number" },
+        "categoriaCnh": { "type": "string", "enum": ["A", "B", "AB", "C", "D", "E"] },
+        "status": { "type": "string", "enum": ["EM_ANDAMENTO", "CONCLUIDO", "CANCELADO"] },
+        "aulasCumpridas": { "type": "number" },
+        "totalAulasContratadas": { "type": "number" },
+        "observacoesInstrutor": { "type": "string", "maxLength": 2000 },
+        "dataCadastro": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "organizacaoId", "instrutorId", "nome", "categoriaCnh", "status"]
+    },
+    "Vehicle": {
+      "title": "Vehicle",
+      "description": "Veículo da frota para aulas práticas de direção",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "organizacaoId": { "type": "string", "maxLength": 128 },
+        "modelo": { "type": "string", "maxLength": 100 },
+        "placa": { "type": "string", "maxLength": 20 },
+        "ano": { "type": "number" },
+        "tipo": { "type": "string", "enum": ["CARRO", "MOTO", "CAMINHAO", "ONIBUS"] },
+        "status": { "type": "string", "enum": ["DISPONIVEL", "EM_AULA", "MANUTENCAO"] },
+        "proximaRevisaoKm": { "type": "number" },
+        "kmAtual": { "type": "number" }
+      },
+      "required": ["id", "organizacaoId", "modelo", "placa", "tipo", "status"]
+    },
+    "Lesson": {
+      "title": "Lesson",
+      "description": "Aula prática agendada ou executada",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "organizacaoId": { "type": "string", "maxLength": 128 },
+        "alunoId": { "type": "string", "maxLength": 128 },
+        "instrutorId": { "type": "string", "maxLength": 128 },
+        "veiculoId": { "type": "string", "maxLength": 128 },
+        "data": { "type": "string", "maxLength": 32 },
+        "horaInicio": { "type": "string", "maxLength": 16 },
+        "horaFim": { "type": "string", "maxLength": 16 },
+        "topico": { "type": "string", "maxLength": 150 },
+        "status": { "type": "string", "enum": ["AGENDADA", "EM_ANDAMENTO", "CONCLUIDA", "CANCELADA", "FALTA"] },
+        "observacaoInstrutor": { "type": "string", "maxLength": 2000 },
+        "notaAula": { "type": "number" },
+        "criadoEm": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "organizacaoId", "alunoId", "instrutorId", "veiculoId", "data", "status"]
+    },
+    "AvailableSlot": {
+      "title": "AvailableSlot",
+      "description": "Horário disponibilizado pelo instrutor para agendamento",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "organizacaoId": { "type": "string", "maxLength": 128 },
+        "instrutorId": { "type": "string", "maxLength": 128 },
+        "data": { "type": "string", "maxLength": 32 },
+        "horaInicio": { "type": "string", "maxLength": 16 },
+        "horaFim": { "type": "string", "maxLength": 16 },
+        "bloqueado": { "type": "boolean" },
+        "motivoBloqueio": { "type": "string", "maxLength": 200 }
+      },
+      "required": ["id", "organizacaoId", "instrutorId", "data", "horaInicio", "horaFim", "bloqueado"]
+    },
+    "AccountReceivable": {
+      "title": "AccountReceivable",
+      "description": "Título financeiro a receber do aluno",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "organizacaoId": { "type": "string", "maxLength": 128 },
+        "alunoId": { "type": "string", "maxLength": 128 },
+        "pacoteId": { "type": "string", "maxLength": 128 },
+        "descricao": { "type": "string", "maxLength": 200 },
+        "valorTotalCentavos": { "type": "number" },
+        "valorPagoCentavos": { "type": "number" },
+        "saldoDevedorCentavos": { "type": "number" },
+        "dataVencimento": { "type": "string", "maxLength": 32 },
+        "status": { "type": "string", "enum": ["PENDENTE", "PARCIAL", "PAGO", "VENCIDO", "CANCELADO"] },
+        "criadoEm": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "organizacaoId", "alunoId", "descricao", "valorTotalCentavos", "dataVencimento", "status"]
+    },
+    "PaymentRecord": {
+      "title": "PaymentRecord",
+      "description": "Registro de pagamento efetuado por aluno",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "organizacaoId": { "type": "string", "maxLength": 128 },
+        "contaReceberId": { "type": "string", "maxLength": 128 },
+        "alunoId": { "type": "string", "maxLength": 128 },
+        "valorCentavos": { "type": "number" },
+        "metodo": { "type": "string", "enum": ["PIX", "CARTAO_CREDITO", "DINHEIRO", "TRANSFERENCIA"] },
+        "dataPagamento": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "organizacaoId", "contaReceberId", "alunoId", "valorCentavos", "metodo", "dataPagamento"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "Despesa operacional do instrutor ou autoescola",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "organizacaoId": { "type": "string", "maxLength": 128 },
+        "descricao": { "type": "string", "maxLength": 200 },
+        "categoria": { "type": "string", "maxLength": 64 },
+        "valorCentavos": { "type": "number" },
+        "dataVencimento": { "type": "string", "maxLength": 32 },
+        "status": { "type": "string", "enum": ["PENDENTE", "PAGA"] }
+      },
+      "required": ["id", "organizacaoId", "descricao", "categoria", "valorCentavos", "dataVencimento", "status"]
+    },
+    "PackageOffer": {
+      "title": "PackageOffer",
+      "description": "Pacote de aulas e serviços oferecido para contratação",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "organizacaoId": { "type": "string", "maxLength": 128 },
+        "nome": { "type": "string", "maxLength": 150 },
+        "totalAulas": { "type": "number" },
+        "categoriaCnh": { "type": "string", "enum": ["A", "B", "AB", "C", "D", "E"] },
+        "valorCentavos": { "type": "number" },
+        "formaPagamento": { "type": "string", "maxLength": 64 },
+        "descricao": { "type": "string", "maxLength": 1000 },
+        "ativo": { "type": "boolean" }
+      },
+      "required": ["id", "organizacaoId", "nome", "totalAulas", "categoriaCnh", "valorCentavos", "ativo"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Registro de auditoria e conformidade LGPD",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "organizacaoId": { "type": "string", "maxLength": 128 },
+        "usuarioId": { "type": "string", "maxLength": 128 },
+        "usuarioNome": { "type": "string", "maxLength": 150 },
+        "acao": { "type": "string", "maxLength": 100 },
+        "entidade": { "type": "string", "maxLength": 100 },
+        "entidadeId": { "type": "string", "maxLength": 128 },
+        "detalhes": { "type": "string", "maxLength": 2000 },
+        "timestamp": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "organizacaoId", "usuarioId", "acao", "entidade", "entidadeId", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/organizations/{orgId}": {
+      "schema": "Organization",
+      "description": "Organizações e autoescolas cadastradas"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Perfis de usuários, instrutores e alunos"
+    },
+    "/students/{studentId}": {
+      "schema": "Student",
+      "description": "Cadastros de alunos com progresso"
+    },
+    "/vehicles/{vehicleId}": {
+      "schema": "Vehicle",
+      "description": "Veículos da frota"
+    },
+    "/lessons/{lessonId}": {
+      "schema": "Lesson",
+      "description": "Aulas práticas e status"
+    },
+    "/availableSlots/{slotId}": {
+      "schema": "AvailableSlot",
+      "description": "Horários liberados para agendamento"
+    },
+    "/accountsReceivable/{accountId}": {
+      "schema": "AccountReceivable",
+      "description": "Contas a receber e parcelas de alunos"
+    },
+    "/paymentRecords/{paymentId}": {
+      "schema": "PaymentRecord",
+      "description": "Comprovantes e registros de pagamento"
+    },
+    "/expenses/{expenseId}": {
+      "schema": "Expense",
+      "description": "Despesas operacionais e custos de manutenção"
+    },
+    "/packages/{packageId}": {
+      "schema": "PackageOffer",
+      "description": "Pacotes e tabelas de preços"
+    },
+    "/auditLogs/{logId}": {
+      "schema": "AuditLog",
+      "description": "Trilha de auditoria LGPD"
+    }
+  }
+}

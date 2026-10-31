@@ -1,0 +1,20 @@
+{
+  "id": "/",
+  "name": "Sistema de Administração de Gestão de Direção",
+  "short_name": "GestãoDireção",
+  "description": "Sistema de Administração de Gestão de Direção - Auto gestão financeira, controle de alunos por instrutor, pacotes de aulas, agenda 06h às 00h, cobranças PIX/Cartão e relatórios PDF.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#1e293b",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

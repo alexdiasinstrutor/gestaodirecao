@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e40af;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0f172a;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#38bdf8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2563eb;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Background with squircle safe zone -->
+  <rect width="512" height="512" rx="112" fill="url(#grad1)" />
+  
+  <!-- Outer Steering Wheel Ring -->
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#ffffff" stroke-width="26" stroke-linecap="round" />
+  <circle cx="256" cy="256" r="132" fill="none" stroke="#3b82f6" stroke-width="6" opacity="0.4" />
+  
+  <!-- Center Hub -->
+  <circle cx="256" cy="256" r="54" fill="url(#gold)" stroke="#ffffff" stroke-width="12" />
+  
+  <!-- Spokes -->
+  <!-- Left Spoke -->
+  <path d="M120 256 L202 256" stroke="#ffffff" stroke-width="22" stroke-linecap="round" />
+  <!-- Right Spoke -->
+  <path d="M310 256 L392 256" stroke="#ffffff" stroke-width="22" stroke-linecap="round" />
+  <!-- Bottom Center Spoke -->
+  <path d="M256 310 L256 392" stroke="#ffffff" stroke-width="22" stroke-linecap="round" />
+  
+  <!-- Accent Dots on Grip -->
+  <circle cx="256" cy="116" r="10" fill="#38bdf8" />
+  <circle cx="156" cy="156" r="7" fill="#60a5fa" />
+  <circle cx="356" cy="156" r="7" fill="#60a5fa" />
+  
+  <!-- Mini Speedometer Needle at center -->
+  <path d="M256 256 L278 234" stroke="#ffffff" stroke-width="8" stroke-linecap="round" />
+</svg>

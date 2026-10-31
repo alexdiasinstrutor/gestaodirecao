@@ -1,0 +1,691 @@
+/**
+ * ============================================================
+ * ADAPTADOR SUPABASE — Sistema de Gestão de Direção v5.6
+ * ============================================================
+ * Este módulo espelha toda a interface do `db` em storage.ts,
+ * porém gravando e lendo do Supabase (PostgreSQL) em vez do localStorage.
+ *
+ * Estratégia: Dual-write (grava em ambos) durante a transição.
+ * Assim o sistema funciona mesmo sem conexão (fallback localStorage).
+ * ============================================================
+ */
+
+import { supabase, isSupabaseEnabled } from './supabaseClient';
+import {
+  Organization, User, Student, Vehicle, Lesson, AvailableSlot,
+  AccountReceivable, PaymentRecord, Expense, Investment, PackageOffer,
+  AuditLog, WhatsAppReminderLog, StudentTransferHistory,
+} from '../types';
+
+// ─── Helpers de mapeamento: TypeScript camelCase → SQL snake_case ───────────
+
+function orgToRow(o: Organization): Record<string, any> {
+  return {
+    id: o.id,
+    nome: o.nome,
+    tipo: o.tipo,
+    cnpj_cpf: o.cnpjCpf,
+    telefone: o.telefone,
+    email: o.email,
+    cidade: o.cidade,
+    estado: o.estado,
+    status: o.status,
+    plano: o.plano,
+    data_vencimento_plano: o.dataVencimentoPlano || null,
+    valor_mensalidade_centavos: o.valorMensalidadeCentavos || 0,
+    chave_acesso: o.chaveAcesso || null,
+    chave_acesso_gerada_em: o.chaveAcessoGeradaEm || null,
+    modulos_customizados: o.modulosCustomizados || [],
+    limite_alunos: o.limiteAlunos || 0,
+    limite_instrutores: o.limiteInstrutores || 0,
+    motivo_bloqueio: o.motivoBloqueio || null,
+    criado_em: o.criadoEm || new Date().toISOString(),
+  };
+}
+
+function rowToOrg(r: any): Organization {
+  return {
+    id: r.id,
+    nome: r.nome,
+    tipo: r.tipo,
+    cnpjCpf: r.cnpj_cpf,
+    telefone: r.telefone,
+    email: r.email,
+    cidade: r.cidade,
+    estado: r.estado,
+    status: r.status,
+    plano: r.plano,
+    criadoEm: r.criado_em,
+    dataVencimentoPlano: r.data_vencimento_plano,
+    valorMensalidadeCentavos: r.valor_mensalidade_centavos,
+    chaveAcesso: r.chave_acesso,
+    chaveAcessoGeradaEm: r.chave_acesso_gerada_em,
+    modulosCustomizados: r.modulos_customizados || [],
+    limiteAlunos: r.limite_alunos,
+    limiteInstrutores: r.limite_instrutores,
+    motivoBloqueio: r.motivo_bloqueio,
+  };
+}
+
+function userToRow(u: User): Record<string, any> {
+  return {
+    id: u.id,
+    organizacao_id: u.organizacaoId,
+    nome: u.nome,
+    email: u.email,
+    papel: u.papel,
+    telefone: u.telefone,
+    cpf_ultimos_4: u.cpfUltimos4,
+    cpf_fingerprint: u.cpfFingerprint,
+    cpf_mascarado: u.cpfMascarado || null,
+    cpf_completo: u.cpfCompleto || null,
+    two_factor_ativo: u.twoFactorAtivo || false,
+    two_factor_secret: u.twoFactorSecret || null,
+    ultimo_acesso: u.ultimoAcesso || null,
+    avatar_url: u.avatarUrl || null,
+    senha_temporaria: u.senhaTemporaria || null,
+  };
+}
+
+function rowToUser(r: any): User {
+  return {
+    id: r.id,
+    organizacaoId: r.organizacao_id,
+    nome: r.nome,
+    email: r.email,
+    papel: r.papel,
+    telefone: r.telefone,
+    cpfUltimos4: r.cpf_ultimos_4,
+    cpfFingerprint: r.cpf_fingerprint,
+    cpfMascarado: r.cpf_mascarado,
+    cpfCompleto: r.cpf_completo,
+    twoFactorAtivo: r.two_factor_ativo,
+    twoFactorSecret: r.two_factor_secret,
+    ultimoAcesso: r.ultimo_acesso,
+    avatarUrl: r.avatar_url,
+    senhaTemporaria: r.senha_temporaria,
+  };
+}
+
+function studentToRow(s: Student): Record<string, any> {
+  return {
+    id: s.id,
+    organizacao_id: s.organizacaoId,
+    instrutor_id: s.instrutorId,
+    nome: s.nome,
+    email: s.email || null,
+    telefone: s.telefone || null,
+    cpf_mascarado: s.cpfMascarado,
+    cpf_fingerprint: s.cpfFingerprint,
+    data_nascimento: s.dataNascimento,
+    idade: s.idade || 18,
+    categoria_cnh: s.categoriaCnh,
+    status: s.status,
+    aulas_cumpridas: s.aulasCumpridas || 0,
+    total_aulas_contratadas: s.totalAulasContratadas || 20,
+    habilidades: s.habilidades || {},
+    observacoes_instrutor: s.observacoesInstrutor || null,
+    pacote_id: s.pacoteId || null,
+    pacote_nome: s.pacoteNome || null,
+    historico_transferencias: s.historicoTransferencias || [],
+    data_cadastro: s.dataCadastro || new Date().toISOString(),
+  };
+}
+
+function rowToStudent(r: any): Student {
+  return {
+    id: r.id,
+    organizacaoId: r.organizacao_id,
+    instrutorId: r.instrutor_id,
+    nome: r.nome,
+    email: r.email,
+    telefone: r.telefone,
+    cpfMascarado: r.cpf_mascarado,
+    cpfFingerprint: r.cpf_fingerprint,
+    dataNascimento: r.data_nascimento,
+    idade: r.idade,
+    categoriaCnh: r.categoria_cnh,
+    status: r.status,
+    aulasCumpridas: r.aulas_cumpridas,
+    totalAulasContratadas: r.total_aulas_contratadas,
+    habilidades: r.habilidades,
+    observacoesInstrutor: r.observacoes_instrutor,
+    dataCadastro: r.data_cadastro,
+    pacoteId: r.pacote_id,
+    pacoteNome: r.pacote_nome,
+    historicoTransferencias: r.historico_transferencias || [],
+  };
+}
+
+function vehicleToRow(v: Vehicle): Record<string, any> {
+  return {
+    id: v.id,
+    organizacao_id: v.organizacaoId,
+    modelo: v.modelo,
+    placa: v.placa,
+    ano: v.ano,
+    tipo: v.tipo,
+    status: v.status,
+    km_atual: v.kmAtual || 0,
+    proxima_revisao_km: v.proximaRevisaoKm || 10000,
+  };
+}
+
+function rowToVehicle(r: any): Vehicle {
+  return {
+    id: r.id,
+    organizacaoId: r.organizacao_id,
+    modelo: r.modelo,
+    placa: r.placa,
+    ano: r.ano,
+    tipo: r.tipo,
+    status: r.status,
+    kmAtual: r.km_atual,
+    proximaRevisaoKm: r.proxima_revisao_km,
+  };
+}
+
+function lessonToRow(l: Lesson): Record<string, any> {
+  return {
+    id: l.id,
+    organizacao_id: l.organizacaoId,
+    aluno_id: l.alunoId,
+    instrutor_id: l.instrutorId,
+    veiculo_id: l.veiculoId || null,
+    data: l.data,
+    hora_inicio: l.horaInicio,
+    hora_fim: l.horaFim,
+    topico: l.topico,
+    status: l.status,
+    nota_aula: l.notaAula || null,
+    observacao_instrutor: l.observacaoInstrutor || null,
+    competencias_trabalhadas: l.competenciasTrabalhadas || [],
+    criado_em: l.criadoEm || new Date().toISOString(),
+  };
+}
+
+function rowToLesson(r: any): Lesson {
+  return {
+    id: r.id,
+    organizacaoId: r.organizacao_id,
+    alunoId: r.aluno_id,
+    instrutorId: r.instrutor_id,
+    veiculoId: r.veiculo_id,
+    data: r.data,
+    horaInicio: r.hora_inicio,
+    horaFim: r.hora_fim,
+    topico: r.topico,
+    status: r.status,
+    notaAula: r.nota_aula,
+    observacaoInstrutor: r.observacao_instrutor,
+    competenciasTrabalhadas: r.competencias_trabalhadas,
+    criadoEm: r.criado_em,
+  };
+}
+
+function slotToRow(s: AvailableSlot): Record<string, any> {
+  return {
+    id: s.id,
+    organizacao_id: s.organizacaoId,
+    instrutor_id: s.instrutorId,
+    data: s.data,
+    hora_inicio: s.horaInicio,
+    hora_fim: s.horaFim,
+    bloqueado: s.bloqueado,
+    motivo_bloqueio: s.motivoBloqueio || null,
+  };
+}
+
+function rowToSlot(r: any): AvailableSlot {
+  return {
+    id: r.id,
+    organizacaoId: r.organizacao_id,
+    instrutorId: r.instrutor_id,
+    data: r.data,
+    horaInicio: r.hora_inicio,
+    horaFim: r.hora_fim,
+    bloqueado: r.bloqueado,
+    motivoBloqueio: r.motivo_bloqueio,
+  };
+}
+
+function accountToRow(a: AccountReceivable): Record<string, any> {
+  return {
+    id: a.id,
+    organizacao_id: a.organizacaoId,
+    aluno_id: a.alunoId,
+    pacote_id: a.pacoteId || null,
+    descricao: a.descricao,
+    valor_total_centavos: a.valorTotalCentavos,
+    valor_pago_centavos: a.valorPagoCentavos,
+    saldo_devedor_centavos: a.saldoDevedorCentavos,
+    data_vencimento: a.dataVencimento,
+    status: a.status,
+    pix_payload: a.pixPayload || null,
+    pix_qr_code_url: a.pixQrCodeUrl || null,
+    parcelas_total: a.parcelasTotal || 1,
+    criado_em: a.criadoEm || new Date().toISOString(),
+  };
+}
+
+function rowToAccount(r: any): AccountReceivable {
+  return {
+    id: r.id,
+    organizacaoId: r.organizacao_id,
+    alunoId: r.aluno_id,
+    pacoteId: r.pacote_id,
+    descricao: r.descricao,
+    valorTotalCentavos: r.valor_total_centavos,
+    valorPagoCentavos: r.valor_pago_centavos,
+    saldoDevedorCentavos: r.saldo_devedor_centavos,
+    dataVencimento: r.data_vencimento,
+    status: r.status,
+    pixPayload: r.pix_payload,
+    pixQrCodeUrl: r.pix_qr_code_url,
+    parcelasTotal: r.parcelas_total,
+    criadoEm: r.criado_em,
+  };
+}
+
+function paymentToRow(p: PaymentRecord): Record<string, any> {
+  return {
+    id: p.id,
+    organizacao_id: p.organizacaoId,
+    conta_receber_id: p.contaReceberId,
+    aluno_id: p.alunoId,
+    valor_centavos: p.valorCentavos,
+    metodo: p.metodo,
+    parcelas: p.parcelas || 1,
+    taxa_centavos: p.taxaCentavos || 0,
+    data_pagamento: p.dataPagamento,
+    comprovante_numero: p.comprovanteNumero || null,
+    observacao: p.observacao || null,
+  };
+}
+
+function rowToPayment(r: any): PaymentRecord {
+  return {
+    id: r.id,
+    organizacaoId: r.organizacao_id,
+    contaReceberId: r.conta_receber_id,
+    alunoId: r.aluno_id,
+    valorCentavos: r.valor_centavos,
+    metodo: r.metodo,
+    parcelas: r.parcelas,
+    taxaCentavos: r.taxa_centavos,
+    dataPagamento: r.data_pagamento,
+    comprovanteNumero: r.comprovante_numero,
+    observacao: r.observacao,
+  };
+}
+
+function expenseToRow(e: Expense): Record<string, any> {
+  return {
+    id: e.id,
+    organizacao_id: e.organizacaoId,
+    descricao: e.descricao,
+    categoria: e.categoria,
+    veiculo_id: e.veiculoId || null,
+    valor_centavos: e.valorCentavos,
+    data_vencimento: e.dataVencimento,
+    data_pagamento: e.dataPagamento || null,
+    status: e.status,
+  };
+}
+
+function rowToExpense(r: any): Expense {
+  return {
+    id: r.id,
+    organizacaoId: r.organizacao_id,
+    descricao: r.descricao,
+    categoria: r.categoria,
+    veiculoId: r.veiculo_id,
+    valorCentavos: r.valor_centavos,
+    dataVencimento: r.data_vencimento,
+    dataPagamento: r.data_pagamento,
+    status: r.status,
+  };
+}
+
+function investmentToRow(i: Investment): Record<string, any> {
+  return {
+    id: i.id,
+    organizacao_id: i.organizacaoId,
+    titulo: i.titulo,
+    categoria: i.categoria,
+    valor_meta_centavos: i.valorMetaCentavos,
+    valor_acumulado_centavos: i.valorAcumuladoCentavos,
+    aporte_mensal_sugerido_centavos: i.aporteMensalCentavos || 0,
+    data_inicio: i.dataInicio || null,
+    data_prevista_conclusao: i.dataPrevisao || null,
+    anotacoes: i.notas || null,
+  };
+}
+
+function rowToInvestment(r: any): Investment {
+  return {
+    id: r.id,
+    organizacaoId: r.organizacao_id,
+    titulo: r.titulo,
+    categoria: r.categoria,
+    valorMetaCentavos: r.valor_meta_centavos,
+    valorAcumuladoCentavos: r.valor_acumulado_centavos,
+    aporteMensalCentavos: r.aporte_mensal_sugerido_centavos,
+    dataInicio: r.data_inicio,
+    dataPrevisao: r.data_prevista_conclusao,
+    notas: r.anotacoes,
+  };
+}
+
+function packageToRow(pk: PackageOffer): Record<string, any> {
+  return {
+    id: pk.id,
+    organizacao_id: pk.organizacaoId,
+    instrutor_id: pk.instrutorId || null,
+    nome: pk.nome,
+    categoria_cnh: pk.categoriaCnh,
+    quantidade_aulas: pk.totalAulas || 20,
+    valor_centavos: pk.valorCentavos,
+    formas_pagamento_permitidas: pk.formaPagamento,
+    maximo_parcelas_cartao: pk.maxParcelas || 12,
+    desconto_a_vista_percentual: pk.descontoAvistaPercentual || 0,
+    descricao: pk.descricao,
+    ativo: pk.ativo,
+    criado_em: pk.criadoEm || new Date().toISOString(),
+  };
+}
+
+function rowToPackage(r: any): PackageOffer {
+  return {
+    id: r.id,
+    organizacaoId: r.organizacao_id,
+    instrutorId: r.instrutor_id,
+    nome: r.nome,
+    categoriaCnh: r.categoria_cnh,
+    totalAulas: r.quantidade_aulas,
+    valorCentavos: r.valor_centavos,
+    formaPagamento: r.formas_pagamento_permitidas,
+    maxParcelas: r.maximo_parcelas_cartao,
+    descontoAvistaPercentual: r.desconto_a_vista_percentual,
+    descricao: r.descricao,
+    ativo: r.ativo,
+    criadoEm: r.criado_em,
+  };
+}
+
+function auditToRow(a: AuditLog): Record<string, any> {
+  return {
+    id: a.id,
+    organizacao_id: a.organizacaoId,
+    usuario_id: a.usuarioId || null,
+    usuario_nome: a.usuarioNome || null,
+    acao: a.acao,
+    entidade: a.entidade,
+    entidade_id: a.entidadeId || null,
+    detalhes: a.detalhes || null,
+    ip_origem: a.ipOrigem || null,
+    timestamp: a.timestamp || new Date().toISOString(),
+  };
+}
+
+function rowToAudit(r: any): AuditLog {
+  return {
+    id: r.id,
+    organizacaoId: r.organizacao_id,
+    usuarioId: r.usuario_id,
+    usuarioNome: r.usuario_nome,
+    acao: r.acao,
+    entidade: r.entidade,
+    entidadeId: r.entidade_id,
+    detalhes: r.detalhes,
+    ipOrigem: r.ip_origem,
+    timestamp: r.timestamp,
+  };
+}
+
+function whatsappToRow(w: WhatsAppReminderLog): Record<string, any> {
+  return {
+    id: w.id,
+    organizacao_id: w.organizacaoId,
+    aluno_id: w.alunoId,
+    aluno_nome: w.alunoNome,
+    telefone: w.telefone,
+    valor_centavos: w.valorCentavos || 0,
+    data_vencimento: w.dataVencimento || null,
+    mensagem: w.mensagem,
+    enviado_em: w.enviadoEm || new Date().toISOString(),
+    status: w.status,
+  };
+}
+
+// ─── Helper genérico de upsert no Supabase ──────────────────────────────────
+
+async function supabaseUpsert(table: string, row: Record<string, any>): Promise<void> {
+  if (!supabase) return;
+  const { error } = await supabase.from(table).upsert(row, { onConflict: 'id' });
+  if (error) {
+    console.error(`[Supabase] Erro ao salvar em "${table}":`, error.message);
+  }
+}
+
+async function supabaseDelete(table: string, id: string): Promise<void> {
+  if (!supabase) return;
+  const { error } = await supabase.from(table).delete().eq('id', id);
+  if (error) {
+    console.error(`[Supabase] Erro ao deletar de "${table}" id=${id}:`, error.message);
+  }
+}
+
+async function supabaseSelect<T>(
+  table: string,
+  mapper: (r: any) => T,
+  filters?: Record<string, string>
+): Promise<T[]> {
+  if (!supabase) return [];
+  let q = supabase.from(table).select('*');
+  if (filters) {
+    for (const [col, val] of Object.entries(filters)) {
+      q = q.eq(col, val);
+    }
+  }
+  const { data, error } = await q;
+  if (error) {
+    console.error(`[Supabase] Erro ao ler "${table}":`, error.message);
+    return [];
+  }
+  return (data || []).map(mapper);
+}
+
+// ─── API pública do adaptador ────────────────────────────────────────────────
+
+/**
+ * Adaptador Supabase — mesma interface do `db` em storage.ts.
+ * Use junto com a camada localStorage como dual-write durante a transição.
+ */
+export const supabaseAdapter = {
+  enabled: isSupabaseEnabled(),
+
+  // Organizações
+  async getOrganizations(): Promise<Organization[]> {
+    return supabaseSelect('organizations', rowToOrg);
+  },
+  async getOrganization(orgId: string): Promise<Organization | undefined> {
+    const list = await supabaseSelect('organizations', rowToOrg, { id: orgId });
+    return list[0];
+  },
+  async saveOrganization(org: Organization): Promise<void> {
+    await supabaseUpsert('organizations', orgToRow(org));
+  },
+  async deleteOrganization(orgId: string): Promise<void> {
+    await supabaseDelete('organizations', orgId);
+  },
+
+  // Usuários
+  async getUsers(orgId?: string): Promise<User[]> {
+    return supabaseSelect('users', rowToUser, orgId ? { organizacao_id: orgId } : undefined);
+  },
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    if (!supabase) return undefined;
+    const { data } = await supabase.from('users').select('*').eq('email', email.toLowerCase()).limit(1);
+    return data?.[0] ? rowToUser(data[0]) : undefined;
+  },
+  async saveUser(user: User): Promise<void> {
+    await supabaseUpsert('users', userToRow(user));
+  },
+
+  // Alunos
+  async getStudents(orgId: string): Promise<Student[]> {
+    return supabaseSelect('students', rowToStudent, { organizacao_id: orgId });
+  },
+  async getStudentById(studentId: string): Promise<Student | undefined> {
+    const list = await supabaseSelect('students', rowToStudent, { id: studentId });
+    return list[0];
+  },
+  async getStudentByCPFFingerprint(cpfFingerprint: string): Promise<Student | undefined> {
+    if (!supabase) return undefined;
+    const { data } = await supabase.from('students').select('*').eq('cpf_fingerprint', cpfFingerprint).limit(1);
+    return data?.[0] ? rowToStudent(data[0]) : undefined;
+  },
+  async saveStudent(student: Student): Promise<void> {
+    await supabaseUpsert('students', studentToRow(student));
+  },
+
+  // Veículos
+  async getVehicles(orgId: string): Promise<Vehicle[]> {
+    return supabaseSelect('vehicles', rowToVehicle, { organizacao_id: orgId });
+  },
+  async saveVehicle(vehicle: Vehicle): Promise<void> {
+    await supabaseUpsert('vehicles', vehicleToRow(vehicle));
+  },
+
+  // Slots de Agenda
+  async getSlots(orgId: string): Promise<AvailableSlot[]> {
+    return supabaseSelect('available_slots', rowToSlot, { organizacao_id: orgId });
+  },
+  async saveSlot(slot: AvailableSlot): Promise<void> {
+    await supabaseUpsert('available_slots', slotToRow(slot));
+  },
+
+  // Aulas
+  async getLessons(orgId: string): Promise<Lesson[]> {
+    return supabaseSelect('lessons', rowToLesson, { organizacao_id: orgId });
+  },
+  async getLessonsByStudent(studentId: string): Promise<Lesson[]> {
+    return supabaseSelect('lessons', rowToLesson, { aluno_id: studentId });
+  },
+  async saveLesson(lesson: Lesson): Promise<void> {
+    await supabaseUpsert('lessons', lessonToRow(lesson));
+  },
+
+  // Contas a Receber
+  async getAccountsReceivable(orgId: string): Promise<AccountReceivable[]> {
+    return supabaseSelect('accounts_receivable', rowToAccount, { organizacao_id: orgId });
+  },
+  async saveAccountReceivable(account: AccountReceivable): Promise<void> {
+    await supabaseUpsert('accounts_receivable', accountToRow(account));
+  },
+
+  // Pagamentos
+  async getPayments(orgId: string): Promise<PaymentRecord[]> {
+    return supabaseSelect('payment_records', rowToPayment, { organizacao_id: orgId });
+  },
+  async savePayment(payment: PaymentRecord): Promise<void> {
+    await supabaseUpsert('payment_records', paymentToRow(payment));
+  },
+
+  // Despesas
+  async getExpenses(orgId: string): Promise<Expense[]> {
+    return supabaseSelect('expenses', rowToExpense, { organizacao_id: orgId });
+  },
+  async saveExpense(expense: Expense): Promise<void> {
+    await supabaseUpsert('expenses', expenseToRow(expense));
+  },
+  async deleteExpense(id: string): Promise<void> {
+    await supabaseDelete('expenses', id);
+  },
+
+  // Investimentos
+  async getInvestments(orgId: string): Promise<Investment[]> {
+    return supabaseSelect('investments', rowToInvestment, { organizacao_id: orgId });
+  },
+  async saveInvestment(investment: Investment): Promise<void> {
+    await supabaseUpsert('investments', investmentToRow(investment));
+  },
+  async deleteInvestment(id: string): Promise<void> {
+    await supabaseDelete('investments', id);
+  },
+
+  // Pacotes
+  async getPackages(orgId: string): Promise<PackageOffer[]> {
+    return supabaseSelect('package_offers', rowToPackage, { organizacao_id: orgId });
+  },
+  async savePackage(pkg: PackageOffer): Promise<void> {
+    await supabaseUpsert('package_offers', packageToRow(pkg));
+  },
+  async deletePackage(id: string): Promise<void> {
+    await supabaseDelete('package_offers', id);
+  },
+
+  // Audit Logs
+  async getAuditLogs(orgId: string): Promise<AuditLog[]> {
+    if (!supabase) return [];
+    const { data } = await supabase
+      .from('audit_logs')
+      .select('*')
+      .eq('organizacao_id', orgId)
+      .order('timestamp', { ascending: false })
+      .limit(500);
+    return (data || []).map(rowToAudit);
+  },
+  async addAuditLog(log: AuditLog): Promise<void> {
+    await supabaseUpsert('audit_logs', auditToRow(log));
+  },
+
+  // WhatsApp Logs
+  async getWhatsAppLogs(orgId: string): Promise<WhatsAppReminderLog[]> {
+    if (!supabase) return [];
+    const { data } = await supabase
+      .from('whatsapp_logs')
+      .select('*')
+      .eq('organizacao_id', orgId)
+      .order('enviado_em', { ascending: false });
+    return (data || []).map((r: any) => ({
+      id: r.id,
+      organizacaoId: r.organizacao_id,
+      alunoId: r.aluno_id,
+      alunoNome: r.aluno_nome,
+      telefone: r.telefone,
+      valorCentavos: r.valor_centavos,
+      dataVencimento: r.data_vencimento,
+      mensagem: r.mensagem,
+      enviadoEm: r.enviado_em,
+      status: r.status,
+    }));
+  },
+  async logWhatsApp(log: WhatsAppReminderLog): Promise<void> {
+    await supabaseUpsert('whatsapp_logs', whatsappToRow(log));
+  },
+
+  // Student Transfers
+  async saveTransfer(transfer: StudentTransferHistory): Promise<void> {
+    await supabaseUpsert('student_transfers', {
+      id: transfer.id,
+      organizacao_id: transfer.organizacaoId,
+      aluno_id: transfer.alunoId,
+      aluno_nome: transfer.alunoNome,
+      aluno_cpf_mascarado: transfer.alunoCpfMascarado,
+      instrutor_anterior_id: transfer.instrutorAnteriorId,
+      instrutor_anterior_nome: transfer.instrutorAnteriorNome,
+      instrutor_novo_id: transfer.instrutorNovoId,
+      instrutor_novo_nome: transfer.instrutorNovoNome,
+      motivo: transfer.motivo,
+      aulas_cumpridas_ate_transferencia: transfer.aulasCumpridasAteTransferencia,
+      data_transferencia: transfer.dataTransferencia,
+      autor_id: transfer.autorId,
+      autor_nome: transfer.autorNome,
+    });
+  },
+};
+
+export default supabaseAdapter;
+

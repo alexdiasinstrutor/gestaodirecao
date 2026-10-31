@@ -1,0 +1,6 @@
+{
+  "name": "Auto Gestão de Direção",
+  "description": "Sistema completo de auto gestão financeira, controle de alunos, agenda prática, cobranças PIX/Cartão com lembretes WhatsApp e relatórios para instrutores e autoescolas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

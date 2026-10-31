@@ -1,0 +1,111 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Default-Deny Catch-All
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper Primitives
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Connection Health Check
+    match /system/{docId} {
+      allow read, write: if isValidId(docId);
+    }
+
+    // 2. Organizations
+    match /organizations/{orgId} {
+      allow read: if isValidId(orgId);
+      allow write: if isValidId(orgId);
+    }
+
+    // 3. Users
+    match /users/{userId} {
+      allow read: if isValidId(userId);
+      allow write: if isValidId(userId);
+    }
+
+    // 4. Students
+    match /students/{studentId} {
+      allow read: if isValidId(studentId);
+      allow write: if isValidId(studentId);
+    }
+
+    // 5. Vehicles
+    match /vehicles/{vehicleId} {
+      allow read: if isValidId(vehicleId);
+      allow write: if isValidId(vehicleId);
+    }
+
+    // 6. Lessons
+    match /lessons/{lessonId} {
+      allow read: if isValidId(lessonId);
+      allow write: if isValidId(lessonId);
+    }
+
+    // 7. Available Slots
+    match /availableSlots/{slotId} {
+      allow read: if isValidId(slotId);
+      allow write: if isValidId(slotId);
+    }
+
+    // 8. Accounts Receivable
+    match /accountsReceivable/{accountId} {
+      allow read: if isValidId(accountId);
+      allow write: if isValidId(accountId);
+    }
+
+    // 9. Payment Records
+    match /paymentRecords/{paymentId} {
+      allow read: if isValidId(paymentId);
+      allow write: if isValidId(paymentId);
+    }
+
+    // 10. Expenses
+    match /expenses/{expenseId} {
+      allow read: if isValidId(expenseId);
+      allow write: if isValidId(expenseId);
+    }
+
+    // 11. Investments
+    match /investments/{investmentId} {
+      allow read: if isValidId(investmentId);
+      allow write: if isValidId(investmentId);
+    }
+
+    // 12. Packages
+    match /packages/{packageId} {
+      allow read: if isValidId(packageId);
+      allow write: if isValidId(packageId);
+    }
+
+    // 13. Audit Logs
+    match /auditLogs/{logId} {
+      allow read: if isValidId(logId);
+      allow create: if isValidId(logId);
+      allow update, delete: if false; // Imutabilidade de auditoria
+    }
+
+    // 14. WhatsApp Reminder Logs
+    match /whatsAppLogs/{logId} {
+      allow read: if isValidId(logId);
+      allow write: if isValidId(logId);
+    }
+  }
+}
