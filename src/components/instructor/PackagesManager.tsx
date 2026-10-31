@@ -23,7 +23,9 @@ import {
   Organization,
   User,
   PackageOffer,
-  PackagePaymentType
+  PackagePaymentType,
+  CnhCategory,
+  CNH_CATEGORIES
 } from '../../types';
 
 interface PackagesManagerProps {
@@ -45,7 +47,7 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
 
   const [form, setForm] = useState({
     nome: '',
-    categoriaCnh: 'B' as 'A' | 'B' | 'AB' | 'C' | 'D' | 'E',
+    categoriaCnh: 'B' as CnhCategory,
     totalAulas: 20,
     valorReais: '1800.00',
     formaPagamento: 'TODAS' as PackagePaymentType,
@@ -371,15 +373,14 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
                   <label className="block font-bold text-slate-800 mb-1">Categoria CNH *</label>
                   <select
                     value={form.categoriaCnh}
-                    onChange={(e) => setForm({ ...form, categoriaCnh: e.target.value as any })}
+                    onChange={(e) => setForm({ ...form, categoriaCnh: e.target.value as CnhCategory })}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none bg-white font-semibold"
                   >
-                    <option value="B">Categoria B (Carro)</option>
-                    <option value="A">Categoria A (Moto)</option>
-                    <option value="AB">Categoria AB (Carro e Moto)</option>
-                    <option value="C">Categoria C (Caminhão)</option>
-                    <option value="D">Categoria D (Ônibus/Micro)</option>
-                    <option value="E">Categoria E (Carreta/Articulado)</option>
+                    {CNH_CATEGORIES.map((c) => (
+                      <option key={c.value} value={c.value}>
+                        {c.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
 

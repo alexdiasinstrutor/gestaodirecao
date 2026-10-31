@@ -27,7 +27,8 @@ import {
 } from 'lucide-react';
 import { db } from '../../lib/storage';
 import { formatDateBR, formatCurrencyBRL } from '../../lib/validation';
-import type { Student, User, Organization, StudentSkills, PaymentRecord } from '../../types';
+import type { Student, User, Organization, StudentSkills, PaymentRecord, CnhCategory } from '../../types';
+import { CNH_CATEGORIES } from '../../types';
 import { StudentTransferModal } from './StudentTransferModal';
 import { PaymentReceiptModal } from '../common/PaymentReceiptModal';
 import type { PaymentReceiptData } from '../../lib/receiptPdfGenerator';
@@ -277,24 +278,28 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
 
         {/* Category Filters */}
         <div className="flex items-center gap-1 p-1 bg-slate-200/80 rounded-xl w-full sm:w-auto overflow-x-auto no-scrollbar">
-          {['ALL', 'B', 'A', 'AB'].map((cat) => (
+          <button
+            onClick={() => setSelectedCategory('ALL')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+              selectedCategory === 'ALL'
+                ? 'bg-white text-slate-900 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Todas
+          </button>
+          {CNH_CATEGORIES.map((cat) => (
             <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`flex-1 sm:flex-none px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
-                selectedCategory === cat
+              key={cat.value}
+              onClick={() => setSelectedCategory(cat.value)}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                selectedCategory === cat.value
                   ? 'bg-white text-slate-900 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
+              title={cat.label}
             >
-              {cat === 'ALL' ? (
-                <>
-                  <span className="sm:hidden">Todas</span>
-                  <span className="hidden sm:inline">Todas as Categorias</span>
-                </>
-              ) : (
-                `Cat. ${cat}`
-              )}
+              {cat.badge}
             </button>
           ))}
         </div>
@@ -335,7 +340,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                   </div>
                 </div>
                 <span className="px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 text-[11px] font-bold shrink-0">
-                  Cat. {student.categoriaCnh}
+                  {CNH_CATEGORIES.find((c) => c.value === student.categoriaCnh)?.badge || `Cat. ${student.categoriaCnh}`}
                 </span>
               </div>
 
@@ -421,9 +426,25 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                 <div className="min-w-0">
                   <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2 flex-wrap">
                     <span className="break-words">{activeStudent.nome}</span>
-                    <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 text-xs font-semibold border border-blue-400/30 shrink-0">
-                      CNH {activeStudent.categoriaCnh}
-                    </span>
+                    <select
+                      value={activeStudent.categoriaCnh}
+                      onChange={(e) => {
+                        const newCat = e.target.value as CnhCategory;
+                        const updated: Student = { ...activeStudent, categoriaCnh: newCat };
+                        db.saveStudent(updated, currentUser.id);
+                        setActiveStudent(updated);
+                        setSavedSuccess(true);
+                        setTimeout(() => setSavedSuccess(false), 2500);
+                      }}
+                      className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 text-xs font-semibold border border-blue-400/30 shrink-0 cursor-pointer focus:bg-slate-800"
+                      title="Clique para alterar a categoria CNH do aluno"
+                    >
+                      {CNH_CATEGORIES.map((c) => (
+                        <option key={c.value} value={c.value} className="bg-slate-900 text-white">
+                          CNH {c.value} - {c.label.split(' - ')[1] || c.label}
+                        </option>
+                      ))}
+                    </select>
                   </h2>
                   <p className="text-xs text-slate-300 break-words">
                     CPF: {activeStudent.cpfMascarado} · Nasc.: {formatDateBR(activeStudent.dataNascimento)} ({activeStudent.idade} anos)

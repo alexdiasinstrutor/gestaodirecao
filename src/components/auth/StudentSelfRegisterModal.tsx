@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, GraduationCap, ShieldAlert, AlertCircle, CheckCircle2, UserCheck, Package } from 'lucide-react';
 import { db } from '../../lib/storage';
 import { isValidCPF, generateCPFFingerprint, maskCPF, validateMinimumAge, formatCurrencyBRL } from '../../lib/validation';
-import { Student, User } from '../../types';
+import { Student, User, CnhCategory, CNH_CATEGORIES } from '../../types';
 
 interface StudentSelfRegisterModalProps {
   onClose: () => void;
@@ -27,7 +27,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
     cpf: '',
     telefone: '',
     dataNascimento: '',
-    categoriaCnh: 'B' as 'A' | 'B' | 'AB' | 'C' | 'D' | 'E',
+    categoriaCnh: 'B' as CnhCategory,
     instrutorId: defaultInstructorId || orgInstructors[0]?.id || 'usr_instrutor_carlos',
     senha: '',
     confirmarSenha: ''
@@ -294,13 +294,14 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
               <label className="block font-medium text-slate-700 mb-1">Categoria CNH Pretendida *</label>
               <select
                 value={formData.categoriaCnh}
-                onChange={(e) => setFormData({ ...formData, categoriaCnh: e.target.value as any })}
+                onChange={(e) => setFormData({ ...formData, categoriaCnh: e.target.value as CnhCategory })}
                 className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none bg-white font-medium"
               >
-                <option value="B">Categoria B - Carro (Automóvel)</option>
-                <option value="A">Categoria A - Moto (Motocicleta)</option>
-                <option value="AB">Categoria AB - Carro e Moto</option>
-                <option value="D">Categoria D - Transporte de Passageiros</option>
+                {CNH_CATEGORIES.map((cat) => (
+                  <option key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </option>
+                ))}
               </select>
             </div>
 

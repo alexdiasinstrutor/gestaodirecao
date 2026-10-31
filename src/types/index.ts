@@ -65,6 +65,43 @@ export interface User {
   cidadePix?: string;
 }
 
+export type CnhCategory =
+  | 'ACC'
+  | 'A'
+  | 'B'
+  | 'AB'
+  | 'C'
+  | 'AC'
+  | 'D'
+  | 'AD'
+  | 'E'
+  | 'AE'
+  | 'PCD'
+  | 'OUTRA';
+
+export interface CnhCategoryDef {
+  value: CnhCategory;
+  label: string;
+  badge: string;
+  descricao: string;
+  veiculos: string;
+}
+
+export const CNH_CATEGORIES: CnhCategoryDef[] = [
+  { value: 'ACC', label: 'ACC - Ciclomotores (até 50cc)', badge: 'ACC', descricao: 'Autorização para Conduzir Ciclomotores', veiculos: 'Cinquentinhas e ciclomotores de até 50 cilindradas' },
+  { value: 'A', label: 'Categoria A - Motocicleta / Triciclo', badge: 'Cat. A', descricao: 'Veículos motorizados de 2 ou 3 rodas', veiculos: 'Motos, motonetas, ciclomotores e triciclos' },
+  { value: 'B', label: 'Categoria B - Carro / Utilitário', badge: 'Cat. B', descricao: 'Automóveis leves e comerciais', veiculos: 'Carros de passeio, caminhonetes e utilitários até 3.500kg (máx. 8 passageiros)' },
+  { value: 'AB', label: 'Categoria AB - Carro e Moto', badge: 'Cat. AB', descricao: 'Habilitação combinada Carro + Moto', veiculos: 'Automóveis leves e motocicletas' },
+  { value: 'C', label: 'Categoria C - Caminhão (Carga > 3,5t)', badge: 'Cat. C', descricao: 'Veículos de transporte de carga', veiculos: 'Caminhões e tratores com peso bruto total acima de 3.500kg' },
+  { value: 'AC', label: 'Categoria AC - Moto e Caminhão', badge: 'Cat. AC', descricao: 'Habilitação combinada Moto + Caminhão', veiculos: 'Motocicletas e veículos de carga acima de 3.500kg' },
+  { value: 'D', label: 'Categoria D - Ônibus / Micro-ônibus / Vans', badge: 'Cat. D', descricao: 'Veículos de transporte de passageiros', veiculos: 'Vans, micro-ônibus e ônibus com mais de 8 passageiros' },
+  { value: 'AD', label: 'Categoria AD - Moto e Ônibus / Van', badge: 'Cat. AD', descricao: 'Habilitação combinada Moto + Transporte de Passageiros', veiculos: 'Motocicletas e veículos de passageiros com mais de 8 lugares' },
+  { value: 'E', label: 'Categoria E - Carreta / Bitrem / Articulado', badge: 'Cat. E', descricao: 'Veículos com unidades acopladas e articulados', veiculos: 'Carretas, treminhões, bitrens e veículos com reboque acima de 6.000kg' },
+  { value: 'AE', label: 'Categoria AE - Moto e Carreta', badge: 'Cat. AE', descricao: 'Habilitação combinada Moto + Veículos Articulados', veiculos: 'Motocicletas e carretas/articulados' },
+  { value: 'PCD', label: 'PCD - Habilitação Especial (Adaptada)', badge: 'PCD', descricao: 'Habilitação para Condutores com Deficiência', veiculos: 'Veículos automotores com adaptações específicas conforme junta médica' },
+  { value: 'OUTRA', label: 'Outra / Cursos Especializados (MOPP, Escolar)', badge: 'Outra', descricao: 'Cursos de especialização, reciclagem e capacitação', veiculos: 'MOPP, Transporte Escolar, Emergência, Cargas Indivisíveis' },
+];
+
 export interface Student {
   id: string;
   organizacaoId: string;
@@ -76,7 +113,7 @@ export interface Student {
   cpfFingerprint: string;
   dataNascimento: string; // YYYY-MM-DD
   idade: number; // Must be >= 18
-  categoriaCnh: 'A' | 'B' | 'AB' | 'C' | 'D' | 'E';
+  categoriaCnh: CnhCategory;
   status: 'EM_ANDAMENTO' | 'CONCLUIDO' | 'CANCELADO';
   aulasCumpridas: number;
   totalAulasContratadas: number; // Tipicamente 20 aulas
@@ -228,7 +265,7 @@ export interface PackageOffer {
   instrutorNome?: string;
   nome: string;
   totalAulas: number;
-  categoriaCnh: 'A' | 'B' | 'AB' | 'C' | 'D' | 'E';
+  categoriaCnh: CnhCategory;
   valorCentavos: number;
   formaPagamento: PackagePaymentType;
   maxParcelas?: number;
