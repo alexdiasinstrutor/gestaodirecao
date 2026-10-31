@@ -1002,6 +1002,55 @@ export const db = {
     this.addAuditLog(user.organizacaoId, user.id, 'CRIACAO_USUARIO', 'Usuario', user.id, `Criado usuário ${user.nome} (${user.papel})`);
   },
 
+  updateUser(user: User): void {
+    const users = readList<User>(STORAGE_KEYS.USERS);
+    const index = users.findIndex((u) => u.id === user.id);
+    if (index >= 0) {
+      users[index] = user;
+      writeList(STORAGE_KEYS.USERS, users);
+      supabaseAdapter.saveUser(user).catch(console.error);
+      const current = this.getCurrentUser();
+      if (current && current.id === user.id) {
+        this.setCurrentUser(user);
+      }
+      this.addAuditLog(user.organizacaoId, user.id, 'ATUALIZACAO_USUARIO', 'Usuario', user.id, `Atualizado perfil do usuário ${user.nome}`);
+    }
+  },
+
+  getEffectivePixConfig(org?: Organization, user?: User): {
+    chavePix: string;
+    tipoChavePix: string;
+    beneficiarioPix: string;
+    cidadePix: string;
+    origem: 'INSTRUTOR' | 'ORGANIZACAO' | 'PADRAO';
+  } {
+    if (user?.chavePix && user.chavePix.trim()) {
+      return {
+        chavePix: user.chavePix.trim(),
+        tipoChavePix: user.tipoChavePix || 'EMAIL',
+        beneficiarioPix: user.beneficiarioPix || user.nome,
+        cidadePix: user.cidadePix || org?.cidade || 'SAO PAULO',
+        origem: 'INSTRUTOR'
+      };
+    }
+    if (org?.chavePix && org.chavePix.trim()) {
+      return {
+        chavePix: org.chavePix.trim(),
+        tipoChavePix: org.tipoChavePix || (org.cnpjCpf.length > 14 ? 'CNPJ' : 'CPF'),
+        beneficiarioPix: org.beneficiarioPix || org.nome,
+        cidadePix: org.cidadePix || org.cidade || 'SAO PAULO',
+        origem: 'ORGANIZACAO'
+      };
+    }
+    return {
+      chavePix: org?.email || user?.email || 'contato@direcaosegura.com.br',
+      tipoChavePix: 'EMAIL',
+      beneficiarioPix: org?.nome || user?.nome || 'Sistema de Direção',
+      cidadePix: org?.cidade || 'SAO PAULO',
+      origem: 'PADRAO'
+    };
+  },
+
   // Students
   getStudents(orgId: string): Student[] {
     return readList<Student>(STORAGE_KEYS.STUDENTS).filter((s) => s.organizacaoId === orgId);

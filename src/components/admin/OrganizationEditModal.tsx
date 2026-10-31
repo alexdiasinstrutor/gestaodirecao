@@ -11,7 +11,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { ALL_SYSTEM_MODULES, SAAS_PLANS, getPlanDetails } from '../../lib/saasPlans';
-import type { Organization, OrganizationStatus, SaaSPlanType } from '../../types';
+import type { Organization, OrganizationStatus, SaaSPlanType, PixKeyType } from '../../types';
 
 interface OrganizationEditModalProps {
   organization: Organization;
@@ -41,6 +41,11 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
       ? (organization.valorMensalidadeCentavos / 100).toFixed(2)
       : (getPlanDetails(organization.plano).precoSugeridoMensalCentavos / 100).toFixed(2)
   );
+
+  const [chavePix, setChavePix] = useState(organization.chavePix || '');
+  const [tipoChavePix, setTipoChavePix] = useState<PixKeyType>(organization.tipoChavePix || 'CNPJ');
+  const [beneficiarioPix, setBeneficiarioPix] = useState(organization.beneficiarioPix || organization.nome);
+  const [cidadePix, setCidadePix] = useState(organization.cidadePix || organization.cidade || 'SAO PAULO');
 
   // Módulos liberados (se já tinha customizado usa eles, se não usa os padrões do plano)
   const [selectedModules, setSelectedModules] = useState<string[]>(() => {
@@ -92,7 +97,11 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
       plano,
       dataVencimentoPlano,
       valorMensalidadeCentavos: valorCentavos,
-      modulosCustomizados: selectedModules
+      modulosCustomizados: selectedModules,
+      chavePix: chavePix.trim(),
+      tipoChavePix,
+      beneficiarioPix: beneficiarioPix.trim(),
+      cidadePix: cidadePix.trim()
     };
 
     onSave(updated);
@@ -256,12 +265,69 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
             </div>
           </div>
 
+          {/* Configurações de Recebimento PIX da Organização */}
+          <div className="pt-3 border-t border-slate-200 space-y-3">
+            <span className="font-bold text-slate-900 uppercase text-[10px] tracking-wider block">
+              3. Chave PIX Oficial para Recebimento de Alunos
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Tipo da Chave PIX</label>
+                <select
+                  value={tipoChavePix}
+                  onChange={(e) => setTipoChavePix(e.target.value as PixKeyType)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white"
+                >
+                  <option value="CNPJ">CNPJ</option>
+                  <option value="CPF">CPF</option>
+                  <option value="EMAIL">E-mail</option>
+                  <option value="TELEFONE">Telefone Celular</option>
+                  <option value="ALEATORIA">Chave Aleatória (EVP)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Chave PIX</label>
+                <input
+                  type="text"
+                  value={chavePix}
+                  onChange={(e) => setChavePix(e.target.value)}
+                  placeholder="Ex: 32.194.852/0001-44 ou email"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Nome do Beneficiário / Titular</label>
+                <input
+                  type="text"
+                  value={beneficiarioPix}
+                  onChange={(e) => setBeneficiarioPix(e.target.value)}
+                  placeholder="Nome no banco (máx 25 carac.)"
+                  maxLength={25}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Cidade do Beneficiário</label>
+                <input
+                  type="text"
+                  value={cidadePix}
+                  onChange={(e) => setCidadePix(e.target.value)}
+                  placeholder="Ex: SAO PAULO"
+                  maxLength={15}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl"
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Permissões Granulares de Módulos (Feature Flags) */}
           <div className="pt-3 border-t border-slate-200 space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
                 <span className="font-bold text-slate-900 uppercase text-[10px] tracking-wider block">
-                  3. Permissões de Módulos para esta Instituição ({selectedModules.length} de {ALL_SYSTEM_MODULES.length} ativos)
+                  4. Permissões de Módulos para esta Instituição ({selectedModules.length} de {ALL_SYSTEM_MODULES.length} ativos)
                 </span>
                 <p className="text-[11px] text-slate-500">
                   Você pode ligar ou desligar qualquer módulo individualmente para este cliente.
@@ -295,11 +361,10 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
                     key={mod.id}
                     type="button"
                     onClick={() => toggleModule(mod.id)}
-                    className={`flex items-start gap-2 p-2 rounded-xl text-left transition-colors cursor-pointer border ${
-                      isSelected
+                    className={`flex items-start gap-2 p-2 rounded-xl text-left transition-colors cursor-pointer border ${isSelected
                         ? 'bg-white border-purple-300 shadow-2xs'
                         : 'bg-transparent border-transparent text-slate-400 hover:bg-white/60'
-                    }`}
+                      }`}
                   >
                     <div className="mt-0.5 shrink-0">
                       {isSelected ? (

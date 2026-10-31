@@ -45,10 +45,77 @@ export function buildWhatsAppLink(phoneRaw: string, message: string): string {
 }
 
 /**
- * Gera payload PIX Copia e Cola formatado para pagamentos no Brasil
+ * Calcula CRC16 CCITT (polinômio 0x1021, valor inicial 0xFFFF) conforme padrão do Banco Central do Brasil
  */
-export function generatePixCopiaECola(chavePix: string, nomeRecebedor: string, valorCentavos: number, txid: string): string {
-  const valor = (valorCentavos / 100).toFixed(2);
-  // Simulação de payload padrão EMVCo BR Code
-  return `00020126580014BR.GOV.BCB.PIX0114${chavePix}520400005303986540${valor.length}${valor}5802BR5913${nomeRecebedor.slice(0, 25)}6009SAO PAULO62070503${txid.slice(0, 10)}6304`;
+function crc16CCITT(str: string): string {
+  let crc = 0xffff;
+  for (let c = 0; c < str.length; c++) {
+    crc ^= str.charCodeAt(c) << 8;
+    for (let i = 0; i < 8; i++) {
+      if ((crc & 0x8000) !== 0) {
+        crc = ((crc << 1) ^ 0x1021) & 0xffff;
+      } else {
+        crc = (crc << 1) & 0xffff;
+      }
+    }
+  }
+  return crc.toString(16).toUpperCase().padStart(4, '0');
+}
+
+function emvField(id: string, value: string): string {
+  const len = value.length.toString().padStart(2, '0');
+  return `${id}${len}${value}`;
+}
+
+function normalizeAscii(str: string, maxLen: number): string {
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9 ]/g, '')
+    .trim()
+    .slice(0, maxLen);
+}
+
+/**
+ * Gera payload PIX Copia e Cola Oficial (BR Code / EMVCo) aceito por todos os bancos brasileiros
+ */
+export function generatePixCopiaECola(
+  chavePix: string,
+  nomeRecebedor: string,
+  valorCentavos: number,
+  txid: string = '***',
+  cidade: string = 'SAO PAULO'
+): string {
+  const cleanKey = (chavePix || '').trim();
+  const cleanName = normalizeAscii(nomeRecebedor || 'RECEBEDOR', 25) || 'RECEBEDOR';
+  const cleanCity = normalizeAscii(cidade || 'CIDADE', 15) || 'SAO PAULO';
+  const cleanTxid = normalizeAscii((txid || 'PAGTO').replace(/[^a-zA-Z0-9]/g, ''), 25) || 'PAGTO';
+  const valorStr = (valorCentavos / 100).toFixed(2);
+
+  // Merchant Account Information (Tag 26)
+  const maiGui = emvField('00', 'BR.GOV.BCB.PIX');
+  const maiKey = emvField('01', cleanKey);
+  const tag26 = emvField('26', maiGui + maiKey);
+
+  // Campos principais
+  const tag00 = emvField('00', '01');
+  const tag52 = emvField('52', '0000');
+  const tag53 = emvField('53', '986');
+  const tag54 = valorCentavos > 0 ? emvField('54', valorStr) : '';
+  const tag58 = emvField('58', 'BR');
+  const tag59 = emvField('59', cleanName);
+  const tag60 = emvField('60', cleanCity);
+  const tag62 = emvField('62', emvField('05', cleanTxid));
+
+  const payloadWithoutCRC = `${tag00}${tag26}${tag52}${tag53}${tag54}${tag58}${tag59}${tag60}${tag62}6304`;
+  const checksum = crc16CCITT(payloadWithoutCRC);
+
+  return `${payloadWithoutCRC}${checksum}`;
+}
+
+/**
+ * Retorna URL da imagem de QR Code escaneável de alta resolução
+ */
+export function getPixQrCodeImageUrl(payload: string, size: number = 280): string {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(payload)}&margin=10`;
 }

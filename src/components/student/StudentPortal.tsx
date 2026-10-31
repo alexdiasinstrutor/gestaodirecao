@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { db } from '../../lib/storage';
 import { formatCurrencyBRL, formatDateBR } from '../../lib/validation';
-import { generatePixCopiaECola } from '../../lib/whatsapp';
+import { generatePixCopiaECola, getPixQrCodeImageUrl } from '../../lib/whatsapp';
 import {
   Student,
   User as UserType,
@@ -41,6 +41,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ currentUser, curre
   const student = students.find((s) => s.email.toLowerCase() === currentUser.email.toLowerCase()) || students[0];
 
   const instructor = db.getUsers(orgId).find((u) => u.id === student?.instrutorId) || db.getUsers(orgId)[1];
+  const pixConfig = db.getEffectivePixConfig(currentOrg, instructor);
   const vehicles = db.getVehicles(orgId);
   const lessons = db.getLessonsByStudent(student?.id || '');
   const accounts = db.getAccountsReceivable(orgId).filter((a) => a.alunoId === student?.id);
@@ -58,6 +59,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ currentUser, curre
   const [showPixModal, setShowPixModal] = useState<boolean>(false);
   const [selectedAccountForPix, setSelectedAccountForPix] = useState<AccountReceivable | null>(null);
   const [pixCopied, setPixCopied] = useState<boolean>(false);
+  const [chaveCopied, setChaveCopied] = useState<boolean>(false);
 
   // Available slots for selected date
   const allSlots = db.getSlots(orgId);
@@ -123,14 +125,31 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ currentUser, curre
     setSelectedAccountForPix(acc);
     setShowPixModal(true);
     setPixCopied(false);
+    setChaveCopied(false);
+  };
+
+  const getStudentPixPayload = (acc: AccountReceivable) => {
+    return generatePixCopiaECola(
+      pixConfig.chavePix,
+      pixConfig.beneficiarioPix,
+      acc.saldoDevedorCentavos,
+      acc.id,
+      pixConfig.cidadePix
+    );
   };
 
   const handleCopyPixCode = () => {
     if (!selectedAccountForPix) return;
-    const payload = selectedAccountForPix.pixPayload || generatePixCopiaECola('financeiro@direcaosegura.com.br', currentOrg.nome, selectedAccountForPix.saldoDevedorCentavos, `REC${selectedAccountForPix.id}`);
+    const payload = getStudentPixPayload(selectedAccountForPix);
     navigator.clipboard.writeText(payload);
     setPixCopied(true);
     setTimeout(() => setPixCopied(false), 3000);
+  };
+
+  const handleCopyKey = () => {
+    navigator.clipboard.writeText(pixConfig.chavePix);
+    setChaveCopied(true);
+    setTimeout(() => setChaveCopied(false), 3000);
   };
 
   if (!student) {
@@ -259,15 +278,14 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ currentUser, curre
                             key={slot.id}
                             type="button"
                             onClick={() => setSelectedSlot(slot.horaInicio)}
-                            className={`py-2 px-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
-                              isSelected
+                            className={`py-2 px-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${isSelected
                                 ? 'bg-blue-600 border-blue-600 text-white shadow-xs'
                                 : isNight
-                                ? 'bg-indigo-50/70 border-indigo-200 text-indigo-900 hover:border-indigo-400'
-                                : isMorning
-                                ? 'bg-amber-50/50 border-amber-200 text-amber-900 hover:border-amber-400'
-                                : 'bg-slate-50 border-slate-200 text-slate-800 hover:border-blue-400 hover:bg-blue-50'
-                            }`}
+                                  ? 'bg-indigo-50/70 border-indigo-200 text-indigo-900 hover:border-indigo-400'
+                                  : isMorning
+                                    ? 'bg-amber-50/50 border-amber-200 text-amber-900 hover:border-amber-400'
+                                    : 'bg-slate-50 border-slate-200 text-slate-800 hover:border-blue-400 hover:bg-blue-50'
+                              }`}
                           >
                             <span className="font-mono text-xs">{slot.horaInicio}</span>
                             <span className="text-[9px] font-medium opacity-80">
@@ -338,9 +356,8 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ currentUser, curre
                 </div>
                 <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
                   <div
-                    className={`h-2 rounded-full transition-all ${
-                      skill.score >= 8 ? 'bg-emerald-500' : skill.score >= 6 ? 'bg-blue-500' : 'bg-amber-500'
-                    }`}
+                    className={`h-2 rounded-full transition-all ${skill.score >= 8 ? 'bg-emerald-500' : skill.score >= 6 ? 'bg-blue-500' : 'bg-amber-500'
+                      }`}
                     style={{ width: `${(skill.score / 10) * 100}%` }}
                   />
                 </div>
@@ -380,11 +397,10 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ currentUser, curre
                   <p className="text-slate-500 text-[11px]">{lsn.topico}</p>
                 </div>
                 <span
-                  className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                    lsn.status === 'CONCLUIDA'
+                  className={`px-2 py-0.5 rounded text-[10px] font-semibold ${lsn.status === 'CONCLUIDA'
                       ? 'bg-emerald-100 text-emerald-800'
                       : 'bg-blue-100 text-blue-800'
-                  }`}
+                    }`}
                 >
                   {lsn.status}
                 </span>
@@ -446,11 +462,16 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ currentUser, curre
               </button>
             </div>
 
-            {/* Simulated QR Code Visual */}
-            <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl inline-block mx-auto">
-              <div className="w-40 h-40 bg-white border border-slate-300 rounded-xl flex items-center justify-center p-2 relative shadow-xs">
-                <QrCode className="w-36 h-36 text-slate-900" />
-              </div>
+            {/* Real Scannable QR Code */}
+            <div className="p-3 bg-white border-2 border-emerald-500/30 rounded-2xl inline-block mx-auto shadow-sm">
+              <img
+                src={getPixQrCodeImageUrl(getStudentPixPayload(selectedAccountForPix), 240)}
+                alt="QR Code PIX Escaneável"
+                className="w-44 h-44 mx-auto rounded-xl"
+              />
+              <p className="text-[10px] text-slate-400 mt-1 font-medium">
+                Aponte a câmera do app do seu banco
+              </p>
             </div>
 
             <div>
@@ -458,6 +479,32 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ currentUser, curre
               <p className="text-xl font-extrabold font-mono text-emerald-700 mt-0.5">
                 {formatCurrencyBRL(selectedAccountForPix.saldoDevedorCentavos)}
               </p>
+            </div>
+
+            {/* Chave e Beneficiário Info */}
+            <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-left text-xs space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-emerald-800 font-semibold">Beneficiário:</span>
+                <span className="text-[11px] text-emerald-950 font-bold truncate max-w-[180px]">
+                  {pixConfig.beneficiarioPix}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-emerald-800 font-semibold">Chave PIX:</span>
+                <div className="flex items-center gap-1">
+                  <span className="font-mono text-[11px] text-emerald-950 font-extrabold truncate max-w-[150px]">
+                    {pixConfig.chavePix}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleCopyKey}
+                    className="p-1 rounded bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] cursor-pointer"
+                    title="Copiar Chave PIX"
+                  >
+                    {chaveCopied ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Copia e Cola */}

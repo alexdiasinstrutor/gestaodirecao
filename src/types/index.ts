@@ -8,6 +8,8 @@ export type OrganizationStatus = 'ATIVO' | 'BLOQUEADO' | 'PENDENTE_APROVACAO' | 
 
 export type SaaSPlanType = 'DEMO' | 'BASICO' | 'AVANCADO' | 'MASTER' | 'PRO' | 'ENTERPRISE';
 
+export type PixKeyType = 'CPF' | 'CNPJ' | 'EMAIL' | 'TELEFONE' | 'ALEATORIA';
+
 export interface Organization {
   id: string;
   nome: string;
@@ -32,6 +34,11 @@ export interface Organization {
   solicitadoPorEmail?: string;
   solicitadoPorTelefone?: string;
   motivoBloqueio?: string;
+  // Configurações de Recebimento PIX
+  chavePix?: string;
+  tipoChavePix?: PixKeyType;
+  beneficiarioPix?: string;
+  cidadePix?: string;
 }
 
 export interface User {
@@ -51,6 +58,11 @@ export interface User {
   avatarUrl?: string;
   senhaTemporaria?: string;
   aprovadoPorMaster?: boolean;
+  // Configurações de Recebimento PIX do Instrutor
+  chavePix?: string;
+  tipoChavePix?: PixKeyType;
+  beneficiarioPix?: string;
+  cidadePix?: string;
 }
 
 export interface Student {

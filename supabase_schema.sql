@@ -6,6 +6,17 @@
 -- 1. Habilitar extensões úteis
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- Migrações incrementais seguras para bancos já existentes
+ALTER TABLE IF EXISTS public.organizations ADD COLUMN IF NOT EXISTS chave_pix VARCHAR(255);
+ALTER TABLE IF EXISTS public.organizations ADD COLUMN IF NOT EXISTS tipo_chave_pix VARCHAR(50);
+ALTER TABLE IF EXISTS public.organizations ADD COLUMN IF NOT EXISTS beneficiario_pix VARCHAR(255);
+ALTER TABLE IF EXISTS public.organizations ADD COLUMN IF NOT EXISTS cidade_pix VARCHAR(100);
+
+ALTER TABLE IF EXISTS public.users ADD COLUMN IF NOT EXISTS chave_pix VARCHAR(255);
+ALTER TABLE IF EXISTS public.users ADD COLUMN IF NOT EXISTS tipo_chave_pix VARCHAR(50);
+ALTER TABLE IF EXISTS public.users ADD COLUMN IF NOT EXISTS beneficiario_pix VARCHAR(255);
+ALTER TABLE IF EXISTS public.users ADD COLUMN IF NOT EXISTS cidade_pix VARCHAR(100);
+
 -- 2. Tabela: ORGANIZATIONS (CFCs, Autoescolas e Instrutores Autônomos)
 CREATE TABLE IF NOT EXISTS public.organizations (
     id VARCHAR(100) PRIMARY KEY,
@@ -26,6 +37,10 @@ CREATE TABLE IF NOT EXISTS public.organizations (
     limite_alunos INTEGER DEFAULT 0,
     limite_instrutores INTEGER DEFAULT 0,
     motivo_bloqueio TEXT,
+    chave_pix VARCHAR(255),
+    tipo_chave_pix VARCHAR(50),
+    beneficiario_pix VARCHAR(255),
+    cidade_pix VARCHAR(100),
     criado_em TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -46,6 +61,10 @@ CREATE TABLE IF NOT EXISTS public.users (
     ultimo_acesso TIMESTAMPTZ,
     avatar_url TEXT,
     senha_temporaria VARCHAR(100),
+    chave_pix VARCHAR(255),
+    tipo_chave_pix VARCHAR(50),
+    beneficiario_pix VARCHAR(255),
+    cidade_pix VARCHAR(100),
     criado_em TIMESTAMPTZ DEFAULT NOW()
 );
 

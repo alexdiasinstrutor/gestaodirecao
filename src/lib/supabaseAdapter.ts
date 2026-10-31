@@ -39,6 +39,10 @@ function orgToRow(o: Organization): Record<string, any> {
     limite_alunos: o.limiteAlunos || 0,
     limite_instrutores: o.limiteInstrutores || 0,
     motivo_bloqueio: o.motivoBloqueio || null,
+    chave_pix: o.chavePix || null,
+    tipo_chave_pix: o.tipoChavePix || null,
+    beneficiario_pix: o.beneficiarioPix || null,
+    cidade_pix: o.cidadePix || null,
     criado_em: o.criadoEm || new Date().toISOString(),
   };
 }
@@ -64,6 +68,10 @@ function rowToOrg(r: any): Organization {
     limiteAlunos: r.limite_alunos,
     limiteInstrutores: r.limite_instrutores,
     motivoBloqueio: r.motivo_bloqueio,
+    chavePix: r.chave_pix,
+    tipoChavePix: r.tipo_chave_pix,
+    beneficiarioPix: r.beneficiario_pix,
+    cidadePix: r.cidade_pix,
   };
 }
 
@@ -84,6 +92,10 @@ function userToRow(u: User): Record<string, any> {
     ultimo_acesso: u.ultimoAcesso || null,
     avatar_url: u.avatarUrl || null,
     senha_temporaria: u.senhaTemporaria || null,
+    chave_pix: u.chavePix || null,
+    tipo_chave_pix: u.tipoChavePix || null,
+    beneficiario_pix: u.beneficiarioPix || null,
+    cidade_pix: u.cidadePix || null,
   };
 }
 
@@ -104,6 +116,10 @@ function rowToUser(r: any): User {
     ultimoAcesso: r.ultimo_acesso,
     avatarUrl: r.avatar_url,
     senhaTemporaria: r.senha_temporaria,
+    chavePix: r.chave_pix,
+    tipoChavePix: r.tipo_chave_pix,
+    beneficiarioPix: r.beneficiario_pix,
+    cidadePix: r.cidade_pix,
   };
 }
 

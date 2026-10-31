@@ -9,7 +9,8 @@ import {
   UserCheck,
   Shield,
   GraduationCap,
-  ChevronDown
+  ChevronDown,
+  QrCode
 } from 'lucide-react';
 import { User, Organization } from '../../types';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
@@ -22,6 +23,7 @@ interface HeaderProps {
   onSwitchUser: (email: string) => void;
   onOpenLGPD: () => void;
   onOpenDossieAndAgents?: () => void;
+  onOpenPixConfig?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -30,7 +32,8 @@ export const Header: React.FC<HeaderProps> = ({
   onLogout,
   onSwitchUser,
   onOpenLGPD,
-  onOpenDossieAndAgents
+  onOpenDossieAndAgents,
+  onOpenPixConfig
 }) => {
   const { isOnline, isSyncing, pendingCount, triggerSync } = useOnlineStatus();
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
@@ -191,6 +194,22 @@ export const Header: React.FC<HeaderProps> = ({
                         </span>
                       </div>
                     </div>
+
+                    {/* PIX Quick Action for Instructors and Admins */}
+                    {onOpenPixConfig && currentUser.papel !== 'ALUNO' && (
+                      <div className="px-2 py-1.5 border-b border-slate-100">
+                        <button
+                          onClick={() => {
+                            setShowSwitchMenu(false);
+                            onOpenPixConfig();
+                          }}
+                          className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs hover:bg-emerald-50 text-emerald-700 font-semibold flex items-center gap-2 cursor-pointer transition-colors"
+                        >
+                          <QrCode className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Configurar Chave PIX</span>
+                        </button>
+                      </div>
+                    )}
 
                     {/* Quick Profile Switching for Testing / RBAC Demonstration */}
                     <div className="px-2 py-1.5 border-b border-slate-100">

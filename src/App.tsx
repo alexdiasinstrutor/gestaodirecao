@@ -31,6 +31,7 @@ import { ReportsView } from './components/instructor/ReportsView';
 import { StudentPortal } from './components/student/StudentPortal';
 import { AdminMasterPanel } from './components/admin/AdminMasterPanel';
 import { SecurityAgentsModal } from './components/common/SecurityAgentsModal';
+import { PixConfigModal } from './components/common/PixConfigModal';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { canAccessModule } from './lib/saasPlans';
 
@@ -63,6 +64,7 @@ export default function App() {
   const [showStudentInviteModal, setShowStudentInviteModal] = useState<boolean>(false);
   const [showLGPDModal, setShowLGPDModal] = useState<boolean>(false);
   const [showSecurityAgentsModal, setShowSecurityAgentsModal] = useState<boolean>(false);
+  const [showPixConfigModal, setShowPixConfigModal] = useState<boolean>(false);
 
   const { isOnline, isSyncing, pendingCount, triggerSync } = useOnlineStatus();
 
@@ -158,6 +160,7 @@ export default function App() {
           onSwitchUser={handleSwitchUser}
           onOpenLGPD={() => setShowLGPDModal(true)}
           onOpenDossieAndAgents={() => setShowSecurityAgentsModal(true)}
+          onOpenPixConfig={() => setShowPixConfigModal(true)}
         />
       </div>
 
@@ -369,6 +372,25 @@ export default function App() {
           isOpen={showSecurityAgentsModal}
           onClose={() => setShowSecurityAgentsModal(false)}
           currentUserNome={currentUser.nome}
+        />
+      )}
+
+      {showPixConfigModal && (
+        <PixConfigModal
+          org={currentOrg}
+          user={currentUser}
+          onClose={() => setShowPixConfigModal(false)}
+          onSaved={() => {
+            setShowPixConfigModal(false);
+            if (currentUser) {
+              const u = db.getCurrentUser();
+              if (u) setCurrentUser({ ...u });
+            }
+            if (currentOrg) {
+              const o = db.getOrganization(currentOrg.id);
+              if (o) setCurrentOrg({ ...o });
+            }
+          }}
         />
       )}
     </div>

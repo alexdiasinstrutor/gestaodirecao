@@ -6,11 +6,12 @@ import {
   Key,
   Calendar,
   Sparkles,
-  UserCheck
+  UserCheck,
+  QrCode
 } from 'lucide-react';
 import { SAAS_PLANS, getPlanDetails } from '../../lib/saasPlans';
 import { generateCPFFingerprint } from '../../lib/validation';
-import type { Organization, OrganizationType, SaaSPlanType, User } from '../../types';
+import type { Organization, OrganizationType, SaaSPlanType, User, PixKeyType } from '../../types';
 
 interface OrganizationNewModalProps {
   onClose: () => void;
@@ -30,6 +31,12 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
   const [estado, setEstado] = useState('SP');
   const [plano, setPlano] = useState<SaaSPlanType>('BASICO');
   const [diasValidade, setDiasValidade] = useState<number>(30);
+
+  // Chave PIX Padrão
+  const [tipoChavePix, setTipoChavePix] = useState<PixKeyType>('CNPJ');
+  const [chavePix, setChavePix] = useState('');
+  const [beneficiarioPix, setBeneficiarioPix] = useState('');
+  const [cidadePix, setCidadePix] = useState('');
 
   // Instrutor/Gestor Inicial
   const [criarUsuarioInicial, setCriarUsuarioInicial] = useState(true);
@@ -62,7 +69,11 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
       valorMensalidadeCentavos: planDef.precoSugeridoMensalCentavos,
       chaveAcesso,
       chaveAcessoGeradaEm: new Date().toISOString(),
-      modulosCustomizados: [...planDef.modulosPermitidos]
+      modulosCustomizados: [...planDef.modulosPermitidos],
+      chavePix: chavePix.trim(),
+      tipoChavePix,
+      beneficiarioPix: beneficiarioPix.trim(),
+      cidadePix: cidadePix.trim()
     };
 
     let initialUser: User | undefined;
@@ -234,11 +245,75 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
             </div>
           </div>
 
+          {/* Chave PIX Oficial */}
+          <div className="pt-3 border-t border-slate-200 space-y-3">
+            <div className="flex items-center gap-1.5">
+              <QrCode className="w-4 h-4 text-emerald-600" />
+              <span className="font-bold text-slate-900 uppercase text-[10px] tracking-wider block">
+                3. Configuração de Recebimento PIX (Opcional)
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500">
+              Chave que receberá os pagamentos dos alunos via QR Code dinâmico e mensagens automáticas de cobrança.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Tipo de Chave PIX</label>
+                <select
+                  value={tipoChavePix}
+                  onChange={(e) => setTipoChavePix(e.target.value as PixKeyType)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white"
+                >
+                  <option value="CNPJ">CNPJ</option>
+                  <option value="CPF">CPF</option>
+                  <option value="TELEFONE">Telefone / Celular</option>
+                  <option value="EMAIL">E-mail</option>
+                  <option value="ALEATORIA">Chave Aleatória (EVP)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Chave PIX</label>
+                <input
+                  type="text"
+                  value={chavePix}
+                  onChange={(e) => setChavePix(e.target.value)}
+                  placeholder="Ex: 11999998888 ou pix@suaempresa.com"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono text-emerald-700"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Nome do Beneficiário</label>
+                <input
+                  type="text"
+                  value={beneficiarioPix}
+                  onChange={(e) => setBeneficiarioPix(e.target.value)}
+                  placeholder="Nome do titular no banco (máx 25 carac.)"
+                  maxLength={25}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Cidade do Beneficiário</label>
+                <input
+                  type="text"
+                  value={cidadePix}
+                  onChange={(e) => setCidadePix(e.target.value)}
+                  placeholder="Ex: SAO PAULO"
+                  maxLength={15}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl"
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Usuário Inicial */}
           <div className="pt-3 border-t border-slate-200 space-y-3">
             <div className="flex items-center justify-between">
               <span className="font-bold text-slate-900 uppercase text-[10px] tracking-wider">
-                3. Usuário Gestor / Instrutor Titular
+                4. Usuário Gestor / Instrutor Titular
               </span>
               <label className="flex items-center gap-1.5 cursor-pointer">
                 <input
