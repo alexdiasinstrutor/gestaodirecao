@@ -13,6 +13,7 @@ import {
   QrCode
 } from 'lucide-react';
 import { User, Organization } from '../../types';
+import { db } from '../../lib/storage';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { usePWAInstall } from '../../hooks/usePWAInstall';
 
@@ -211,42 +212,38 @@ export const Header: React.FC<HeaderProps> = ({
                       </div>
                     )}
 
-                    {/* Quick Profile Switching for Testing / RBAC Demonstration */}
-                    <div className="px-2 py-1.5 border-b border-slate-100">
-                      <p className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                        Alternar Perfil Rápido (Demonstração)
-                      </p>
-                      <button
-                        onClick={() => {
-                          onSwitchUser('instrutor@autoescola.com');
-                          setShowSwitchMenu(false);
-                        }}
-                        className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs hover:bg-slate-100 flex items-center gap-2 text-slate-700 cursor-pointer"
-                      >
-                        <UserCheck className="w-3.5 h-3.5 text-blue-600" />
-                        <span>Instrutor (Carlos Eduardo)</span>
-                      </button>
-                      <button
-                        onClick={() => {
-                          onSwitchUser('aluno@teste.com.br');
-                          setShowSwitchMenu(false);
-                        }}
-                        className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs hover:bg-slate-100 flex items-center gap-2 text-slate-700 cursor-pointer"
-                      >
-                        <GraduationCap className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Aluno Teste (Pedro Henrique)</span>
-                      </button>
-                      <button
-                        onClick={() => {
-                          onSwitchUser('admin@sistema.com.br');
-                          setShowSwitchMenu(false);
-                        }}
-                        className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs hover:bg-slate-100 flex items-center gap-2 text-slate-700 cursor-pointer"
-                      >
-                        <Shield className="w-3.5 h-3.5 text-purple-600" />
-                        <span>Super Admin Master</span>
-                      </button>
-                    </div>
+                    {/* Alternar entre Usuários Cadastrados */}
+                    {(() => {
+                      const otherUsers = db.getUsers().filter((u) => u.id !== currentUser.id);
+                      if (otherUsers.length === 0) return null;
+                      return (
+                        <div className="px-2 py-1.5 border-b border-slate-100">
+                          <p className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                            Alternar Perfil
+                          </p>
+                          <div className="max-h-36 overflow-y-auto space-y-1">
+                            {otherUsers.map((u) => (
+                              <button
+                                key={u.id}
+                                onClick={() => {
+                                  onSwitchUser(u.email);
+                                  setShowSwitchMenu(false);
+                                }}
+                                className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs hover:bg-slate-100 flex items-center justify-between gap-2 text-slate-700 cursor-pointer"
+                              >
+                                <div className="truncate">
+                                  <p className="font-semibold text-slate-900 truncate">{u.nome}</p>
+                                  <p className="text-[10px] text-slate-500 font-mono truncate">{u.email}</p>
+                                </div>
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 shrink-0">
+                                  {u.papel === 'SUPER_ADMIN' ? 'Master' : u.papel === 'ALUNO' ? 'Aluno' : 'Instrutor'}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     <div className="px-2 pt-1">
                       <button

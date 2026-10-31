@@ -213,69 +213,36 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             </button>
           </form>
 
-          {/* Quick profile shortcuts for Instant Testing */}
-          <div className="pt-4 border-t border-slate-200">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2 text-center">
-              Acesso Rápido para Testes & Demonstração
-            </p>
-            <div className="grid grid-cols-1 gap-2">
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('cassiordcosta@gmail.com')}
-                className="w-full flex items-center justify-between p-2.5 rounded-xl border border-purple-200 bg-purple-50/50 hover:bg-purple-100 hover:border-purple-300 text-left transition-colors cursor-pointer"
-              >
-                <div>
-                  <p className="text-xs font-bold text-slate-900">Cássio Costa (Administrador Master)</p>
-                  <p className="text-[11px] text-purple-700 font-mono font-medium">cassiordcosta@gmail.com</p>
+          {/* Contas Cadastradas no Sistema */}
+          {(() => {
+            const registeredUsers = db.getUsers();
+            if (registeredUsers.length === 0) return null;
+            return (
+              <div className="pt-4 border-t border-slate-200">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2 text-center">
+                  Contas Cadastradas no Sistema
+                </p>
+                <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">
+                  {registeredUsers.map((u) => (
+                    <button
+                      key={u.id}
+                      type="button"
+                      onClick={() => handleQuickLogin(u.email)}
+                      className="w-full flex items-center justify-between p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-purple-50 hover:border-purple-300 text-left transition-colors cursor-pointer"
+                    >
+                      <div>
+                        <p className="text-xs font-bold text-slate-900">{u.nome}</p>
+                        <p className="text-[11px] text-purple-700 font-mono font-medium">{u.email}</p>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-900 text-white">
+                        {u.papel === 'SUPER_ADMIN' ? 'Master' : u.papel === 'ALUNO' ? 'Aluno' : 'Instrutor'}
+                      </span>
+                    </button>
+                  ))}
                 </div>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-600 text-white shadow-2xs">
-                  Super Admin Master
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('instrutor@autoescola.com')}
-                className="w-full flex items-center justify-between p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-300 text-left transition-colors cursor-pointer"
-              >
-                <div>
-                  <p className="text-xs font-bold text-slate-900">Instrutor (Carlos Eduardo)</p>
-                  <p className="text-[11px] text-slate-500 font-mono">instrutor@autoescola.com</p>
-                </div>
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-blue-100 text-blue-800">
-                  Instrutor A
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('roberto@autoescola.com')}
-                className="w-full flex items-center justify-between p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-300 text-left transition-colors cursor-pointer"
-              >
-                <div>
-                  <p className="text-xs font-bold text-slate-900">Instrutor (Roberto Vasconcelos)</p>
-                  <p className="text-[11px] text-slate-500 font-mono">roberto@autoescola.com</p>
-                </div>
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-indigo-100 text-indigo-800">
-                  Instrutor B
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('aluno@teste.com.br')}
-                className="w-full flex items-center justify-between p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 text-left transition-colors cursor-pointer"
-              >
-                <div>
-                  <p className="text-xs font-bold text-slate-900">Aluno Padrão de Teste</p>
-                  <p className="text-[11px] text-slate-500 font-mono">aluno@teste.com.br</p>
-                </div>
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
-                  Portal do Aluno
-                </span>
-              </button>
-            </div>
-          </div>
+              </div>
+            );
+          })()}
 
           {/* Registration Links */}
           <div className="pt-2 border-t border-slate-200 flex flex-col sm:flex-row gap-2">
@@ -368,38 +335,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   <p className="text-[11px] text-purple-700 font-mono truncate">cassiordcosta@gmail.com</p>
                   <span className="inline-block mt-0.5 text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded bg-purple-200 text-purple-900">
                     Administrador Master
-                  </span>
-                </div>
-              </button>
-
-              <button
-                onClick={() => handleSelectGoogleAccount('instrutor@autoescola.com')}
-                className="w-full flex items-center gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-blue-50 text-left transition-colors cursor-pointer"
-              >
-                <div className="w-8 h-8 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-xs shrink-0">
-                  CE
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-bold text-slate-900 truncate">Carlos Eduardo</p>
-                  <p className="text-[11px] text-slate-500 font-mono truncate">instrutor@autoescola.com</p>
-                  <span className="inline-block mt-0.5 text-[9px] font-semibold uppercase px-1.5 py-0.2 rounded bg-blue-100 text-blue-800">
-                    Instrutor Credenciado
-                  </span>
-                </div>
-              </button>
-
-              <button
-                onClick={() => handleSelectGoogleAccount('roberto@autoescola.com')}
-                className="w-full flex items-center gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-indigo-50 text-left transition-colors cursor-pointer"
-              >
-                <div className="w-8 h-8 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center text-xs shrink-0">
-                  RV
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-bold text-slate-900 truncate">Roberto Vasconcelos</p>
-                  <p className="text-[11px] text-slate-500 font-mono truncate">roberto@autoescola.com</p>
-                  <span className="inline-block mt-0.5 text-[9px] font-semibold uppercase px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-800">
-                    Instrutor Credenciado
                   </span>
                 </div>
               </button>

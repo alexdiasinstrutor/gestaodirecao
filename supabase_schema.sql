@@ -278,6 +278,25 @@ CREATE INDEX IF NOT EXISTS idx_transfers_aluno ON public.student_transfers(aluno
 CREATE INDEX IF NOT EXISTS idx_whatsapp_logs_aluno ON public.whatsapp_logs(aluno_id);
 
 -- ==============================================================================
+-- 17. POLÍTICAS DE ACESSO (ROW LEVEL SECURITY - RLS)
+-- Permite leitura e escrita completa via chave pública anon (Dual-Write & Offline First)
+-- ==============================================================================
+ALTER TABLE public.organizations DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.users DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.students DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vehicles DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.lessons DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.accounts_receivable DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.payment_records DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.expenses DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.investments DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.package_offers DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.audit_logs DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.available_slots DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.student_transfers DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.whatsapp_logs DISABLE ROW LEVEL SECURITY;
+
+-- ==============================================================================
 -- FIM DO SCRIPT DDL
 -- ==============================================================================
 

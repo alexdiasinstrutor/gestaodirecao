@@ -12,7 +12,7 @@ import {
   LogOut,
   HeartPulse
 } from 'lucide-react';
-import { db, initDatabase } from './lib/storage';
+import { db, initDatabase, syncFromSupabase } from './lib/storage';
 import { User, Organization } from './types';
 import { Header } from './components/common/Header';
 import { TwoFactorModal } from './components/common/TwoFactorModal';
@@ -36,18 +36,33 @@ import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { canAccessModule } from './lib/saasPlans';
 
 export default function App() {
-  // Initialize storage & seeds on mount
+  // Initialize storage & seeds on mount, then hydrate from Supabase
   useEffect(() => {
     initDatabase();
+    syncFromSupabase().then(() => {
+      const u = db.getCurrentUser();
+      if (u?.id === 'usr_admin_master' || u?.id === 'usr_instrutor_carlos') {
+        db.setCurrentUser(null);
+        setCurrentUser(null);
+      } else if (u) {
+        setCurrentUser(u);
+        setCurrentOrg(db.getOrganization(u.organizacaoId));
+      }
+    });
   }, []);
 
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     initDatabase();
-    return db.getCurrentUser();
+    const u = db.getCurrentUser();
+    // Do not auto-login as legacy demo user
+    if (u?.id === 'usr_admin_master' || u?.id === 'usr_instrutor_carlos') {
+      db.setCurrentUser(null);
+      return null;
+    }
+    return u;
   });
 
   const [currentOrg, setCurrentOrg] = useState<Organization | undefined>(() => {
-    initDatabase();
     const user = db.getCurrentUser();
     return user ? db.getOrganization(user.organizacaoId) : db.getOrganizations()[0];
   });

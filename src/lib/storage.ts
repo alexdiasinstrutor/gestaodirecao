@@ -107,8 +107,8 @@ const STORAGE_KEYS = {
   SEEDED: 'agd_seeded_v5'
 };
 
-// Seed dataset
-function seedInitialData() {
+// Seed dataset de demonstração (opcional para testes)
+export function seedDemoData() {
   const orgId = 'org_direcao_certa_01';
 
   const defaultOrg: Organization = {
@@ -719,16 +719,143 @@ function seedInitialData() {
   localStorage.setItem(STORAGE_KEYS.WHATSAPP_LOGS, JSON.stringify([]));
   localStorage.setItem(STORAGE_KEYS.SYNC_QUEUE, JSON.stringify([]));
   localStorage.setItem(STORAGE_KEYS.SEEDED, 'true');
+}
 
-  // Default login to Instructor Carlos Eduardo for instant access
-  localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(users[1]));
+// Inicializa o banco de dados limpo e oficial para produção (Sem dados fictícios)
+export function seedCleanProductionData(): { org: Organization; user: User } {
+  const orgId = 'org_direcao_certa_01';
+
+  const defaultOrg: Organization = {
+    id: orgId,
+    nome: 'Sistema de Administração de Gestão de Direção',
+    tipo: 'INSTRUTOR_AUTONOMO',
+    cnpjCpf: '32.194.852/0001-44',
+    telefone: '(11) 98765-4321',
+    email: 'cassiordcosta@gmail.com',
+    cidade: 'São Paulo',
+    estado: 'SP',
+    status: 'ATIVO',
+    plano: 'MASTER',
+    criadoEm: new Date().toISOString()
+  };
+
+  const masterUser: User = {
+    id: 'usr_admin_cassio',
+    organizacaoId: orgId,
+    nome: 'Cássio Costa (Administrador Master)',
+    email: 'cassiordcosta@gmail.com',
+    papel: 'SUPER_ADMIN',
+    telefone: '(11) 98765-4321',
+    cpfUltimos4: '3300',
+    cpfFingerprint: generateCPFFingerprint('11122233300'),
+    cpfMascarado: '***.***.333-00',
+    cpfCompleto: '111.222.333-00',
+    twoFactorAtivo: false,
+    ultimoAcesso: new Date().toISOString(),
+    aprovadoPorMaster: true
+  };
+
+  writeList(STORAGE_KEYS.ORGANIZATIONS, [defaultOrg]);
+  writeList(STORAGE_KEYS.USERS, [masterUser]);
+  writeList(STORAGE_KEYS.STUDENTS, []);
+  writeList(STORAGE_KEYS.VEHICLES, []);
+  writeList(STORAGE_KEYS.SLOTS, []);
+  writeList(STORAGE_KEYS.LESSONS, []);
+  writeList(STORAGE_KEYS.PACKAGES, []);
+  writeList(STORAGE_KEYS.ACCOUNTS, []);
+  writeList(STORAGE_KEYS.PAYMENTS, []);
+  writeList(STORAGE_KEYS.EXPENSES, []);
+  writeList(STORAGE_KEYS.INVESTMENTS, []);
+  writeList(STORAGE_KEYS.AUDIT, []);
+  writeList(STORAGE_KEYS.WHATSAPP_LOGS, []);
+  writeList(STORAGE_KEYS.SYNC_QUEUE, []);
+  localStorage.setItem(STORAGE_KEYS.SEEDED, 'true');
+
+  // Não auto-loga no master: exige autenticação do usuário
+  const current = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+  if (current) {
+    try {
+      const u = JSON.parse(current);
+      if (u.id === 'usr_admin_master' || u.id === 'usr_instrutor_carlos' || u.email === 'admin@sistema.com.br') {
+        localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+      }
+    } catch {
+      localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+    }
+  }
+
+  // Persiste no Supabase caso esteja conectado
+  if (supabaseAdapter.enabled) {
+    supabaseAdapter.saveOrganization(defaultOrg).catch(console.error);
+    supabaseAdapter.saveUser(masterUser).catch(console.error);
+  }
+
+  return { org: defaultOrg, user: masterUser };
+}
+
+// Sincronização inicial com o Supabase (Hydration)
+export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'supabase' | 'clean' }> {
+  if (!supabaseAdapter.enabled) return { synced: false, source: 'clean' };
+
+  try {
+    const orgs = await supabaseAdapter.getOrganizations();
+    const users = await supabaseAdapter.getUsers();
+
+    if (orgs.length === 0 && users.length === 0) {
+      // Supabase está 100% limpo! Garante que o localStorage também fica limpo
+      seedCleanProductionData();
+      return { synced: true, source: 'clean' };
+    }
+
+    // Supabase possui dados reais cadastrados: hidrata o localStorage a partir do Supabase
+    writeList(STORAGE_KEYS.ORGANIZATIONS, orgs);
+    writeList(STORAGE_KEYS.USERS, users);
+
+    const orgId = orgs[0]?.id;
+    if (orgId) {
+      const [students, vehicles, lessons, slots, accounts, payments, expenses, investments, packages] =
+        await Promise.all([
+          supabaseAdapter.getStudents(orgId),
+          supabaseAdapter.getVehicles(orgId),
+          supabaseAdapter.getLessons(orgId),
+          supabaseAdapter.getSlots(orgId),
+          supabaseAdapter.getAccountsReceivable(orgId),
+          supabaseAdapter.getPayments(orgId),
+          supabaseAdapter.getExpenses(orgId),
+          supabaseAdapter.getInvestments(orgId),
+          supabaseAdapter.getPackages(orgId)
+        ]);
+
+      writeList(STORAGE_KEYS.STUDENTS, students || []);
+      writeList(STORAGE_KEYS.VEHICLES, vehicles || []);
+      writeList(STORAGE_KEYS.LESSONS, lessons || []);
+      writeList(STORAGE_KEYS.SLOTS, slots || []);
+      writeList(STORAGE_KEYS.ACCOUNTS, accounts || []);
+      writeList(STORAGE_KEYS.PAYMENTS, payments || []);
+      writeList(STORAGE_KEYS.EXPENSES, expenses || []);
+      writeList(STORAGE_KEYS.INVESTMENTS, investments || []);
+      writeList(STORAGE_KEYS.PACKAGES, packages || []);
+    }
+
+    return { synced: true, source: 'supabase' };
+  } catch (err) {
+    console.error('Erro na sincronização com Supabase:', err);
+    return { synced: false, source: 'clean' };
+  }
 }
 
 // Initialize seed if not already done
 export function initDatabase() {
   const seeded = localStorage.getItem(STORAGE_KEYS.SEEDED);
-  if (!seeded) {
-    seedInitialData();
+  const students = readList<Student>(STORAGE_KEYS.STUDENTS);
+  const isLegacyDemo = students.some(
+    (s) => s.id === 'stu_pedro_silva' || s.id === 'stu_mariana_souza' || s.nome === 'Pedro Henrique Silva'
+  );
+
+  // Se nunca foi iniciado ou se ainda tem resquício dos alunos fictícios antigos (Pedro Henrique, Mariana, etc.):
+  if (!seeded || isLegacyDemo) {
+    seedCleanProductionData();
+    return;
   } else {
     // Migration: update existing organization name if it still has the old name
     try {
@@ -1743,90 +1870,23 @@ export const db = {
     };
   },
 
-  // Reset demo database
-  resetDatabase(): void {
-    localStorage.removeItem(STORAGE_KEYS.ORGANIZATIONS);
-    localStorage.removeItem(STORAGE_KEYS.USERS);
-    localStorage.removeItem(STORAGE_KEYS.STUDENTS);
-    localStorage.removeItem(STORAGE_KEYS.VEHICLES);
-    localStorage.removeItem(STORAGE_KEYS.SLOTS);
-    localStorage.removeItem(STORAGE_KEYS.LESSONS);
-    localStorage.removeItem(STORAGE_KEYS.PACKAGES);
-    localStorage.removeItem(STORAGE_KEYS.ACCOUNTS);
-    localStorage.removeItem(STORAGE_KEYS.PAYMENTS);
-    localStorage.removeItem(STORAGE_KEYS.EXPENSES);
-    localStorage.removeItem(STORAGE_KEYS.INVESTMENTS);
-    localStorage.removeItem(STORAGE_KEYS.AUDIT);
-    localStorage.removeItem(STORAGE_KEYS.WHATSAPP_LOGS);
-    localStorage.removeItem(STORAGE_KEYS.SYNC_QUEUE);
-    localStorage.removeItem(STORAGE_KEYS.SEEDED);
-    seedInitialData();
+  // Reset database limpo
+  async resetDatabase(): Promise<void> {
+    if (supabaseAdapter.enabled) {
+      await supabaseAdapter.wipeAllData({ keepMasterAdmin: true });
+    }
+    seedCleanProductionData();
+    localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
   },
 
-  // Limpa todos os dados fictícios de demonstração para entrada em produção oficial (Go-Live)
+  // Limpa todos os dados de teste para entrada em produção oficial (Go-Live)
   // Preserva estritamente a conta do Administrador Master (cassiordcosta@gmail.com) e sua Organização Master
-  clearDatabaseForProduction(): void {
-    const orgId = 'org_direcao_certa_01';
-    const masterOrg: Organization = {
-      id: orgId,
-      nome: 'Sistema de Administração de Gestão de Direção',
-      tipo: 'INSTRUTOR_AUTONOMO',
-      cnpjCpf: '32.194.852/0001-44',
-      telefone: '(11) 98765-4321',
-      email: 'cassiordcosta@gmail.com',
-      cidade: 'São Paulo',
-      estado: 'SP',
-      status: 'ATIVO',
-      plano: 'MASTER',
-      criadoEm: new Date().toISOString()
-    };
-
-    const masterUser: User = {
-      id: 'usr_admin_cassio',
-      organizacaoId: orgId,
-      nome: 'Cássio Costa (Administrador Master)',
-      email: 'cassiordcosta@gmail.com',
-      papel: 'SUPER_ADMIN',
-      telefone: '(11) 98765-4321',
-      cpfUltimos4: '3300',
-      cpfFingerprint: generateCPFFingerprint('11122233300'),
-      cpfMascarado: '***.***.333-00',
-      cpfCompleto: '111.222.333-00',
-      twoFactorAtivo: true,
-      ultimoAcesso: new Date().toISOString()
-    };
-
-    const initialAudit: AuditLog[] = [
-      {
-        id: `aud_golive_${Date.now()}`,
-        organizacaoId: orgId,
-        usuarioId: masterUser.id,
-        usuarioNome: masterUser.nome,
-        acao: 'SISTEMA_GOLIVE_LIMPEZA',
-        entidade: 'database',
-        entidadeId: orgId,
-        detalhes: 'Base de dados limpa e inicializada com sucesso para ambiente de produção oficial.',
-        ipOrigem: '127.0.0.1',
-        timestamp: new Date().toISOString()
-      }
-    ];
-
-    writeList(STORAGE_KEYS.ORGANIZATIONS, [masterOrg]);
-    writeList(STORAGE_KEYS.USERS, [masterUser]);
-    writeList(STORAGE_KEYS.STUDENTS, []);
-    writeList(STORAGE_KEYS.VEHICLES, []);
-    writeList(STORAGE_KEYS.SLOTS, []);
-    writeList(STORAGE_KEYS.LESSONS, []);
-    writeList(STORAGE_KEYS.PACKAGES, []);
-    writeList(STORAGE_KEYS.ACCOUNTS, []);
-    writeList(STORAGE_KEYS.PAYMENTS, []);
-    writeList(STORAGE_KEYS.EXPENSES, []);
-    writeList(STORAGE_KEYS.INVESTMENTS, []);
-    writeList(STORAGE_KEYS.AUDIT, initialAudit);
-    writeList(STORAGE_KEYS.WHATSAPP_LOGS, []);
-    writeList(STORAGE_KEYS.SYNC_QUEUE, []);
-    localStorage.setItem(STORAGE_KEYS.SEEDED, 'true');
-    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(masterUser));
+  async clearDatabaseForProduction(): Promise<void> {
+    if (supabaseAdapter.enabled) {
+      await supabaseAdapter.wipeAllData({ keepMasterAdmin: true });
+    }
+    seedCleanProductionData();
+    localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
   },
 
   getAllDataForExport() {

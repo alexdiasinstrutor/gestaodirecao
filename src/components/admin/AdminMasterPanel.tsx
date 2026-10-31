@@ -37,7 +37,7 @@ import {
   Filter,
   Rocket
 } from 'lucide-react';
-import { db, CadastrosIntegrityReport } from '../../lib/storage';
+import { db, CadastrosIntegrityReport, seedDemoData } from '../../lib/storage';
 import { formatCurrencyBRL, formatDateBR } from '../../lib/validation';
 import { getPlanDetails, SAAS_PLANS } from '../../lib/saasPlans';
 import { Organization, User, Student, SaaSPlanType, OrganizationStatus } from '../../types';
@@ -127,30 +127,34 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({ currentUser,
     }
   };
 
-  const handleResetData = () => {
-    if (window.confirm('Deseja realmente redefinir o banco de dados para os dados padrão de demonstração?')) {
-      db.resetDatabase();
+  const handleResetData = async () => {
+    if (window.confirm('Deseja realmente carregar os dados simulados de demonstração (teste)?')) {
+      setIsScanning(true);
+      seedDemoData();
       setResetSuccess(true);
       setTimeout(() => {
         setResetSuccess(false);
+        setIsScanning(false);
         window.location.reload();
       }, 1000);
     }
   };
 
-  const handleCleanForProduction = () => {
+  const handleCleanForProduction = async () => {
     if (
       window.confirm(
-        'ATENÇÃO: Deseja realmente LIMPAR todos os dados fictícios de teste e preparar o banco para PRODUÇÃO (Go-Live)?\n\n' +
+        'ATENÇÃO: Deseja realmente LIMPAR todos os dados do banco (Supabase e Local) para PRODUÇÃO?\n\n' +
         '✓ Sua conta Master (cassiordcosta@gmail.com) e sua Organização Master serão mantidas intactas com Plano Master.\n' +
-        '✓ Todos os alunos, aulas, despesas e pagamentos fictícios de teste serão removidos.\n' +
-        '✓ O sistema ficará pronto para cadastrar clientes e alunos reais.'
+        '✓ Todos os alunos, aulas, faturas, despesas e pagamentos serão apagados definitivamente do Supabase e do navegador.\n' +
+        '✓ O sistema voltará para a tela de login pronto para cadastrar clientes e alunos reais.'
       )
     ) {
-      db.clearDatabaseForProduction();
+      setIsScanning(true);
+      await db.clearDatabaseForProduction();
       setResetSuccess(true);
       setTimeout(() => {
         setResetSuccess(false);
+        setIsScanning(false);
         window.location.reload();
       }, 1000);
     }
@@ -268,22 +272,32 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({ currentUser,
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={() => onSwitchUser('instrutor@autoescola.com')}
-              className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors cursor-pointer"
-              title="Acessar ambiente como Instrutor Carlos Eduardo"
-            >
-              <Users className="w-4 h-4" />
-              Simular Instrutor
-            </button>
-            <button
-              onClick={() => onSwitchUser('aluno@teste.com.br')}
-              className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors cursor-pointer"
-              title="Acessar ambiente como Aluno Pedro"
-            >
-              <GraduationCap className="w-4 h-4" />
-              Simular Aluno
-            </button>
+            {allUsers.find((u) => u.papel === 'INSTRUTOR' || u.papel === 'ADMIN_ORG') && (
+              <button
+                onClick={() => {
+                  const inst = allUsers.find((u) => u.papel === 'INSTRUTOR' || u.papel === 'ADMIN_ORG');
+                  if (inst) onSwitchUser(inst.email);
+                }}
+                className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors cursor-pointer"
+                title="Acessar ambiente como Instrutor"
+              >
+                <Users className="w-4 h-4" />
+                Visualizar como Instrutor
+              </button>
+            )}
+            {allUsers.find((u) => u.papel === 'ALUNO') && (
+              <button
+                onClick={() => {
+                  const al = allUsers.find((u) => u.papel === 'ALUNO');
+                  if (al) onSwitchUser(al.email);
+                }}
+                className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors cursor-pointer"
+                title="Acessar ambiente como Aluno"
+              >
+                <GraduationCap className="w-4 h-4" />
+                Visualizar como Aluno
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -701,6 +701,35 @@ export const supabaseAdapter = {
       autor_nome: transfer.autorNome,
     });
   },
+
+  // Limpeza total de dados para ambiente de produção
+  async wipeAllData(options?: { keepMasterAdmin?: boolean }): Promise<void> {
+    if (!supabase) return;
+    try {
+      // Ordem reversa de integridade referencial:
+      await supabase.from('whatsapp_logs').delete().neq('id', '___none___');
+      await supabase.from('student_transfers').delete().neq('id', '___none___');
+      await supabase.from('audit_logs').delete().neq('id', '___none___');
+      await supabase.from('payment_records').delete().neq('id', '___none___');
+      await supabase.from('accounts_receivable').delete().neq('id', '___none___');
+      await supabase.from('lessons').delete().neq('id', '___none___');
+      await supabase.from('available_slots').delete().neq('id', '___none___');
+      await supabase.from('package_offers').delete().neq('id', '___none___');
+      await supabase.from('investments').delete().neq('id', '___none___');
+      await supabase.from('expenses').delete().neq('id', '___none___');
+      await supabase.from('vehicles').delete().neq('id', '___none___');
+      await supabase.from('students').delete().neq('id', '___none___');
+
+      if (!options?.keepMasterAdmin) {
+        await supabase.from('users').delete().neq('id', '___none___');
+        await supabase.from('organizations').delete().neq('id', '___none___');
+      } else {
+        await supabase.from('users').delete().neq('email', 'cassiordcosta@gmail.com');
+      }
+    } catch (e) {
+      console.error('[Supabase] Erro ao limpar tabelas no Supabase:', e);
+    }
+  },
 };
 
 export default supabaseAdapter;
