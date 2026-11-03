@@ -1,9 +1,9 @@
 // Helper engine for Official Dossier Document generation, viewing and PDF printing
 
 export const DOSSIER_METADATA = {
-  title: 'Dossiê Técnico Homologado - Sistema de Gestão de Direção',
-  version: 'v5.6 Auditada, Homologada e Pronta para Produção (Go-Live & Supabase)',
-  date: 'Outubro de 2026',
+  title: 'Dossiê Técnico Homologado - Gestão AD (Auto Direção)',
+  version: 'v6.0 Auditada, Responsiva (Modo Mobile & Normal) e Integrada ao Supabase',
+  date: 'Novembro de 2026',
   masterAdmin: 'cassiordcosta@gmail.com',
   regulations: 'CTB, CONTRAN e LGPD (Lei 13.709/2018)'
 };
@@ -18,37 +18,39 @@ export function getOfficialDossierHtml(): string {
         <span class="badge success">SISTEMA AUDITADO & BLINDADO</span>
         <span class="badge neutral">CONFORMIDADE CTB / CONTRAN / LGPD</span>
       </div>
-      <h1 class="doc-title">Sistema de Administração de Gestão de Direção</h1>
-      <p class="doc-subtitle">Dossiê Técnico, Arquitetura de Software, Catálogo de Telas, Regras de Negócio e Dicionário de Dados</p>
+      <h1 class="doc-title">Gestão AD (Auto Direção)</h1>
+      <p class="doc-subtitle">Dossiê Técnico, Arquitetura Responsiva (Mobile/Tablet/Desktop), Catálogo de Telas, Regras de Negócio e Dicionário de Dados</p>
       
       <div class="meta-grid">
         <div class="meta-item">
           <strong>Versão da Plataforma:</strong>
-          <span>v5.6 Estável, Homologada e Pronta para Produção</span>
+          <span>v6.0 Estável, Homologada e Pronta para Produção (Modo Mobile Simplificado + Normal)</span>
         </div>
         <div class="meta-item">
           <strong>Administrador Master:</strong>
-          <span>cassiordcosta@gmail.com</span>
+          <span>cassiordcosta@gmail.com (Suporte Multi-Master Ativo)</span>
         </div>
         <div class="meta-item">
           <strong>Data de Registro:</strong>
-          <span>Outubro de 2026</span>
+          <span>Novembro de 2026</span>
         </div>
         <div class="meta-item">
           <strong>Tipo de Banco de Dados:</strong>
-          <span>Google Cloud Firestore + Offline-First (IndexedDB)</span>
+          <span>Supabase PostgreSQL Dual-Write + Cloud Firestore + Offline-First</span>
         </div>
       </div>
     </header>
 
     <!-- 1. Resumo Executivo -->
     <section class="doc-section">
-      <h2>1. Resumo Executivo e Identificação do Sistema</h2>
-      <p>O <strong>Sistema de Administração de Gestão de Direção</strong> é uma plataforma tecnológica de nível corporativo e pedagógico desenvolvida para atender com máxima segurança, conformidade e rigor operacional:</p>
+      <h2>1. Resumo Executivo e Identificação do Sistema (Gestão AD)</h2>
+      <p>O <strong>Gestão AD (Auto Direção)</strong> é uma plataforma tecnológica de nível corporativo e pedagógico desenvolvida para atender com máxima segurança, conformidade e rigor operacional:</p>
       <ul>
-        <li><strong>Instrutores de Trânsito Autônomos</strong>: Gestão individual de carteira de alunos, aulas, agendas diurnas/noturnas e faturamento.</li>
+        <li><strong>Instrutores de Trânsito Autônomos</strong>: Gestão individual de carteira de alunos nas 12 categorias oficiais de CNH (ACC, A, B, AB, C, AC, D, AD, E, AE, PCD e OUTRA), agendas diurnas/noturnas, PIX dinâmico editável (beneficiário de até 50 caracteres) e faturamento.</li>
         <li><strong>Centros de Formação de Condutores (CFCs / Autoescolas)</strong>: Gestão unificada de múltiplos instrutores, frota de veículos, DRE consolidado e controle financeiro.</li>
-        <li><strong>Candidatos à Habilitação (Alunos)</strong>: Acompanhamento aula a aula do processo de aprendizagem, notas de habilidades, agendamentos e quitações financeiras.</li>
+        <li><strong>Candidatos à Habilitação (Alunos)</strong>: Acompanhamento aula a aula do processo de aprendizagem, notas de habilidades, agendamentos e quitações via QR Code PIX.</li>
+        <li><strong>Interface Adaptativa Inteligente (Mobile / Tablet / Desktop)</strong>: Detecção automática do dispositivo com <strong>Modo Mobile Simplificado</strong> (exibindo apenas os recursos essenciais para Instrutor, Aluno e Master em campo) e alternância em 1 clique para o <strong>Modo Normal (Completo)</strong> com todos os menus e painéis.</li>
+        <li><strong>Governança Master Avançada</strong>: Gestão completa da equipe de Administradores Master (<code>SUPER_ADMIN</code>), incluindo troca de senha direta no Módulo Master, recuperação de senha por e-mail + CPF (LGPD), edição cadastral e inclusão de novos usuários Master.</li>
       </ul>
     </section>
 

@@ -384,3 +384,4 @@ export const MasterUserEditModal: React.FC<MasterUserEditModalProps> = ({
     </div>
   );
 };
+

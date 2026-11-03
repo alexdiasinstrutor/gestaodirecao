@@ -50,7 +50,7 @@ export const OfficialDossierPdfViewer: React.FC<OfficialDossierPdfViewerProps> =
             </span>
             <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
               <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-              v5.6 Homologada
+              v6.0 Homologada
             </span>
             <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-slate-100 text-slate-700">
               PDF Real (jsPDF Engine)
@@ -152,21 +152,21 @@ export const OfficialDossierPdfViewer: React.FC<OfficialDossierPdfViewerProps> =
               REPÚBLICA FEDERATIVA DO BRASIL · SISTEMA NACIONAL DE TRÂNSITO
             </span>
             <span className="font-mono text-[11px] bg-slate-100 px-2.5 py-0.5 rounded">
-              HOMOLOGADO: OUTUBRO DE 2026
+              HOMOLOGADO: NOVEMBRO DE 2026
             </span>
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-950 tracking-tight">
-            Sistema de Administração de Gestão de Direção
+            Gestão AD (Auto Direção)
           </h1>
           <p className="text-sm text-slate-600">
-            Dossiê Técnico, Arquitetura de Software, Catálogo de Telas, Regras de Negócio e Dicionário de Dados
+            Dossiê Técnico, Arquitetura Adaptativa (Mobile/Tablet/Desktop), Catálogo de Telas, Regras de Negócio e Dicionário de Dados
           </p>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs mt-3">
             <div>
               <span className="text-slate-500 block text-[11px]">Versão da Plataforma:</span>
-              <strong className="text-slate-900 font-mono">v5.3 Estável</strong>
+              <strong className="text-slate-900 font-mono">v6.0 Estável</strong>
             </div>
             <div>
               <span className="text-slate-500 block text-[11px]">Administrador Master:</span>
@@ -176,11 +176,11 @@ export const OfficialDossierPdfViewer: React.FC<OfficialDossierPdfViewerProps> =
             </div>
             <div>
               <span className="text-slate-500 block text-[11px]">Banco de Dados:</span>
-              <strong className="text-emerald-700">Cloud Firestore</strong>
+              <strong className="text-emerald-700">Supabase SQL + Firestore</strong>
             </div>
             <div>
-              <span className="text-slate-500 block text-[11px]">Modo Operacional:</span>
-              <strong className="text-slate-800">Offline-First Híbrido</strong>
+              <span className="text-slate-500 block text-[11px]">Interface Adaptativa:</span>
+              <strong className="text-slate-800">Modo Mobile & Normal</strong>
             </div>
           </div>
         </div>
@@ -192,13 +192,13 @@ export const OfficialDossierPdfViewer: React.FC<OfficialDossierPdfViewerProps> =
             Resumo Executivo e Identificação do Sistema
           </h2>
           <p className="text-xs text-slate-700 leading-relaxed">
-            O <strong>Sistema de Administração de Gestão de Direção</strong> é uma plataforma full-stack de gestão pedagógica, operacional e financeira desenvolvida para Centros de Formação de Condutores (CFCs / Autoescolas), Instrutores de Trânsito Autônomos e Candidatos à Habilitação.
+            O <strong>Gestão AD (Auto Direção)</strong> é uma plataforma full-stack de gestão pedagógica, operacional e financeira desenvolvida para Centros de Formação de Condutores (CFCs / Autoescolas), Instrutores de Trânsito Autônomos e Candidatos à Habilitação.
           </p>
           <ul className="list-disc pl-5 text-xs text-slate-700 space-y-1">
-            <li><strong>Gestão Pedagógica CONTRAN</strong>: Acompanhamento de 8 competências práticas (baliza, embreagem, rodovia, etc.) avaliadas de 0 a 10.</li>
-            <li><strong>Gestão Financeira em Centavos</strong>: Contas a receber, carnês, baixa de parcelas e integração com PIX dinâmico (Copia e Cola + QR Code).</li>
-            <li><strong>Agenda Prática Noturna</strong>: Operação das 06:00 às 00:00 atendendo às exigências de carga horária noturna do Código de Trânsito Brasileiro.</li>
-            <li><strong>Governança Estrita RBAC</strong>: Níveis categóricos de privilégio para Administrador Master, Gestores de CFC, Instrutores e Alunos.</li>
+            <li><strong>Gestão Pedagógica CONTRAN & 12 Categorias de CNH</strong>: Suporte às 12 categorias oficiais (ACC, A, B, AB, C, AC, D, AD, E, AE, PCD e OUTRA) e avaliação de 8 competências práticas de 0 a 10.</li>
+            <li><strong>Gestão Financeira em Centavos & PIX Editável</strong>: Contas a receber, carnês, baixa de parcelas e configuração dinâmica de Chave PIX + Beneficiário (até 50 caracteres) com geração automática de QR Code EMV.</li>
+            <li><strong>Modo Mobile Simplificado & Modo Normal (Detecção Automática)</strong>: Identifica automaticamente a interface física (Mobile, Tablet ou Desktop), oferecendo o Modo Mobile Simplificado com os recursos essenciais para Instrutor, Aluno e Master, e o botão Modo Normal que libera todos os menus e painéis sem quebra visual.</li>
+            <li><strong>Governança Master Avançada (Multi-Master & Senhas)</strong>: Módulo Master com troca direta de senha, recuperação de senha por e-mail + CPF (LGPD), edição de dados cadastrais do Master e inclusão de novos usuários <code>SUPER_ADMIN</code>.</li>
           </ul>
         </section>
 

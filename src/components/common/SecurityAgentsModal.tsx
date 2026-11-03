@@ -1502,6 +1502,48 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                   </div>
                 )}
 
+                {/* UX_UI Item Novo: Modo Mobile Simplificado & Detecção de Interface */}
+                {(validationFilter === 'TODOS' || validationFilter === 'UX_UI') && (
+                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Smartphone className="w-4 h-4 text-purple-600" />
+                        <h4 className="text-xs font-bold text-slate-900">Modo Mobile Simplificado vs Modo Normal</h4>
+                      </div>
+                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                        APROVADO
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      Detecção automática da interface física (<code className="text-purple-600 font-mono">Mobile / Tablet / Desktop</code>). No Modo Simplificado, exibe apenas os recursos essenciais para Instrutor, Aluno e Master; ao clicar em <strong>Modo Normal</strong>, libera todos os menus com responsividade total.
+                    </p>
+                    <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
+                      Hook: useInterfaceMode (SIMPLIFIED vs FULL)
+                    </div>
+                  </div>
+                )}
+
+                {/* ENGENHARIA Item Novo: Gestão de Equipe Master & Recuperação de Senha */}
+                {(validationFilter === 'TODOS' || validationFilter === 'ENGENHARIA') && (
+                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <KeyRound className="w-4 h-4 text-blue-600" />
+                        <h4 className="text-xs font-bold text-slate-900">Gestão Multi-Master, Troca de Senha e PIX Dinâmico</h4>
+                      </div>
+                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                        APROVADO
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      Módulo Master com troca direta de senha, recuperação por e-mail + CPF, edição cadastral e inclusão de novos usuários Master. Suporte às 12 categorias de CNH e configuração PIX editável com beneficiário de até 50 caracteres.
+                    </p>
+                    <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
+                      Sincronização Dual-Write: LocalStorage + Supabase PostgreSQL
+                    </div>
+                  </div>
+                )}
+
               </div>
 
               {/* Technical Sign-Off Footer */}

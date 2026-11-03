@@ -14,7 +14,8 @@ import {
   User,
   Phone,
   ShieldCheck,
-  X
+  X,
+  LayoutGrid
 } from 'lucide-react';
 import { db } from '../../lib/storage';
 import { formatCurrencyBRL, formatDateBR } from '../../lib/validation';
@@ -31,10 +32,18 @@ import {
 interface StudentPortalProps {
   currentUser: UserType;
   currentOrg: Organization;
+  isSimplified?: boolean;
+  onSwitchToFullMode?: () => void;
 }
 
-export const StudentPortal: React.FC<StudentPortalProps> = ({ currentUser, currentOrg }) => {
+export const StudentPortal: React.FC<StudentPortalProps> = ({
+  currentUser,
+  currentOrg,
+  isSimplified = false,
+  onSwitchToFullMode
+}) => {
   const orgId = currentOrg.id;
+  const [studentMobileTab, setStudentMobileTab] = useState<'BOOK' | 'PIX' | 'PROGRESS'>('BOOK');
 
   // Find student entity matching this user (by email or id)
   const students = db.getStudents(orgId);
@@ -207,248 +216,315 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ currentUser, curre
         </div>
       )}
 
-      {/* Main Grid: Book a Lesson & Skills Radar */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* SECTION: AGENDAR NOVA AULA PRÁTICA */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-blue-600" />
-              Agendar Nova Aula Prática
-            </h2>
-            <span className="text-xs text-slate-500">
-              Apenas horários liberados e sem conflitos
-            </span>
-          </div>
+      {/* Barra de Navegação Simplificada do Aluno (Modo Mobile Simplificado) */}
+      {isSimplified && (
+        <div className="bg-white p-1.5 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-1 overflow-x-auto no-scrollbar">
+          <button
+            type="button"
+            onClick={() => setStudentMobileTab('BOOK')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer touch-target ${
+              studentMobileTab === 'BOOK'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <Calendar className="w-4 h-4 shrink-0" />
+            <span>Agendar Aula</span>
+          </button>
 
-          {scheduleError && (
-            <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
-              <span>{scheduleError}</span>
-            </div>
+          <button
+            type="button"
+            onClick={() => setStudentMobileTab('PIX')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer touch-target ${
+              studentMobileTab === 'PIX'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <QrCode className="w-4 h-4 shrink-0" />
+            <span>Pagar PIX</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setStudentMobileTab('PROGRESS')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer touch-target ${
+              studentMobileTab === 'PROGRESS'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <Award className="w-4 h-4 shrink-0" />
+            <span>Aulas & Notas</span>
+          </button>
+
+          {onSwitchToFullMode && (
+            <button
+              type="button"
+              onClick={onSwitchToFullMode}
+              className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-bold whitespace-nowrap bg-slate-900 text-white hover:bg-slate-800 transition-all cursor-pointer touch-target shrink-0"
+              title="Exibir todas as seções simultaneamente no Modo Normal"
+            >
+              <LayoutGrid className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+              <span>Modo Normal</span>
+            </button>
           )}
+        </div>
+      )}
 
-          <form onSubmit={handleBookLesson} className="space-y-4 text-xs">
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">
-                Escolha a Data da Aula:
-              </label>
-              <input
-                type="date"
-                required
-                value={scheduleDate}
-                min={new Date().toISOString().slice(0, 10)}
-                onChange={(e) => {
-                  setScheduleDate(e.target.value);
-                  setSelectedSlot(null);
-                }}
-                className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 font-bold"
-              />
+      {/* Main Grid: Book a Lesson & Skills Radar */}
+      <div className={`grid grid-cols-1 ${isSimplified ? '' : 'lg:grid-cols-2'} gap-5 sm:gap-6`}>
+        {/* SECTION: AGENDAR NOVA AULA PRÁTICA */}
+        {(!isSimplified || studentMobileTab === 'BOOK') && (
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-1 pb-2 border-b border-slate-100">
+              <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-blue-600 shrink-0" />
+                <span>Agendar Nova Aula Prática</span>
+              </h2>
+              <span className="text-[11px] text-slate-500">
+                Apenas horários liberados
+              </span>
             </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block font-semibold text-slate-700">
-                  Horários Liberados pelo Instrutor para {formatDateBR(scheduleDate)}:
-                </label>
-                <span className="text-[10px] text-slate-500 font-medium">
-                  Faixa disponível: 06h às 00h
-                </span>
+            {scheduleError && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                <span>{scheduleError}</span>
               </div>
-              {availableSlotsOnDate.length === 0 ? (
-                <div className="p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-center text-slate-400">
-                  <Clock className="w-6 h-6 mx-auto mb-1 text-slate-300" />
-                  <p>Nenhum horário livre ou liberado pelo instrutor para esta data.</p>
-                  <p className="text-[11px] mt-0.5 text-slate-500">Experimente selecionar outro dia no calendário acima.</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                    {availableSlotsOnDate
-                      .slice()
-                      .sort((a, b) => a.horaInicio.localeCompare(b.horaInicio))
-                      .map((slot) => {
-                        const isSelected = selectedSlot === slot.horaInicio;
-                        const hour = parseInt(slot.horaInicio.split(':')[0], 10);
-                        const isNight = hour >= 19 || slot.horaInicio === '00:00';
-                        const isMorning = hour >= 6 && hour < 12;
+            )}
 
-                        return (
-                          <button
-                            key={slot.id}
-                            type="button"
-                            onClick={() => setSelectedSlot(slot.horaInicio)}
-                            className={`py-2 px-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${isSelected
-                                ? 'bg-blue-600 border-blue-600 text-white shadow-xs'
-                                : isNight
+            <form onSubmit={handleBookLesson} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Escolha a Data da Aula:
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={scheduleDate}
+                  min={new Date().toISOString().slice(0, 10)}
+                  onChange={(e) => {
+                    setScheduleDate(e.target.value);
+                    setSelectedSlot(null);
+                  }}
+                  className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:border-blue-600 font-bold"
+                />
+              </div>
+
+              <div>
+                <div className="flex flex-wrap items-center justify-between gap-1 mb-1.5">
+                  <label className="block font-semibold text-slate-700">
+                    Horários Liberados para {formatDateBR(scheduleDate)}:
+                  </label>
+                  <span className="text-[10px] text-slate-500 font-medium">
+                    Faixa: 06h às 00h
+                  </span>
+                </div>
+                {availableSlotsOnDate.length === 0 ? (
+                  <div className="p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-center text-slate-400">
+                    <Clock className="w-6 h-6 mx-auto mb-1 text-slate-300" />
+                    <p>Nenhum horário livre ou liberado pelo instrutor para esta data.</p>
+                    <p className="text-[11px] mt-0.5 text-slate-500">Experimente selecionar outro dia no calendário acima.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      {availableSlotsOnDate
+                        .slice()
+                        .sort((a, b) => a.horaInicio.localeCompare(b.horaInicio))
+                        .map((slot) => {
+                          const isSelected = selectedSlot === slot.horaInicio;
+                          const hour = parseInt(slot.horaInicio.split(':')[0], 10);
+                          const isNight = hour >= 19 || slot.horaInicio === '00:00';
+                          const isMorning = hour >= 6 && hour < 12;
+
+                          return (
+                            <button
+                              key={slot.id}
+                              type="button"
+                              onClick={() => setSelectedSlot(slot.horaInicio)}
+                              className={`py-2 px-2 rounded-xl border text-xs font-bold transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
+                                isSelected
+                                  ? 'bg-blue-600 border-blue-600 text-white shadow-xs'
+                                  : isNight
                                   ? 'bg-indigo-50/70 border-indigo-200 text-indigo-900 hover:border-indigo-400'
                                   : isMorning
-                                    ? 'bg-amber-50/50 border-amber-200 text-amber-900 hover:border-amber-400'
-                                    : 'bg-slate-50 border-slate-200 text-slate-800 hover:border-blue-400 hover:bg-blue-50'
+                                  ? 'bg-amber-50/50 border-amber-200 text-amber-900 hover:border-amber-400'
+                                  : 'bg-slate-50 border-slate-200 text-slate-800 hover:border-blue-400 hover:bg-blue-50'
                               }`}
-                          >
-                            <span className="font-mono text-xs">{slot.horaInicio}</span>
-                            <span className="text-[9px] font-medium opacity-80">
-                              {isNight ? '🌙 Noturno' : isMorning ? '☀️ Manhã' : '🌤️ Tarde'}
-                            </span>
-                          </button>
-                        );
-                      })}
+                            >
+                              <span className="font-mono text-xs">{slot.horaInicio}</span>
+                              <span className="text-[9px] font-medium opacity-80">
+                                {isNight ? '🌙 Noturno' : isMorning ? '☀️ Manhã' : '🌤️ Tarde'}
+                              </span>
+                            </button>
+                          );
+                        })}
+                    </div>
+                    <p className="text-[10px] text-slate-400 text-right">
+                      * Aulas a partir das 19h contam como prática noturna.
+                    </p>
                   </div>
-                  <p className="text-[10px] text-slate-400 text-right">
-                    * Aulas no período noturno (a partir das 19h até 00h) contam para a exigência de prática noturna do Detran.
-                  </p>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
 
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">
-                O que você gostaria de treinar nesta aula?
-              </label>
-              <input
-                type="text"
-                value={bookingTopic}
-                onChange={(e) => setBookingTopic(e.target.value)}
-                placeholder="Ex: Baliza de 3 pontos e estacionamento em 45 graus"
-                className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600"
-              />
-            </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  O que você gostaria de treinar nesta aula?
+                </label>
+                <input
+                  type="text"
+                  value={bookingTopic}
+                  onChange={(e) => setBookingTopic(e.target.value)}
+                  placeholder="Ex: Baliza de 3 pontos e estacionamento"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600"
+                />
+              </div>
 
-            <button
-              type="submit"
-              disabled={!selectedSlot}
-              className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold rounded-xl text-xs shadow-xs transition-colors cursor-pointer touch-target"
-            >
-              Confirmar Agendamento da Aula
-            </button>
-          </form>
-        </div>
+              <button
+                type="submit"
+                disabled={!selectedSlot}
+                className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold rounded-xl text-xs shadow-xs transition-colors cursor-pointer touch-target"
+              >
+                Confirmar Agendamento da Aula
+              </button>
+            </form>
+          </div>
+        )}
 
         {/* SECTION: MEU PROGRESSO & 8 COMPETÊNCIAS */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <Award className="w-4 h-4 text-amber-500" />
-              Minhas Notas & Domínio Prático
-            </h2>
-            <span className="text-xs text-blue-600 font-bold">
-              Avaliação Oficial Detran
-            </span>
-          </div>
-
-          {/* 8 Skills progression */}
-          <div className="space-y-2.5 text-xs">
-            {[
-              { key: 'baliza', label: 'Baliza / Estacionamento', score: student.habilidades.baliza },
-              { key: 'controleEmbreagem', label: 'Controle de Embreagem (Rampa)', score: student.habilidades.controleEmbreagem },
-              { key: 'transitoPesado', label: 'Trânsito Pesado & Fluidez', score: student.habilidades.transitoPesado },
-              { key: 'conversoesCruzamentos', label: 'Conversões & Cruzamentos', score: student.habilidades.conversoesCruzamentos },
-              { key: 'rodoviaVelocidade', label: 'Rodovia & Velocidade', score: student.habilidades.rodoviaVelocidade },
-              { key: 'sinalizacaoPreferencia', label: 'Sinalização & Preferência', score: student.habilidades.sinalizacaoPreferencia },
-              { key: 'posturaDefensiva', label: 'Postura Defensiva', score: student.habilidades.posturaDefensiva },
-              { key: 'simuladoExame', label: 'Simulado de Exame Prático', score: student.habilidades.simuladoExame }
-            ].map((skill) => (
-              <div key={skill.key} className="space-y-1">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="font-medium text-slate-700">{skill.label}</span>
-                  <span className="font-bold font-mono text-slate-900">{skill.score.toFixed(1)} / 10</span>
-                </div>
-                <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                  <div
-                    className={`h-2 rounded-full transition-all ${skill.score >= 8 ? 'bg-emerald-500' : skill.score >= 6 ? 'bg-blue-500' : 'bg-amber-500'
-                      }`}
-                    style={{ width: `${(skill.score / 10) * 100}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Instructor Notes */}
-          {student.observacoesInstrutor && (
-            <div className="p-3 bg-blue-50/70 border border-blue-200/60 rounded-xl text-xs space-y-1">
-              <span className="font-bold text-blue-900 block">Parecer do Instrutor:</span>
-              <p className="text-slate-700 italic">"{student.observacoesInstrutor}"</p>
+        {(!isSimplified || studentMobileTab === 'PROGRESS') && (
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Award className="w-4 h-4 text-amber-500 shrink-0" />
+                <span>Minhas Notas & Domínio Prático</span>
+              </h2>
+              <span className="text-xs text-blue-600 font-bold">
+                Avaliação Detran
+              </span>
             </div>
-          )}
-        </div>
+
+            {/* 8 Skills progression */}
+            <div className="space-y-2.5 text-xs">
+              {[
+                { key: 'baliza', label: 'Baliza / Estacionamento', score: student.habilidades.baliza },
+                { key: 'controleEmbreagem', label: 'Controle de Embreagem (Rampa)', score: student.habilidades.controleEmbreagem },
+                { key: 'transitoPesado', label: 'Trânsito Pesado & Fluidez', score: student.habilidades.transitoPesado },
+                { key: 'conversoesCruzamentos', label: 'Conversões & Cruzamentos', score: student.habilidades.conversoesCruzamentos },
+                { key: 'rodoviaVelocidade', label: 'Rodovia & Velocidade', score: student.habilidades.rodoviaVelocidade },
+                { key: 'sinalizacaoPreferencia', label: 'Sinalização & Preferência', score: student.habilidades.sinalizacaoPreferencia },
+                { key: 'posturaDefensiva', label: 'Postura Defensiva', score: student.habilidades.posturaDefensiva },
+                { key: 'simuladoExame', label: 'Simulado de Exame Prático', score: student.habilidades.simuladoExame }
+              ].map((skill) => (
+                <div key={skill.key} className="space-y-1">
+                  <div className="flex justify-between items-center text-xs gap-2">
+                    <span className="font-medium text-slate-700 truncate">{skill.label}</span>
+                    <span className="font-bold font-mono text-slate-900 shrink-0">{skill.score.toFixed(1)} / 10</span>
+                  </div>
+                  <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                    <div
+                      className={`h-2 rounded-full transition-all ${
+                        skill.score >= 8 ? 'bg-emerald-500' : skill.score >= 6 ? 'bg-blue-500' : 'bg-amber-500'
+                      }`}
+                      style={{ width: `${(skill.score / 10) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Instructor Notes */}
+            {student.observacoesInstrutor && (
+              <div className="p-3 bg-blue-50/70 border border-blue-200/60 rounded-xl text-xs space-y-1">
+                <span className="font-bold text-blue-900 block">Parecer do Instrutor:</span>
+                <p className="text-slate-700 italic">"{student.observacoesInstrutor}"</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Two Column: Upcoming Scheduled Lessons & Invoices/Payments */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className={`grid grid-cols-1 ${isSimplified ? '' : 'lg:grid-cols-2'} gap-5 sm:gap-6`}>
         {/* Minhas Aulas Agendadas */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-3">
-          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-            <Clock className="w-4 h-4 text-blue-600" />
-            Minhas Aulas de Direção ({lessons.length})
-          </h2>
+        {(!isSimplified || studentMobileTab === 'PROGRESS' || studentMobileTab === 'BOOK') && (
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs space-y-3">
+            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <Clock className="w-4 h-4 text-blue-600 shrink-0" />
+              <span>Minhas Aulas de Direção ({lessons.length})</span>
+            </h2>
 
-          <div className="space-y-2 max-h-60 overflow-y-auto">
-            {lessons.map((lsn) => (
-              <div
-                key={lsn.id}
-                className="p-3 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-between text-xs"
-              >
-                <div>
-                  <p className="font-bold text-slate-900">
-                    {formatDateBR(lsn.data)} às {lsn.horaInicio} - {lsn.horaFim}
-                  </p>
-                  <p className="text-slate-500 text-[11px]">{lsn.topico}</p>
-                </div>
-                <span
-                  className={`px-2 py-0.5 rounded text-[10px] font-semibold ${lsn.status === 'CONCLUIDA'
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : 'bg-blue-100 text-blue-800'
-                    }`}
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {lessons.map((lsn) => (
+                <div
+                  key={lsn.id}
+                  className="p-3 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-between gap-2 text-xs"
                 >
-                  {lsn.status}
-                </span>
-              </div>
-            ))}
+                  <div className="min-w-0">
+                    <p className="font-bold text-slate-900 truncate">
+                      {formatDateBR(lsn.data)} às {lsn.horaInicio} - {lsn.horaFim}
+                    </p>
+                    <p className="text-slate-500 text-[11px] truncate">{lsn.topico}</p>
+                  </div>
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-semibold shrink-0 ${
+                      lsn.status === 'CONCLUIDA'
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-blue-100 text-blue-800'
+                    }`}
+                  >
+                    {lsn.status}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Faturas & Pagamento PIX */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-3">
-          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-            <CreditCard className="w-4 h-4 text-emerald-600" />
-            Minhas Mensalidades & Pagamentos PIX
-          </h2>
+        {(!isSimplified || studentMobileTab === 'PIX') && (
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs space-y-3">
+            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <CreditCard className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Minhas Mensalidades & Pagamentos PIX</span>
+            </h2>
 
-          <div className="space-y-2.5">
-            {accounts.map((acc) => (
-              <div
-                key={acc.id}
-                className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
-              >
-                <div>
-                  <p className="font-bold text-slate-900">{acc.descricao}</p>
-                  <p className="text-[11px] text-slate-500">
-                    Vencimento: {formatDateBR(acc.dataVencimento)} · Saldo: <strong className="text-slate-900 font-mono">{formatCurrencyBRL(acc.saldoDevedorCentavos)}</strong>
-                  </p>
-                </div>
+            <div className="space-y-2.5">
+              {accounts.map((acc) => (
+                <div
+                  key={acc.id}
+                  className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                >
+                  <div className="min-w-0">
+                    <p className="font-bold text-slate-900 break-words">{acc.descricao}</p>
+                    <p className="text-[11px] text-slate-500">
+                      Vencimento: {formatDateBR(acc.dataVencimento)} · Saldo: <strong className="text-slate-900 font-mono">{formatCurrencyBRL(acc.saldoDevedorCentavos)}</strong>
+                    </p>
+                  </div>
 
-                <div className="w-full sm:w-auto">
-                  {acc.saldoDevedorCentavos > 0 ? (
-                    <button
-                      onClick={() => handleOpenPixModal(acc)}
-                      className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3.5 py-2 sm:py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold shadow-xs transition-colors cursor-pointer"
-                    >
-                      <QrCode className="w-3.5 h-3.5" />
-                      Pagar c/ PIX
-                    </button>
-                  ) : (
-                    <span className="text-emerald-700 font-semibold flex items-center justify-center sm:justify-end gap-1 py-1">
-                      <CheckCircle2 className="w-4 h-4" />
-                      Quitado
-                    </span>
-                  )}
+                  <div className="w-full sm:w-auto shrink-0">
+                    {acc.saldoDevedorCentavos > 0 ? (
+                      <button
+                        onClick={() => handleOpenPixModal(acc)}
+                        className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3.5 py-2 sm:py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold shadow-xs transition-colors cursor-pointer touch-target"
+                      >
+                        <QrCode className="w-3.5 h-3.5" />
+                        <span>Pagar c/ PIX</span>
+                      </button>
+                    ) : (
+                      <span className="text-emerald-700 font-semibold flex items-center justify-center sm:justify-end gap-1 py-1">
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Quitado</span>
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* PIX MODAL FOR STUDENT PAYMENT */}

@@ -19,6 +19,29 @@
   min-width: 44px;
 }
 
+/* Smooth horizontal scrolling without intrusive scrollbars on navigation bars */
+.no-scrollbar::-webkit-scrollbar,
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar,
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Safe area padding for mobile bottom navigation bars */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0.5rem);
+}
+
+/* Responsive table wrapper */
+.responsive-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Print styling for formal financial and student performance reports (PDF Export) */
 @media print {
   @page {

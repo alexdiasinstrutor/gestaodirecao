@@ -13,7 +13,9 @@ import {
   Clock,
   Car,
   CheckCircle2,
-  Package
+  Package,
+  QrCode,
+  LayoutGrid
 } from 'lucide-react';
 import { db } from '../../lib/storage';
 import { formatCurrencyBRL, formatDateBR } from '../../lib/validation';
@@ -25,6 +27,9 @@ interface InstructorDashboardProps {
   onNavigate: (tab: string) => void;
   onOpenInvite: () => void;
   onOpenNewStudent: () => void;
+  onOpenPixConfig?: () => void;
+  isSimplified?: boolean;
+  onSwitchToFullMode?: () => void;
 }
 
 export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
@@ -32,7 +37,10 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
   currentOrg,
   onNavigate,
   onOpenInvite,
-  onOpenNewStudent
+  onOpenNewStudent,
+  onOpenPixConfig,
+  isSimplified = false,
+  onSwitchToFullMode
 }) => {
   const orgId = currentOrg.id;
 
@@ -72,20 +80,22 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
   const overdueAccounts = accounts.filter((a) => a.status === 'VENCIDO');
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Top Banner / Actions */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-blue-950 text-white rounded-2xl p-5 sm:p-6 shadow-xl border border-slate-800">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-blue-950 text-white rounded-2xl p-4 sm:p-6 shadow-xl border border-slate-800">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3.5">
           <div>
-            <span className="text-xs font-semibold text-blue-400 tracking-wider uppercase">
-              Painel de Gestão & Indicadores
+            <span className="text-[11px] font-semibold text-blue-400 tracking-wider uppercase">
+              {isSimplified ? 'Operação Rápida do Instrutor' : 'Painel de Gestão & Indicadores'}
             </span>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-white mt-0.5">
+            <h1 className="text-lg sm:text-2xl font-extrabold text-white mt-0.5">
               Olá, {currentUser.nome.split(' ')[0]}! 🚗
             </h1>
-            <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-xl">
-              Organização: <strong className="text-white">{currentOrg.nome}</strong>. Acompanhe seus recebíveis, aulas práticas agendadas e controle financeiro.
-            </p>
+            {!isSimplified && (
+              <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-xl">
+                Organização: <strong className="text-white">{currentOrg.nome}</strong>. Acompanhe seus recebíveis, aulas práticas agendadas e controle financeiro.
+              </p>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -93,147 +103,225 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
               onClick={onOpenNewStudent}
               className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer touch-target shadow-sm"
             >
-              <PlusCircle className="w-4 h-4" />
-              Novo Aluno (18+)
+              <PlusCircle className="w-4 h-4 shrink-0" />
+              <span>Novo Aluno</span>
             </button>
-            <button
-              onClick={() => onNavigate('FINANCE')}
-              className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer touch-target border border-slate-700"
-            >
-              <Package className="w-4 h-4 text-purple-400" />
-              Pacotes de Aulas
-            </button>
+            {onOpenPixConfig && (
+              <button
+                onClick={onOpenPixConfig}
+                className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer touch-target shadow-sm"
+              >
+                <QrCode className="w-4 h-4 shrink-0" />
+                <span>Chave PIX</span>
+              </button>
+            )}
+            {!isSimplified && (
+              <button
+                onClick={() => onNavigate('FINANCE')}
+                className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer touch-target border border-slate-700"
+              >
+                <Package className="w-4 h-4 text-purple-400 shrink-0" />
+                <span>Pacotes de Aulas</span>
+              </button>
+            )}
             <button
               onClick={onOpenInvite}
               className="flex items-center gap-1.5 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer touch-target border border-slate-600"
             >
-              <MessageSquare className="w-4 h-4 text-emerald-400" />
-              Convidar via WhatsApp
+              <MessageSquare className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>Convidar Aluno</span>
             </button>
           </div>
         </div>
       </div>
 
+      {/* Essential Mobile Quick-Action Grid (Shown in Simplified Mode) */}
+      {isSimplified && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <button
+            type="button"
+            onClick={() => onNavigate('SCHEDULE')}
+            className="p-3.5 bg-white hover:bg-blue-50/60 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-3 text-left transition-all cursor-pointer"
+          >
+            <div className="p-2.5 rounded-xl bg-blue-600 text-white shrink-0">
+              <Calendar className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-extrabold text-slate-900 truncate">Agenda Hoje</p>
+              <p className="text-[11px] text-blue-600 font-semibold">{todayLessons.length} aula(s)</p>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onNavigate('STUDENTS')}
+            className="p-3.5 bg-white hover:bg-indigo-50/60 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-3 text-left transition-all cursor-pointer"
+          >
+            <div className="p-2.5 rounded-xl bg-indigo-600 text-white shrink-0">
+              <Users className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-extrabold text-slate-900 truncate">Meus Alunos</p>
+              <p className="text-[11px] text-indigo-600 font-semibold">{students.length} ativo(s)</p>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onNavigate('WHATSAPP')}
+            className="p-3.5 bg-white hover:bg-emerald-50/60 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-3 text-left transition-all cursor-pointer"
+          >
+            <div className="p-2.5 rounded-xl bg-emerald-600 text-white shrink-0">
+              <MessageSquare className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-extrabold text-slate-900 truncate">Cobrar / PIX</p>
+              <p className="text-[11px] text-emerald-700 font-semibold">{overdueAccounts.length} pendente(s)</p>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={onSwitchToFullMode}
+            className="p-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl border border-slate-800 shadow-xs flex items-center gap-3 text-left transition-all cursor-pointer"
+          >
+            <div className="p-2.5 rounded-xl bg-white/15 text-sky-300 shrink-0">
+              <LayoutGrid className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-extrabold text-white truncate">Modo Normal</p>
+              <p className="text-[11px] text-sky-300 font-semibold">Todos os Menus</p>
+            </div>
+          </button>
+        </div>
+      )}
+
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className={`grid grid-cols-2 ${isSimplified ? 'lg:grid-cols-2' : 'lg:grid-cols-4'} gap-3 sm:gap-4`}>
         {/* Recebido */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between">
+        <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between gap-1">
             <span className="text-xs font-medium text-slate-500">Recebido Total</span>
-            <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600">
+            <div className="p-1.5 sm:p-2 rounded-xl bg-emerald-50 text-emerald-600 shrink-0">
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-2">
-            <p className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">
+            <p className="text-base sm:text-xl font-extrabold text-slate-900 tracking-tight truncate">
               {formatCurrencyBRL(totalRecebidoCentavos)}
             </p>
             <p className="text-[11px] text-emerald-700 font-medium flex items-center gap-1 mt-0.5">
-              <ArrowUpRight className="w-3 h-3" />
-              Entradas comprovadas
+              <ArrowUpRight className="w-3 h-3 shrink-0" />
+              <span className="truncate">Entradas confirmadas</span>
             </p>
           </div>
         </div>
 
         {/* Em Aberto / Pendente */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">A Receber (No Prazo)</span>
-            <div className="p-2 rounded-xl bg-blue-50 text-blue-600">
+        <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-xs font-medium text-slate-500">A Receber</span>
+            <div className="p-1.5 sm:p-2 rounded-xl bg-blue-50 text-blue-600 shrink-0">
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-2">
-            <p className="text-lg sm:text-xl font-extrabold text-blue-700 tracking-tight">
+            <p className="text-base sm:text-xl font-extrabold text-blue-700 tracking-tight truncate">
               {formatCurrencyBRL(totalPendenteCentavos)}
             </p>
-            <p className="text-[11px] text-slate-500 mt-0.5">Parcelas a vencer</p>
+            <p className="text-[11px] text-slate-500 mt-0.5 truncate">Parcelas a vencer</p>
           </div>
         </div>
 
-        {/* Inadimplência / Vencido */}
-        <div className="bg-white p-4 rounded-2xl border border-red-200 bg-red-50/20 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-red-700">Atrasados / Vencidos</span>
-            <div className="p-2 rounded-xl bg-red-100 text-red-700">
-              <AlertTriangle className="w-4 h-4" />
+        {!isSimplified && (
+          <>
+            {/* Inadimplência / Vencido */}
+            <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-red-200 bg-red-50/20 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-xs font-medium text-red-700">Atrasados / Vencidos</span>
+                <div className="p-1.5 sm:p-2 rounded-xl bg-red-100 text-red-700 shrink-0">
+                  <AlertTriangle className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="mt-2">
+                <p className="text-base sm:text-xl font-extrabold text-red-600 tracking-tight truncate">
+                  {formatCurrencyBRL(totalVencidoCentavos)}
+                </p>
+                <button
+                  onClick={() => onNavigate('WHATSAPP')}
+                  className="text-[11px] text-red-700 font-semibold hover:underline flex items-center gap-1 mt-0.5 cursor-pointer"
+                >
+                  <span>{overdueAccounts.length} cobrança(s)</span>
+                  <ArrowRight className="w-3 h-3 shrink-0" />
+                </button>
+              </div>
             </div>
-          </div>
-          <div className="mt-2">
-            <p className="text-lg sm:text-xl font-extrabold text-red-600 tracking-tight">
-              {formatCurrencyBRL(totalVencidoCentavos)}
-            </p>
-            <button
-              onClick={() => onNavigate('WHATSAPP')}
-              className="text-[11px] text-red-700 font-semibold hover:underline flex items-center gap-1 mt-0.5 cursor-pointer"
-            >
-              <span>{overdueAccounts.length} cobrança(s) pendente(s)</span>
-              <ArrowRight className="w-3 h-3" />
-            </button>
-          </div>
-        </div>
 
-        {/* Saldo Líquido Operacional */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Saldo Líquido</span>
-            <div className="p-2 rounded-xl bg-slate-100 text-slate-800">
-              <DollarSign className="w-4 h-4" />
+            {/* Saldo Líquido Operacional */}
+            <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-xs font-medium text-slate-500">Saldo Líquido</span>
+                <div className="p-1.5 sm:p-2 rounded-xl bg-slate-100 text-slate-800 shrink-0">
+                  <DollarSign className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="mt-2">
+                <p className={`text-base sm:text-xl font-extrabold tracking-tight truncate ${saldoLiquidoCentavos >= 0 ? 'text-slate-900' : 'text-red-600'}`}>
+                  {formatCurrencyBRL(saldoLiquidoCentavos)}
+                </p>
+                <p className="text-[11px] text-slate-500 mt-0.5 truncate">
+                  Receitas (-) Despesas
+                </p>
+              </div>
             </div>
-          </div>
-          <div className="mt-2">
-            <p className={`text-lg sm:text-xl font-extrabold tracking-tight ${saldoLiquidoCentavos >= 0 ? 'text-slate-900' : 'text-red-600'}`}>
-              {formatCurrencyBRL(saldoLiquidoCentavos)}
-            </p>
-            <p className="text-[11px] text-slate-500 mt-0.5">
-              Receitas (-) Despesas Pagas
-            </p>
-          </div>
-        </div>
+          </>
+        )}
       </div>
 
-      {/* Secondary Quick Metrics */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-white p-3.5 rounded-xl border border-slate-200 flex items-center gap-3">
-          <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
-            <Users className="w-4 h-4" />
+      {/* Secondary Quick Metrics (Full Mode only) */}
+      {!isSimplified && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="bg-white p-3.5 rounded-xl border border-slate-200 flex items-center gap-3">
+            <div className="p-2 bg-blue-50 text-blue-600 rounded-lg shrink-0">
+              <Users className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-slate-500 truncate">Alunos Ativos</p>
+              <p className="text-base font-bold text-slate-900">{students.length}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-xs text-slate-500">Alunos Ativos</p>
-            <p className="text-base font-bold text-slate-900">{students.length}</p>
-          </div>
-        </div>
 
-        <div className="bg-white p-3.5 rounded-xl border border-slate-200 flex items-center gap-3">
-          <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
-            <Calendar className="w-4 h-4" />
+          <div className="bg-white p-3.5 rounded-xl border border-slate-200 flex items-center gap-3">
+            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg shrink-0">
+              <Calendar className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-slate-500 truncate">Aulas Hoje</p>
+              <p className="text-base font-bold text-slate-900">{todayLessons.length}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-xs text-slate-500">Aulas Hoje</p>
-            <p className="text-base font-bold text-slate-900">{todayLessons.length}</p>
-          </div>
-        </div>
 
-        <div className="bg-white p-3.5 rounded-xl border border-slate-200 flex items-center gap-3">
-          <div className="p-2 bg-amber-50 text-amber-600 rounded-lg">
-            <Fuel className="w-4 h-4" />
+          <div className="bg-white p-3.5 rounded-xl border border-slate-200 flex items-center gap-3">
+            <div className="p-2 bg-amber-50 text-amber-600 rounded-lg shrink-0">
+              <Fuel className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-slate-500 truncate">Despesas Pagas</p>
+              <p className="text-base font-bold text-slate-900 truncate">{formatCurrencyBRL(totalDespesasPagasCentavos)}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-xs text-slate-500">Despesas Pagas</p>
-            <p className="text-base font-bold text-slate-900">{formatCurrencyBRL(totalDespesasPagasCentavos)}</p>
-          </div>
-        </div>
 
-        <div className="bg-white p-3.5 rounded-xl border border-slate-200 flex items-center gap-3">
-          <div className="p-2 bg-purple-50 text-purple-600 rounded-lg">
-            <TrendingUp className="w-4 h-4" />
-          </div>
-          <div>
-            <p className="text-xs text-slate-500">Investimentos</p>
-            <p className="text-base font-bold text-slate-900">{formatCurrencyBRL(totalInvestimentosCentavos)}</p>
+          <div className="bg-white p-3.5 rounded-xl border border-slate-200 flex items-center gap-3">
+            <div className="p-2 bg-purple-50 text-purple-600 rounded-lg shrink-0">
+              <TrendingUp className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-slate-500 truncate">Investimentos</p>
+              <p className="text-base font-bold text-slate-900 truncate">{formatCurrencyBRL(totalInvestimentosCentavos)}</p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Overdue Alert Banner if any */}
       {overdueAccounts.length > 0 && (
@@ -327,53 +415,76 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
           )}
         </div>
 
-        {/* Resumo de Despesas Recentes */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 mb-4">
-            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <Fuel className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>Despesas e Gastos Operacionais</span>
-            </h2>
+        {/* Resumo de Despesas Recentes (Modo Normal) ou Card de Expansão (Modo Simplificado) */}
+        {!isSimplified ? (
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 mb-4">
+              <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Fuel className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>Despesas e Gastos Operacionais</span>
+              </h2>
+              <button
+                onClick={() => onNavigate('FINANCE')}
+                className="text-xs font-semibold text-blue-600 hover:text-blue-800 cursor-pointer self-start sm:self-auto"
+              >
+                Ver Finanças & DRE →
+              </button>
+            </div>
+
+            <div className="space-y-2.5">
+              {expenses.slice(0, 4).map((exp) => (
+                <div
+                  key={exp.id}
+                  className="p-3 rounded-xl border border-slate-100 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-slate-900 leading-snug break-words">{exp.descricao}</p>
+                    <p className="text-[11px] text-slate-500 flex flex-wrap items-center gap-1 mt-0.5">
+                      <span className="font-medium text-slate-600">{exp.categoria.replace(/_/g, ' ')}</span>
+                      <span className="text-slate-300">·</span>
+                      <span>Vencimento: {formatDateBR(exp.dataVencimento)}</span>
+                    </p>
+                  </div>
+                  <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-1.5 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-200/60 shrink-0">
+                    <p className="font-bold text-slate-900 font-mono text-sm">
+                      {formatCurrencyBRL(exp.valorCentavos)}
+                    </p>
+                    <span
+                      className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded ${
+                        exp.status === 'PAGA'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : 'bg-amber-100 text-amber-800'
+                      }`}
+                    >
+                      {exp.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs flex flex-col justify-between space-y-3">
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <LayoutGrid className="w-4 h-4 text-sky-600 shrink-0" />
+                <span>Recursos Avançados (Finanças, DRE & Relatórios)</span>
+              </h2>
+              <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                Você está no <strong>Modo Mobile Simplificado</strong> com foco nas aulas e cobranças rápidas do dia.
+                Para acessar o controle de despesas, saúde financeira, pacotes, relatórios IRPF e todos os menus, ative o <strong>Modo Normal</strong>.
+              </p>
+            </div>
             <button
-              onClick={() => onNavigate('FINANCE')}
-              className="text-xs font-semibold text-blue-600 hover:text-blue-800 cursor-pointer self-start sm:self-auto"
+              type="button"
+              onClick={onSwitchToFullMode}
+              className="w-full py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer touch-target shadow-xs"
             >
-              Ver Finanças & DRE →
+              <LayoutGrid className="w-4 h-4 text-sky-400" />
+              <span>Abrir Modo Normal (Todos os Menus)</span>
             </button>
           </div>
-
-          <div className="space-y-2.5">
-            {expenses.slice(0, 4).map((exp) => (
-              <div
-                key={exp.id}
-                className="p-3 rounded-xl border border-slate-100 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="font-bold text-slate-900 leading-snug break-words">{exp.descricao}</p>
-                  <p className="text-[11px] text-slate-500 flex flex-wrap items-center gap-1 mt-0.5">
-                    <span className="font-medium text-slate-600">{exp.categoria.replace(/_/g, ' ')}</span>
-                    <span className="text-slate-300">·</span>
-                    <span>Vencimento: {formatDateBR(exp.dataVencimento)}</span>
-                  </p>
-                </div>
-                <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-1.5 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-200/60 shrink-0">
-                  <p className="font-bold text-slate-900 font-mono text-sm">
-                    {formatCurrencyBRL(exp.valorCentavos)}
-                  </p>
-                  <span
-                    className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded ${
-                      exp.status === 'PAGA'
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : 'bg-amber-100 text-amber-800'
-                    }`}
-                  >
-                    {exp.status}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

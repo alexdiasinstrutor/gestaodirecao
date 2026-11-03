@@ -207,3 +207,4 @@ export const MasterPasswordModal: React.FC<MasterPasswordModalProps> = ({
     </div>
   );
 };
+

@@ -10,7 +10,12 @@ import {
   WifiOff,
   RefreshCw,
   LogOut,
-  HeartPulse
+  HeartPulse,
+  Smartphone,
+  Tablet,
+  Monitor,
+  LayoutGrid,
+  Minimize2
 } from 'lucide-react';
 import { db, initDatabase, syncFromSupabase } from './lib/storage';
 import { User, Organization } from './types';
@@ -33,6 +38,7 @@ import { AdminMasterPanel } from './components/admin/AdminMasterPanel';
 import { SecurityAgentsModal } from './components/common/SecurityAgentsModal';
 import { PixConfigModal } from './components/common/PixConfigModal';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
+import { useInterfaceMode } from './hooks/useInterfaceMode';
 import { canAccessModule } from './lib/saasPlans';
 
 export default function App() {
@@ -82,6 +88,13 @@ export default function App() {
   const [showPixConfigModal, setShowPixConfigModal] = useState<boolean>(false);
 
   const { isOnline, isSyncing, pendingCount, triggerSync } = useOnlineStatus();
+  const {
+    deviceType,
+    deviceLabel,
+    isSimplified,
+    setViewMode,
+    toggleViewMode
+  } = useInterfaceMode();
 
   // Handle Login attempt (triggers strict 2FA)
   const handleLoginAttempt = (user: User) => {
@@ -164,8 +177,31 @@ export default function App() {
   const isStudent = currentUser.papel === 'ALUNO';
   const isSuperAdmin = currentUser.papel === 'SUPER_ADMIN' || currentUser.email === 'cassiordcosta@gmail.com';
 
+  const DeviceIcon =
+    deviceType === 'MOBILE'
+      ? Smartphone
+      : deviceType === 'TABLET'
+      ? Tablet
+      : Monitor;
+
+  // Definição dos itens de navegação com flag essential para Modo Mobile Simplificado
+  const allNavItems = [
+    { id: 'DASHBOARD', label: 'Painel Geral', shortLabel: 'Início', icon: LayoutDashboard, moduleId: 'DASHBOARD', essential: true },
+    { id: 'SCHEDULE', label: 'Agenda & Horários', shortLabel: 'Agenda', icon: Calendar, moduleId: 'SCHEDULE', essential: true },
+    { id: 'STUDENTS', label: 'Alunos & Progresso', shortLabel: 'Alunos', icon: Users, moduleId: 'STUDENTS', essential: true },
+    { id: 'WHATSAPP', label: 'Cobrança & PIX', shortLabel: 'Cobrar/PIX', icon: MessageSquare, moduleId: 'WHATSAPP', essential: true },
+    { id: 'FINANCE', label: 'Finanças & DRE', shortLabel: 'Finanças', icon: DollarSign, moduleId: 'FINANCE_RECEIVABLES', essential: false },
+    { id: 'FINANCIAL_HEALTH', label: 'Saúde Financeira', shortLabel: 'Saúde', icon: HeartPulse, moduleId: 'FINANCIAL_HEALTH', essential: false },
+    { id: 'REPORTS', label: 'Relatórios Automáticos', shortLabel: 'Relatórios', icon: FileText, moduleId: 'REPORTS', essential: false },
+    ...(isSuperAdmin ? [{ id: 'ADMIN', label: 'Console Master', shortLabel: 'Master', icon: Shield, moduleId: 'ADMIN', essential: true }] : [])
+  ].filter((item) => item.id === 'ADMIN' || canAccessModule(currentOrg, item.moduleId, currentUser));
+
+  const visibleNavItems = isSimplified
+    ? allNavItems.filter((item) => item.essential || item.id === activeTab)
+    : allNavItems;
+
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col text-slate-900 pb-20 md:pb-6 print:pb-0 print:bg-white">
+    <div className="min-h-screen bg-slate-100 flex flex-col text-slate-900 pb-24 md:pb-6 print:pb-0 print:bg-white overflow-x-hidden">
       {/* Top Header */}
       <div className="no-print">
         <Header
@@ -182,62 +218,116 @@ export default function App() {
 
       {/* Offline / Sync Alert Banner */}
       {!isOnline && (
-        <div className="no-print bg-amber-500 text-amber-950 px-4 py-2 text-xs font-semibold flex items-center justify-between shadow-xs">
+        <div className="no-print bg-amber-500 text-amber-950 px-3 sm:px-4 py-2 text-xs font-semibold flex flex-wrap items-center justify-between gap-2 shadow-xs">
           <div className="flex items-center gap-2">
             <WifiOff className="w-4 h-4 shrink-0" />
             <span>
-              Você está trabalhando offline. Os dados estão sendo salvos localmente e serão sincronizados automaticamente assim que a conexão retornar.
+              Modo Offline ativo. Dados salvos localmente e sincronizados automaticamente ao reconectar.
             </span>
           </div>
           {pendingCount > 0 && (
-            <span className="bg-amber-600 text-white px-2 py-0.5 rounded text-[10px] font-mono">
-              {pendingCount} operação(ões) na fila
+            <span className="bg-amber-600 text-white px-2 py-0.5 rounded text-[10px] font-mono shrink-0">
+              {pendingCount} na fila
             </span>
           )}
         </div>
       )}
 
       {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3.5 sm:py-6 flex-1 w-full print:p-0 print:m-0 print:max-w-none">
-        {/* Navigation Bar for Instructors and Admins - Desktop / Tablet only (Mobile uses bottom nav) */}
+      <main className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 py-3 sm:py-5 flex-1 w-full print:p-0 print:m-0 print:max-w-none">
+        {/* Adaptive Interface Mode Bar (Identifies Mobile / Tablet / Desktop & Switches Simplified vs Full Mode) */}
+        <div className="no-print mb-3 sm:mb-4 bg-white rounded-2xl border border-slate-200/90 px-3 py-2 shadow-xs flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-bold shrink-0">
+              <DeviceIcon className="w-3.5 h-3.5 text-blue-600" />
+              <span>Interface: {deviceLabel}</span>
+            </span>
+            <span className="text-[11px] text-slate-600 truncate">
+              {isSimplified
+                ? 'Modo Simplificado (Recursos Essenciais)'
+                : 'Modo Normal Completo (Todos os Menus Visíveis)'}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+            <button
+              type="button"
+              onClick={() => setViewMode('SIMPLIFIED')}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer border ${
+                isSimplified
+                  ? 'bg-sky-600 text-white border-sky-600 shadow-xs'
+                  : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+              }`}
+              title="Exibir apenas os recursos essenciais para operação rápida em campo"
+            >
+              <Minimize2 className="w-3 h-3" />
+              <span>Modo Mobile</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setViewMode('FULL')}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer border ${
+                !isSimplified
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+              }`}
+              title="Liberar todos os menus, relatórios, DRE e painéis avançados"
+            >
+              <LayoutGrid className="w-3 h-3" />
+              <span>Modo Normal (Todos os Menus)</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Navigation Bar for Instructors and Admins - Always accessible in Full Mode or on Tablet/Desktop */}
         {!isStudent && (
-          <div className="no-print hidden md:block mb-4 sm:mb-6">
-            <nav className="flex items-center gap-1.5 p-1.5 bg-white rounded-2xl border border-slate-200 shadow-xs overflow-x-auto scrollbar-none">
-              {[
-                { id: 'DASHBOARD', label: 'Painel Geral', icon: LayoutDashboard, moduleId: 'DASHBOARD' },
-                { id: 'FINANCE', label: 'Finanças & DRE', icon: DollarSign, moduleId: 'FINANCE_RECEIVABLES' },
-                { id: 'FINANCIAL_HEALTH', label: 'Saúde Financeira', icon: HeartPulse, moduleId: 'FINANCIAL_HEALTH' },
-                { id: 'STUDENTS', label: 'Alunos & Progresso', icon: Users, moduleId: 'STUDENTS' },
-                { id: 'SCHEDULE', label: 'Agenda & Horários', icon: Calendar, moduleId: 'SCHEDULE' },
-                { id: 'WHATSAPP', label: 'Cobrança WhatsApp', icon: MessageSquare, moduleId: 'WHATSAPP' },
-                { id: 'REPORTS', label: 'Relatórios Automáticos', icon: FileText, moduleId: 'REPORTS' },
-                ...(isSuperAdmin ? [{ id: 'ADMIN', label: 'Console Master', icon: Shield, moduleId: 'ADMIN' }] : [])
-              ]
-                .filter((item) => item.id === 'ADMIN' || canAccessModule(currentOrg, item.moduleId, currentUser))
-                .map((item) => {
-                  const Icon = item.icon;
-                  const isActive = activeTab === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => setActiveTab(item.id)}
-                      className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer touch-target ${isActive
-                          ? 'bg-slate-900 text-white shadow-xs'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                        }`}
-                    >
-                      <Icon className={`w-4 h-4 ${isActive ? 'text-blue-400' : 'text-slate-500'}`} />
-                      <span>{item.label}</span>
-                    </button>
-                  );
-                })}
+          <div className={`no-print mb-3.5 sm:mb-5 ${isSimplified ? 'hidden md:block' : 'block'}`}>
+            <nav
+              aria-label="Menu de Navegação Principal"
+              className="flex items-center gap-1.5 p-1.5 bg-white rounded-2xl border border-slate-200 shadow-xs overflow-x-auto no-scrollbar"
+            >
+              {visibleNavItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer touch-target shrink-0 ${
+                      isActive
+                        ? 'bg-slate-900 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-blue-400' : 'text-slate-500'}`} />
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+
+              {isSimplified && (
+                <button
+                  type="button"
+                  onClick={() => setViewMode('FULL')}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200 transition-all whitespace-nowrap cursor-pointer touch-target shrink-0 ml-auto"
+                >
+                  <LayoutGrid className="w-3.5 h-3.5 text-sky-600" />
+                  <span>+ Todos os Menus (Modo Normal)</span>
+                </button>
+              )}
             </nav>
           </div>
         )}
 
         {/* Content based on Role & Active Tab */}
         {isStudent ? (
-          <StudentPortal currentUser={currentUser} currentOrg={currentOrg!} />
+          <StudentPortal
+            currentUser={currentUser}
+            currentOrg={currentOrg!}
+            isSimplified={isSimplified}
+            onSwitchToFullMode={() => setViewMode('FULL')}
+          />
         ) : (
           <>
             {activeTab === 'DASHBOARD' && (
@@ -247,6 +337,9 @@ export default function App() {
                 onNavigate={(tab) => setActiveTab(tab)}
                 onOpenInvite={() => setShowStudentInviteModal(true)}
                 onOpenNewStudent={() => setShowStudentSelfRegisterModal(true)}
+                onOpenPixConfig={() => setShowPixConfigModal(true)}
+                isSimplified={isSimplified}
+                onSwitchToFullMode={() => setViewMode('FULL')}
               />
             )}
 
@@ -293,6 +386,8 @@ export default function App() {
                 currentUser={currentUser}
                 onSwitchUser={handleSwitchUser}
                 onUserUpdated={(updated) => setCurrentUser(updated)}
+                isSimplified={isSimplified}
+                onSwitchToFullMode={() => setViewMode('FULL')}
               />
             )}
           </>
@@ -301,38 +396,56 @@ export default function App() {
 
       {/* Mobile Bottom Navigation Bar (WCAG AA Touch Target compliant with overflow protection) */}
       {!isStudent && (
-        <nav aria-label="Navegação Principal Móvel" className="no-print md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-1.5 py-1 flex items-center justify-between shadow-lg overflow-x-auto no-scrollbar">
-          {[
-            { id: 'DASHBOARD', label: 'Início', icon: LayoutDashboard, moduleId: 'DASHBOARD' },
-            { id: 'FINANCE', label: 'Finanças', icon: DollarSign, moduleId: 'FINANCE_RECEIVABLES' },
-            { id: 'FINANCIAL_HEALTH', label: 'Saúde', icon: HeartPulse, moduleId: 'FINANCIAL_HEALTH' },
-            { id: 'STUDENTS', label: 'Alunos', icon: Users, moduleId: 'STUDENTS' },
-            { id: 'SCHEDULE', label: 'Agenda', icon: Calendar, moduleId: 'SCHEDULE' },
-            { id: 'WHATSAPP', label: 'Cobrar', icon: MessageSquare, moduleId: 'WHATSAPP' },
-            { id: 'REPORTS', label: 'Relatórios', icon: FileText, moduleId: 'REPORTS' },
-            ...(isSuperAdmin ? [{ id: 'ADMIN', label: 'Master', icon: Shield, moduleId: 'ADMIN' }] : [])
-          ]
-            .filter((item) => item.id === 'ADMIN' || canAccessModule(currentOrg, item.moduleId, currentUser))
-            .map((item) => {
-              const Icon = item.icon;
-              const isActive = activeTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  className={`flex-1 min-w-[44px] flex flex-col items-center justify-center py-1.5 px-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${isActive ? 'text-blue-600 font-extrabold bg-blue-50/60' : 'text-slate-500 hover:text-slate-800'
-                    }`}
-                >
-                  <Icon className={`w-4 h-4 mb-0.5 shrink-0 ${isActive ? 'text-blue-600 scale-110' : 'text-slate-500'}`} />
-                  <span className="text-[10px] whitespace-nowrap leading-tight">{item.label}</span>
-                </button>
-              );
-            })}
+        <nav
+          aria-label="Navegação Principal Móvel"
+          className="no-print md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-1.5 py-1 pb-safe flex items-center justify-between gap-0.5 shadow-lg overflow-x-auto no-scrollbar"
+        >
+          {visibleNavItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`flex-1 min-w-[54px] flex flex-col items-center justify-center py-1.5 px-1 rounded-xl text-[10px] font-bold transition-all cursor-pointer shrink-0 ${
+                  isActive
+                    ? 'text-blue-600 font-extrabold bg-blue-50/80'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Icon className={`w-4 h-4 mb-0.5 shrink-0 ${isActive ? 'text-blue-600 scale-110' : 'text-slate-500'}`} />
+                <span className="text-[10px] whitespace-nowrap leading-tight">{item.shortLabel}</span>
+              </button>
+            );
+          })}
 
-          {(isSuperAdmin || currentUser?.email === 'cassiordcosta@gmail.com') && (
+          {/* Botão direto na barra inferior para expandir o Modo Normal quando simplificado */}
+          {isSimplified ? (
+            <button
+              type="button"
+              onClick={() => setViewMode('FULL')}
+              className="flex-1 min-w-[60px] flex flex-col items-center justify-center py-1.5 px-1 rounded-xl text-[10px] font-bold text-sky-700 bg-sky-50/80 border border-sky-200/80 transition-all cursor-pointer shrink-0"
+              title="Exibir todos os menus do Modo Normal"
+            >
+              <LayoutGrid className="w-4 h-4 mb-0.5 shrink-0 text-sky-600" />
+              <span className="text-[10px] whitespace-nowrap leading-tight">+ Menus</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setViewMode('SIMPLIFIED')}
+              className="flex-1 min-w-[56px] flex flex-col items-center justify-center py-1.5 px-1 rounded-xl text-[10px] font-bold text-slate-600 bg-slate-100/80 transition-all cursor-pointer shrink-0"
+              title="Voltar para o Modo Mobile Simplificado"
+            >
+              <Minimize2 className="w-4 h-4 mb-0.5 shrink-0 text-slate-600" />
+              <span className="text-[10px] whitespace-nowrap leading-tight">Simplificar</span>
+            </button>
+          )}
+
+          {(isSuperAdmin || currentUser?.email === 'cassiordcosta@gmail.com') && !isSimplified && (
             <button
               onClick={() => setShowSecurityAgentsModal(true)}
-              className="flex-1 min-w-[44px] flex flex-col items-center justify-center py-1.5 px-0.5 rounded-lg text-[10px] font-bold text-emerald-600 transition-all cursor-pointer hover:bg-emerald-50/60"
+              className="flex-1 min-w-[50px] flex flex-col items-center justify-center py-1.5 px-1 rounded-xl text-[10px] font-bold text-emerald-600 transition-all cursor-pointer hover:bg-emerald-50/60 shrink-0"
               title="Dossiê Técnico e Agentes (Exclusivo Administrador Master)"
             >
               <Shield className="w-4 h-4 mb-0.5 shrink-0 text-emerald-600" />

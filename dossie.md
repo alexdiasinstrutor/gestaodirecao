@@ -1,6 +1,6 @@
-# DOSSIÊ COMPLETO DO SISTEMA DE GESTÃO DE DIREÇÃO
-**Documento Oficial de Registro Técnico, Arquitetura de Software, Catálogo de Telas, Funcionalidades, Regras de Negócio e Agentes de Segurança**  
-*Data de Homologação: Outubro de 2026 | Versão da Plataforma: v5.6 Auditada, Homologada e Pronta para Produção (Go-Live & Supabase)*
+# DOSSIÊ COMPLETO DO SISTEMA — GESTÃO AD (AUTO DIREÇÃO)
+**Documento Oficial de Registro Técnico, Arquitetura de Software, Interface Adaptativa (Mobile/Tablet/Desktop), Catálogo de Telas, Regras de Negócio e Agentes de Segurança**  
+*Data de Homologação: Novembro de 2026 | Versão da Plataforma: v6.0 Auditada, Responsiva (Modo Mobile & Normal) e Integrada ao Supabase*
 
 ---
 
@@ -943,11 +943,35 @@ Controla a fila transacional armazenada localmente no cliente, transmitida ao Fi
 
 ---
 
-## 13. TERMO DE HOMOLOGAÇÃO E DECLARAÇÃO DE INTEGRIDADE
+## 13. EVOLUÇÃO v6.0: MODO MOBILE SIMPLIFICADO, MULTI-MASTER E GOVERNANÇA COMPLETA
 
-Este Dossiê constitui o registro definitivo e exaustivo de todas as funcionalidades, interfaces, modelos de dados, tabelas, relacionamentos e salvaguardas tecnológicas implementadas no **Sistema de Administração de Gestão de Direção**.
+### 13.1 Detecção Automática de Dispositivo e Modo Mobile Simplificado vs. Modo Normal (`useInterfaceMode.ts`)
+- **Identificação em Tempo Real da Interface**: O sistema detecta automaticamente a interface física do usuário (`Mobile` `< 768px`, `Tablet` `768px–1023px`, `Desktop` `>= 1024px`) e exibe o indicador correspondente no cabeçalho e na barra superior.
+- **Modo Mobile Simplificado (`SIMPLIFIED`)**:
+  - Ativado automaticamente em smartphones (ou sob demanda em qualquer tela), apresentando apenas os recursos essenciais para operação rápida em campo:
+    - **Instrutor**: 4 acessos essenciais (`Início`, `Agenda`, `Alunos`, `Cobrar/PIX`), KPIs vitais de recebimento e lista de aulas práticas do dia.
+    - **Aluno**: Navegação rápida em 3 abas diretas (`Agendar Aula`, `Pagar PIX`, `Aulas & Notas`).
+    - **Administrador Master**: Foco imediato nas abas operacionais (`Instituições & CFCs` e `Equipe Master & Senhas`).
+- **Modo Normal Completo (`FULL`)**:
+  - Ao clicar no botão **"Modo Normal (Todos os Menus)"** (disponível no cabeçalho, na barra de interface, no menu de perfil e na barra inferior móvel), o sistema libera instantaneamente todos os menus (`Finanças & DRE`, `Saúde Financeira`, `Relatórios Automáticos`, `Verificador de Cadastros`, `Planos SaaS`, `Manutenção & Supabase SQL`), mantendo barras de navegação com rolagem horizontal suave (`overflow-x-auto no-scrollbar`) sem quebrar links, tabelas ou modais.
+
+### 13.2 Gestão Completa de Administradores Master (`SUPER_ADMIN`) e Troca de Senha
+- **Troca de Senha no Módulo Master (`MasterPasswordModal.tsx`)**: Qualquer usuário Master pode alterar sua própria senha ou redefinir a senha de outro Master diretamente pela interface, com sincronização imediata no `localStorage` e no **Supabase PostgreSQL** (`users.senha_temporaria`).
+- **Recuperação de Senha por E-mail + CPF (`PasswordRecoveryModal.tsx`)**: Validação estrita cruzando E-mail e CPF cadastrado (em conformidade com a LGPD), envio de código de 6 dígitos e gravação persistente da nova senha validada no `LoginScreen.tsx`.
+- **Edição de Dados Cadastrais e Multi-Master (`MasterUserEditModal.tsx`)**: Permite editar Nome, E-mail, Telefone e CPF do Administrador Master e incluir novos usuários com papel `SUPER_ADMIN` na aba **"Equipe Master & Senhas"** do `AdminMasterPanel.tsx`.
+
+### 13.3 Suporte às 12 Categorias Oficiais de CNH e Configuração PIX Dinâmica
+- **12 Categorias de CNH**: `ACC`, `A`, `B`, `AB`, `C`, `AC`, `D`, `AD`, `E`, `AE`, `PCD` e `OUTRA` disponíveis em matrículas, pacotes e filtros.
+- **Configuração PIX Completa (`PixConfigModal.tsx`)**: Edição de Tipo de Chave, Chave PIX, Cidade e Nome do Beneficiário expandido para até **50 caracteres**, gerando automaticamente o payload EMV Copia e Cola e o QR Code escaneável para pagamento dos alunos.
+
+---
+
+## 14. TERMO DE HOMOLOGAÇÃO E DECLARAÇÃO DE INTEGRIDADE
+
+Este Dossiê constitui o registro definitivo e exaustivo de todas as funcionalidades, interfaces, modelos de dados, tabelas, relacionamentos e salvaguardas tecnológicas implementadas no **Gestão AD (Auto Direção)**.
 
 *Homologado para produção e operação contínua.*  
 *Administração Master: cassiordcosta@gmail.com*  
-*Versão do Sistema: v5.6 Estável, Auditada e Protegida (Go-Live & Supabase)*
+*Versão do Sistema: v6.0 Estável, Responsiva (Modo Mobile & Normal), Auditada e Protegida (Go-Live & Supabase)*
+
 
