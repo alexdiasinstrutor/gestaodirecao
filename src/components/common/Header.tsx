@@ -10,7 +10,9 @@ import {
   Shield,
   GraduationCap,
   ChevronDown,
-  QrCode
+  QrCode,
+  Key,
+  ShieldCheck
 } from 'lucide-react';
 import { User, Organization } from '../../types';
 import { db } from '../../lib/storage';
@@ -26,6 +28,7 @@ interface HeaderProps {
   onOpenLGPD: () => void;
   onOpenDossieAndAgents?: () => void;
   onOpenPixConfig?: () => void;
+  onNavigate?: (tab: string) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -35,7 +38,8 @@ export const Header: React.FC<HeaderProps> = ({
   onSwitchUser,
   onOpenLGPD,
   onOpenDossieAndAgents,
-  onOpenPixConfig
+  onOpenPixConfig,
+  onNavigate
 }) => {
   const { isOnline, isSyncing, pendingCount, triggerSync } = useOnlineStatus();
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
@@ -230,6 +234,22 @@ export const Header: React.FC<HeaderProps> = ({
                         </span>
                       </div>
                     </div>
+
+                    {/* Atalho Master: Equipe Master & Troca de Senha */}
+                    {currentUser.papel === 'SUPER_ADMIN' && onNavigate && (
+                      <div className="px-2 py-1.5 border-b border-slate-100">
+                        <button
+                          onClick={() => {
+                            setShowSwitchMenu(false);
+                            onNavigate('ADMIN');
+                          }}
+                          className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs hover:bg-purple-50 text-purple-700 font-semibold flex items-center gap-2 cursor-pointer transition-colors"
+                        >
+                          <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
+                          <span>Equipe Master & Senhas</span>
+                        </button>
+                      </div>
+                    )}
 
                     {/* PIX Quick Action for Instructors and Admins */}
                     {onOpenPixConfig && currentUser.papel !== 'ALUNO' && (

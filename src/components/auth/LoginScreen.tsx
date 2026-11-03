@@ -55,6 +55,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         return;
       }
 
+      // Validação de senha: se o usuário possui senha cadastrada, deve conferir
+      const expectedPassword = user.senhaTemporaria || '123456';
+      if (password !== expectedPassword) {
+        setError('Senha incorreta. Verifique os dados digitados ou utilize "Esqueceu a senha?" logo abaixo para redefini-la.');
+        setLoading(false);
+        return;
+      }
+
       setLoading(false);
       onLoginAttempt(user);
     }, 400);
@@ -62,9 +70,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
   const handleQuickLogin = (quickEmail: string) => {
     setEmail(quickEmail);
-    setPassword('123456');
     const user = db.getUserByEmail(quickEmail);
     if (user) {
+      setPassword(user.senhaTemporaria || '123456');
       onLoginAttempt(user);
     }
   };

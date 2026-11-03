@@ -50,26 +50,36 @@ import { OrganizationAccessKeyModal } from './OrganizationAccessKeyModal';
 import { ResetPasswordModal } from './ResetPasswordModal';
 import { SaaSPlansTableView } from './SaaSPlansTableView';
 import { SupabaseMigrationModal } from './SupabaseMigrationModal';
+import { MasterPasswordModal } from './MasterPasswordModal';
+import { MasterUserEditModal } from './MasterUserEditModal';
 
 interface AdminMasterPanelProps {
   currentUser: User;
   onSwitchUser: (email: string) => void;
+  onUserUpdated?: (updated: User) => void;
 }
 
-export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({ currentUser, onSwitchUser }) => {
+export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({ currentUser, onSwitchUser, onUserUpdated }) => {
   // Dados atualizados dinamicamente
   const [organizations, setOrganizations] = useState<Organization[]>(() => db.getOrganizations());
-  const allUsers = db.getUsers();
+  const [usersList, setUsersList] = useState<User[]>(() => db.getUsers());
+  const allUsers = usersList;
   const allStudents = db.getStudents(organizations[0]?.id || '');
   const allPayments = db.getPayments(organizations[0]?.id || '');
 
-  const [activeSubTab, setActiveSubTab] = useState<'VERIFICADOR' | 'ORGS' | 'PLANS' | 'MAINTENANCE'>('VERIFICADOR');
+  const [activeSubTab, setActiveSubTab] = useState<'VERIFICADOR' | 'ORGS' | 'MASTERS' | 'PLANS' | 'MAINTENANCE'>('VERIFICADOR');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('TODOS');
   const [filterPlan, setFilterPlan] = useState<string>('TODOS');
   const [resetSuccess, setResetSuccess] = useState<boolean>(false);
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [expandedInstructorId, setExpandedInstructorId] = useState<string | null>(null);
+
+  // Modais de Administradores Master
+  const [showMasterEditModal, setShowMasterEditModal] = useState<boolean>(false);
+  const [masterEditMode, setMasterEditMode] = useState<'NEW' | 'EDIT'>('NEW');
+  const [selectedMasterToEdit, setSelectedMasterToEdit] = useState<User | null>(null);
+  const [selectedMasterToChangePassword, setSelectedMasterToChangePassword] = useState<User | null>(null);
 
   // Feedback Messages
   const [feedbackMsg, setFeedbackMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
@@ -81,6 +91,7 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({ currentUser,
 
   const refreshOrganizations = () => {
     setOrganizations(db.getOrganizations());
+    setUsersList(db.getUsers());
   };
 
   // Modais de Organização
@@ -235,6 +246,7 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({ currentUser,
 
   const instructorsList = allUsers.filter((u) => u.papel === 'ADMIN_ORG' || u.papel === 'INSTRUTOR');
   const pendingOrgs = organizations.filter((o) => o.status === 'PENDENTE_APROVACAO');
+  const superAdmins = allUsers.filter((u) => u.papel === 'SUPER_ADMIN');
 
   // Filtros de busca
   const filteredOrganizations = organizations.filter((org) => {
@@ -272,6 +284,32 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({ currentUser,
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Ações Rápidas do Master Logado */}
+            <div className="flex items-center gap-1.5 p-1 bg-white/10 rounded-xl border border-white/15">
+              <button
+                onClick={() => {
+                  setSelectedMasterToChangePassword(currentUser);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors cursor-pointer"
+                title="Alterar minha senha de Administrador Master"
+              >
+                <Key className="w-3.5 h-3.5" />
+                <span>Minha Senha Master</span>
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedMasterToEdit(currentUser);
+                  setMasterEditMode('EDIT');
+                  setShowMasterEditModal(true);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+                title="Editar meus dados cadastrais de Master (Nome, E-mail, Telefone, CPF)"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                <span>Editar Meus Dados</span>
+              </button>
+            </div>
+
             {allUsers.find((u) => u.papel === 'INSTRUTOR' || u.papel === 'ADMIN_ORG') && (
               <button
                 onClick={() => {
@@ -364,6 +402,18 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({ currentUser,
               {pendingOrgs.length} pendente(s)
             </span>
           )}
+        </button>
+
+        <button
+          onClick={() => setActiveSubTab('MASTERS')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+            activeSubTab === 'MASTERS'
+              ? 'bg-purple-600 text-white shadow-xs'
+              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+          }`}
+        >
+          <ShieldCheck className="w-4 h-4" />
+          <span>Equipe Master & Senhas ({superAdmins.length})</span>
         </button>
 
         <button
@@ -786,6 +836,199 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({ currentUser,
         </div>
       )}
 
+      {/* TAB: EQUIPE MASTER & CONTROLE DE SENHAS */}
+      {activeSubTab === 'MASTERS' && (
+        <div className="space-y-6">
+          {/* Card de Apresentação e Boas-Vindas */}
+          <div className="bg-gradient-to-r from-purple-950 via-slate-900 to-indigo-950 text-white rounded-2xl p-6 shadow-md border border-purple-800/40 flex flex-col md:flex-row md:items-center justify-between gap-5">
+            <div className="space-y-1.5 max-w-2xl">
+              <div className="flex items-center gap-2">
+                <span className="p-1 rounded-md bg-purple-500/20 text-purple-300">
+                  <ShieldCheck className="w-4 h-4 text-purple-300" />
+                </span>
+                <span className="text-[11px] font-bold text-purple-300 uppercase tracking-wider">
+                  Controle de Acessos & Governança Master
+                </span>
+              </div>
+              <h2 className="text-lg sm:text-xl font-extrabold text-white">
+                Administradores Master da Plataforma ({superAdmins.length})
+              </h2>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Os usuários Master têm permissão total de nível <strong>SUPER_ADMIN</strong>: gerenciam CFCs, planos, configurações financeiras globais e contas de acesso. Cada Master pode alterar sua própria senha, recuperar a senha por e-mail com confirmação de CPF e cadastrar novos administradores.
+              </p>
+            </div>
+
+            <button
+              onClick={() => {
+                setSelectedMasterToEdit(null);
+                setMasterEditMode('NEW');
+                setShowMasterEditModal(true);
+              }}
+              className="flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg hover:shadow-purple-900/30 transition-all cursor-pointer shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Novo Administrador Master</span>
+            </button>
+          </div>
+
+          {/* Destaques de Segurança */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
+                <Key className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-[11px] text-slate-500 font-medium">Troca de Senha Direta</p>
+                <p className="text-xs font-bold text-slate-900">Definição no Módulo Master</p>
+                <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">● Sincronização Imediata</p>
+              </div>
+            </div>
+
+            <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+                <Mail className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-[11px] text-slate-500 font-medium">Recuperação por E-mail</p>
+                <p className="text-xs font-bold text-slate-900">Validação com CPF & Código</p>
+                <p className="text-[10px] text-blue-600 font-semibold mt-0.5">● Proteção Anti-Fraude LGPD</p>
+              </div>
+            </div>
+
+            <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                <Database className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-[11px] text-slate-500 font-medium">PostgreSQL / Supabase</p>
+                <p className="text-xs font-bold text-slate-900">Persistência Dual-Write</p>
+                <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">● Tabela users Sincronizada</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Lista de Administradores Master */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Users className="w-4 h-4 text-purple-600" />
+                <span>Lista de Administradores Master Cadastrados ({superAdmins.length})</span>
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {superAdmins.map((master) => {
+                const isSelf = master.id === currentUser.id;
+                return (
+                  <div
+                    key={master.id}
+                    className={`bg-white rounded-2xl border p-5 shadow-xs transition-all relative ${
+                      isSelf ? 'border-purple-300 ring-2 ring-purple-100' : 'border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    {/* Header do Card */}
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-700 text-white flex items-center justify-center font-black text-base shadow-xs shrink-0">
+                          {master.nome.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <h4 className="text-sm font-extrabold text-slate-900 leading-tight">
+                              {master.nome}
+                            </h4>
+                            {isSelf && (
+                              <span className="px-2 py-0.2 rounded-full bg-purple-100 text-purple-800 text-[10px] font-bold border border-purple-200">
+                                Você
+                              </span>
+                            )}
+                          </div>
+                          <span className="inline-block mt-0.5 px-2 py-0.5 rounded bg-slate-900 text-white text-[10px] font-bold">
+                            SUPER_ADMIN
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Dados de Contato e CPF */}
+                    <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-100 space-y-2 text-xs mb-4">
+                      <div className="flex items-center justify-between text-slate-700">
+                        <span className="flex items-center gap-1.5 text-slate-500 font-medium">
+                          <Mail className="w-3.5 h-3.5 text-slate-400" />
+                          E-mail de Login:
+                        </span>
+                        <a
+                          href={`mailto:${master.email}`}
+                          className="font-mono text-purple-700 hover:underline font-semibold"
+                        >
+                          {master.email}
+                        </a>
+                      </div>
+
+                      <div className="flex items-center justify-between text-slate-700">
+                        <span className="flex items-center gap-1.5 text-slate-500 font-medium">
+                          <Phone className="w-3.5 h-3.5 text-slate-400" />
+                          Telefone / WhatsApp:
+                        </span>
+                        <span className="font-semibold text-slate-800">
+                          {master.telefone || 'Não informado'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-slate-700">
+                        <span className="flex items-center gap-1.5 text-slate-500 font-medium">
+                          <CreditCard className="w-3.5 h-3.5 text-slate-400" />
+                          CPF do Titular:
+                        </span>
+                        <span className="font-mono font-semibold text-slate-800">
+                          {master.cpfMascarado || master.cpfCompleto || '***.***.***-**'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-slate-700 pt-1 border-t border-slate-200/60">
+                        <span className="flex items-center gap-1.5 text-slate-500 font-medium">
+                          <Lock className="w-3.5 h-3.5 text-slate-400" />
+                          Status da Senha:
+                        </span>
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          Ativa & Sincronizada
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Botões de Ação para o Master */}
+                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100">
+                      <button
+                        onClick={() => setSelectedMasterToChangePassword(master)}
+                        className="flex items-center justify-center gap-1.5 px-3 py-2 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                        title="Definir nova senha para este Administrador Master"
+                      >
+                        <Key className="w-3.5 h-3.5 text-purple-600" />
+                        <span>Alterar Senha</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setSelectedMasterToEdit(master);
+                          setMasterEditMode('EDIT');
+                          setShowMasterEditModal(true);
+                        }}
+                        className="flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                        title="Editar nome, e-mail, telefone e CPF deste Master"
+                      >
+                        <Pencil className="w-3.5 h-3.5 text-slate-600" />
+                        <span>Editar Cadastro</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* TAB 3: PLANOS SAAS & MÓDULOS */}
       {activeSubTab === 'PLANS' && (
         <SaaSPlansTableView />
@@ -1009,6 +1252,49 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({ currentUser,
         isOpen={showSupabaseModal}
         onClose={() => setShowSupabaseModal(false)}
       />
+
+      {/* MODAL: TROCA DE SENHA DO ADMINISTRADOR MASTER */}
+      {selectedMasterToChangePassword && (
+        <MasterPasswordModal
+          user={selectedMasterToChangePassword}
+          currentUser={currentUser}
+          onClose={() => setSelectedMasterToChangePassword(null)}
+          onSuccess={(updatedUser) => {
+            setSelectedMasterToChangePassword(null);
+            refreshOrganizations();
+            if (updatedUser.id === currentUser.id) {
+              onUserUpdated?.(updatedUser);
+            }
+            showFeedback(`Senha do Administrador Master "${updatedUser.nome}" atualizada com sucesso!`);
+          }}
+        />
+      )}
+
+      {/* MODAL: CADASTRO OU EDIÇÃO DE ADMINISTRADOR MASTER */}
+      {showMasterEditModal && (
+        <MasterUserEditModal
+          mode={masterEditMode}
+          userToEdit={selectedMasterToEdit}
+          currentUser={currentUser}
+          onClose={() => {
+            setShowMasterEditModal(false);
+            setSelectedMasterToEdit(null);
+          }}
+          onSuccess={(savedUser, isNew) => {
+            setShowMasterEditModal(false);
+            setSelectedMasterToEdit(null);
+            refreshOrganizations();
+            if (savedUser.id === currentUser.id) {
+              onUserUpdated?.(savedUser);
+            }
+            showFeedback(
+              isNew
+                ? `Novo Administrador Master "${savedUser.nome}" cadastrado com sucesso!`
+                : `Dados do Administrador Master "${savedUser.nome}" atualizados com sucesso!`
+            );
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -1705,21 +1705,212 @@ export const db = {
     };
   },
 
-  updateUserPassword(userId: string, _newPassword: string): boolean {
+  updateUserPassword(userId: string, newPassword: string): boolean {
     const users = readList<User>(STORAGE_KEYS.USERS);
     const index = users.findIndex((u) => u.id === userId);
     if (index === -1) return false;
+
+    users[index].senhaTemporaria = newPassword;
     users[index].ultimoAcesso = new Date().toISOString();
     writeList(STORAGE_KEYS.USERS, users);
+
+    // Sincronizar com Supabase PostgreSQL
+    supabaseAdapter.saveUser(users[index]).catch(console.error);
+
+    // Se o usuário logado for o mesmo, atualizar sessão local
+    const current = this.getCurrentUser();
+    if (current && current.id === userId) {
+      current.senhaTemporaria = newPassword;
+      current.ultimoAcesso = users[index].ultimoAcesso;
+      this.setCurrentUser(current);
+    }
+
     this.addAuditLog(
       users[index].organizacaoId,
       userId,
       'REDEFINICAO_SENHA',
       'Usuario',
       userId,
-      `Senha redefinida com sucesso para o usuário ${users[index].nome}`
+      `Senha redefinida com sucesso para o usuário ${users[index].nome} (${users[index].email})`
     );
     return true;
+  },
+
+  // Cadastro de Novo Administrador Master
+  createMasterUser(
+    data: {
+      nome: string;
+      email: string;
+      telefone: string;
+      cpf: string;
+      senha: string;
+    },
+    actorId?: string
+  ): { success: boolean; user?: User; message?: string } {
+    const cleanEmail = (data.email || '').trim().toLowerCase();
+    const cleanNome = (data.nome || '').trim();
+    const cleanTelefone = (data.telefone || '').trim();
+    const cleanCpfDigits = (data.cpf || '').replace(/\D/g, '');
+    const cleanSenha = (data.senha || '').trim();
+
+    if (!cleanNome || cleanNome.length < 3) {
+      return { success: false, message: 'O nome do Administrador Master deve conter no mínimo 3 caracteres.' };
+    }
+
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      return { success: false, message: 'Informe um endereço de e-mail válido.' };
+    }
+
+    const existingUser = this.getUserByEmail(cleanEmail);
+    if (existingUser) {
+      return { success: false, message: `Já existe um usuário cadastrado com o e-mail ${cleanEmail}.` };
+    }
+
+    if (cleanCpfDigits.length !== 11) {
+      return { success: false, message: 'O CPF deve possuir exatamente 11 dígitos numéricos.' };
+    }
+
+    if (!cleanSenha || cleanSenha.length < 6) {
+      return { success: false, message: 'A senha de acesso deve possuir no mínimo 6 caracteres.' };
+    }
+
+    const orgs = this.getOrganizations();
+    const targetOrgId = orgs[0]?.id || 'org_direcao_certa_01';
+
+    const newMaster: User = {
+      id: `usr_master_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      organizacaoId: targetOrgId,
+      nome: cleanNome,
+      email: cleanEmail,
+      papel: 'SUPER_ADMIN',
+      telefone: cleanTelefone || '(11) 98765-4321',
+      cpfCompleto: data.cpf.trim(),
+      cpfMascarado: maskCPF(cleanCpfDigits),
+      cpfUltimos4: cleanCpfDigits.slice(-4),
+      cpfFingerprint: generateCPFFingerprint(cleanCpfDigits),
+      senhaTemporaria: cleanSenha,
+      twoFactorAtivo: true,
+      ultimoAcesso: new Date().toISOString()
+    };
+
+    this.createUser(newMaster);
+
+    this.addAuditLog(
+      targetOrgId,
+      actorId || newMaster.id,
+      'CRIACAO_MASTER',
+      'Usuario',
+      newMaster.id,
+      `Novo Administrador Master cadastrado: ${newMaster.nome} (${newMaster.email})`
+    );
+
+    return { success: true, user: newMaster };
+  },
+
+  // Edição dos Dados Cadastrais do Administrador Master
+  updateMasterUser(
+    userId: string,
+    data: {
+      nome: string;
+      email: string;
+      telefone: string;
+      cpf: string;
+    },
+    actorId?: string
+  ): { success: boolean; user?: User; message?: string } {
+    const users = readList<User>(STORAGE_KEYS.USERS);
+    const index = users.findIndex((u) => u.id === userId);
+    if (index === -1) {
+      return { success: false, message: 'Administrador Master não encontrado.' };
+    }
+
+    const cleanEmail = (data.email || '').trim().toLowerCase();
+    const cleanNome = (data.nome || '').trim();
+    const cleanTelefone = (data.telefone || '').trim();
+    const cleanCpfDigits = (data.cpf || '').replace(/\D/g, '');
+
+    if (!cleanNome || cleanNome.length < 3) {
+      return { success: false, message: 'O nome deve conter no mínimo 3 caracteres.' };
+    }
+
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      return { success: false, message: 'Informe um e-mail válido.' };
+    }
+
+    // Se mudou o e-mail, verificar se outro usuário já possui
+    if (cleanEmail !== users[index].email.toLowerCase()) {
+      const emailInUse = users.some((u) => u.id !== userId && u.email.toLowerCase() === cleanEmail);
+      if (emailInUse) {
+        return { success: false, message: `O e-mail ${cleanEmail} já está em uso por outro usuário.` };
+      }
+    }
+
+    // Se o CPF foi alterado
+    if (cleanCpfDigits) {
+      if (cleanCpfDigits.length !== 11) {
+        return { success: false, message: 'O CPF deve possuir exatamente 11 dígitos numéricos.' };
+      }
+      users[index].cpfCompleto = data.cpf.trim();
+      users[index].cpfMascarado = maskCPF(cleanCpfDigits);
+      users[index].cpfUltimos4 = cleanCpfDigits.slice(-4);
+      users[index].cpfFingerprint = generateCPFFingerprint(cleanCpfDigits);
+    }
+
+    users[index].nome = cleanNome;
+    users[index].email = cleanEmail;
+    users[index].telefone = cleanTelefone;
+    users[index].papel = 'SUPER_ADMIN'; // Garante persistência do papel Master
+    users[index].ultimoAcesso = new Date().toISOString();
+
+    writeList(STORAGE_KEYS.USERS, users);
+    supabaseAdapter.saveUser(users[index]).catch(console.error);
+
+    const current = this.getCurrentUser();
+    if (current && current.id === userId) {
+      this.setCurrentUser(users[index]);
+    }
+
+    this.addAuditLog(
+      users[index].organizacaoId,
+      actorId || userId,
+      'ATUALIZACAO_MASTER',
+      'Usuario',
+      userId,
+      `Dados cadastrais do Administrador Master atualizados: ${users[index].nome} (${users[index].email})`
+    );
+
+    return { success: true, user: users[index] };
+  },
+
+  // Troca de Senha do Administrador Master
+  changeMasterPassword(
+    userId: string,
+    newPassword: string,
+    actorId?: string
+  ): { success: boolean; message?: string } {
+    if (!newPassword || newPassword.trim().length < 6) {
+      return { success: false, message: 'A nova senha deve possuir no mínimo 6 caracteres.' };
+    }
+
+    const ok = this.updateUserPassword(userId, newPassword.trim());
+    if (!ok) {
+      return { success: false, message: 'Usuário Master não encontrado para alteração de senha.' };
+    }
+
+    if (actorId && actorId !== userId) {
+      const users = this.getUsers();
+      const target = users.find((u) => u.id === userId);
+      this.addAuditLog(
+        target?.organizacaoId || 'org_direcao_certa_01',
+        actorId,
+        'TROCA_SENHA_MASTER_POR_TERCEIRO',
+        'Usuario',
+        userId,
+        `Senha do Administrador Master ${target?.nome} foi alterada pelo Master ID: ${actorId}`
+      );
+    }
+
+    return { success: true, message: 'Senha do Administrador Master atualizada com sucesso!' };
   },
 
   reassignStudentInstructor(studentId: string, newInstructorId: string, actorId: string): boolean {

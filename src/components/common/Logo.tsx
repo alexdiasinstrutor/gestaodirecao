@@ -144,9 +144,8 @@ export const Logo: React.FC<LogoProps> = ({
       <div className="flex flex-col select-none leading-none">
         <div className="flex items-baseline gap-1.5">
           <span
-            className={`font-black tracking-tight ${dimensions.textMain} ${
-              isDark ? 'text-white' : 'text-slate-900'
-            }`}
+            className={`font-black tracking-tight ${dimensions.textMain} ${isDark ? 'text-white' : 'text-slate-900'
+              }`}
           >
             Gestão
           </span>
@@ -157,9 +156,8 @@ export const Logo: React.FC<LogoProps> = ({
 
         {showSubtitle && (
           <span
-            className={`font-bold tracking-widest uppercase mt-0.5 ${dimensions.textSub} ${
-              isDark ? 'text-sky-300/90' : 'text-slate-500'
-            }`}
+            className={`font-bold tracking-widest uppercase mt-0.5 ${dimensions.textSub} ${isDark ? 'text-sky-300/90' : 'text-slate-500'
+              }`}
           >
             Auto Direção
           </span>

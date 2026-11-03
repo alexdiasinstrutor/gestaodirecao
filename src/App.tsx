@@ -176,6 +176,7 @@ export default function App() {
           onOpenLGPD={() => setShowLGPDModal(true)}
           onOpenDossieAndAgents={() => setShowSecurityAgentsModal(true)}
           onOpenPixConfig={() => setShowPixConfigModal(true)}
+          onNavigate={(tab) => setActiveTab(tab)}
         />
       </div>
 
@@ -291,6 +292,7 @@ export default function App() {
               <AdminMasterPanel
                 currentUser={currentUser}
                 onSwitchUser={handleSwitchUser}
+                onUserUpdated={(updated) => setCurrentUser(updated)}
               />
             )}
           </>
