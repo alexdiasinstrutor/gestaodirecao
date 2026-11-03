@@ -43,6 +43,7 @@ import { db, CadastrosIntegrityReport, seedDemoData } from '../../lib/storage';
 import { formatCurrencyBRL, formatDateBR } from '../../lib/validation';
 import { getPlanDetails, SAAS_PLANS } from '../../lib/saasPlans';
 import { Organization, User, Student, SaaSPlanType, OrganizationStatus } from '../../types';
+import { SmartScrollNav } from '../common/SmartScrollNav';
 
 // Modais Administrativos Modulares
 import { OrganizationDetailsModal } from './OrganizationDetailsModal';
@@ -383,17 +384,20 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
       )}
 
       {/* Navigation Sub-Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto no-scrollbar">
+      <SmartScrollNav
+        ariaLabel="Sub-abas do Console Master"
+        className="flex items-center lg:justify-between gap-1.5 border-b border-slate-200 pb-2"
+      >
         {(!isSimplified || activeSubTab === 'VERIFICADOR') && (
           <button
             onClick={() => setActiveSubTab('VERIFICADOR')}
-            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+            className={`flex items-center justify-center lg:flex-1 gap-1.5 px-2.5 xl:px-3.5 py-2.5 rounded-xl text-[11px] xl:text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               activeSubTab === 'VERIFICADOR'
                 ? 'bg-purple-600 text-white shadow-xs'
                 : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
             }`}
           >
-            <FileCheck className="w-4 h-4 shrink-0" />
+            <FileCheck className="w-3.5 h-3.5 xl:w-4 xl:h-4 shrink-0" />
             <span>Verificador de Cadastros</span>
             <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-white text-[10px]">
               {integrityReport.score}%
@@ -403,13 +407,13 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
 
         <button
           onClick={() => setActiveSubTab('ORGS')}
-          className={`flex items-center gap-2 px-3.5 sm:px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+          className={`flex items-center justify-center lg:flex-1 gap-1.5 px-2.5 xl:px-3.5 py-2.5 rounded-xl text-[11px] xl:text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
             activeSubTab === 'ORGS'
               ? 'bg-purple-600 text-white shadow-xs'
               : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
           }`}
         >
-          <Building className="w-4 h-4 shrink-0" />
+          <Building className="w-3.5 h-3.5 xl:w-4 xl:h-4 shrink-0" />
           <span>Instituições & CFCs ({organizations.length})</span>
           {pendingOrgs.length > 0 && (
             <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-white text-[10px] animate-pulse">
@@ -420,26 +424,26 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
 
         <button
           onClick={() => setActiveSubTab('MASTERS')}
-          className={`flex items-center gap-2 px-3.5 sm:px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+          className={`flex items-center justify-center lg:flex-1 gap-1.5 px-2.5 xl:px-3.5 py-2.5 rounded-xl text-[11px] xl:text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
             activeSubTab === 'MASTERS'
               ? 'bg-purple-600 text-white shadow-xs'
               : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
           }`}
         >
-          <ShieldCheck className="w-4 h-4 shrink-0" />
+          <ShieldCheck className="w-3.5 h-3.5 xl:w-4 xl:h-4 shrink-0" />
           <span>Equipe Master & Senhas ({superAdmins.length})</span>
         </button>
 
         {(!isSimplified || activeSubTab === 'PLANS') && (
           <button
             onClick={() => setActiveSubTab('PLANS')}
-            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+            className={`flex items-center justify-center lg:flex-1 gap-1.5 px-2.5 xl:px-3.5 py-2.5 rounded-xl text-[11px] xl:text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               activeSubTab === 'PLANS'
                 ? 'bg-purple-600 text-white shadow-xs'
                 : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
             }`}
           >
-            <Layers className="w-4 h-4 shrink-0" />
+            <Layers className="w-3.5 h-3.5 xl:w-4 xl:h-4 shrink-0" />
             <span>Planos SaaS & Módulos</span>
           </button>
         )}
@@ -447,13 +451,13 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
         {(!isSimplified || activeSubTab === 'MAINTENANCE') && (
           <button
             onClick={() => setActiveSubTab('MAINTENANCE')}
-            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+            className={`flex items-center justify-center lg:flex-1 gap-1.5 px-2.5 xl:px-3.5 py-2.5 rounded-xl text-[11px] xl:text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               activeSubTab === 'MAINTENANCE'
                 ? 'bg-purple-600 text-white shadow-xs'
                 : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
             }`}
           >
-            <Database className="w-4 h-4 shrink-0" />
+            <Database className="w-3.5 h-3.5 xl:w-4 xl:h-4 shrink-0" />
             <span>Manutenção & Banco Demo</span>
           </button>
         )}
@@ -462,7 +466,7 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
           <button
             type="button"
             onClick={onSwitchToFullMode}
-            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap bg-slate-900 hover:bg-slate-800 text-white shadow-xs shrink-0 ml-auto"
+            className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap bg-slate-900 hover:bg-slate-800 text-white shadow-xs shrink-0 ml-auto"
           >
             <LayoutGrid className="w-4 h-4 text-sky-400 shrink-0" />
             <span>+ Modo Normal (Todas as Abas Master)</span>
@@ -472,17 +476,17 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
         {!isSimplified && (
           <button
             onClick={() => setShowSupabaseModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs ml-auto shrink-0"
+            className="flex items-center justify-center gap-1.5 px-3 xl:px-3.5 py-2.5 rounded-xl text-[11px] xl:text-xs font-bold transition-all cursor-pointer whitespace-nowrap bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs shrink-0"
             title="Conectar com Supabase, exportar DDL SQL relacional e sincronizar tabelas"
           >
-            <Database className="w-4 h-4 shrink-0" />
+            <Database className="w-3.5 h-3.5 xl:w-4 xl:h-4 shrink-0" />
             <span>Supabase / PostgreSQL</span>
             <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-white text-[10px]">
               SQL
             </span>
           </button>
         )}
-      </div>
+      </SmartScrollNav>
 
       {/* TAB 1: VERIFICADOR DE INTEGRIDADE */}
       {activeSubTab === 'VERIFICADOR' && (

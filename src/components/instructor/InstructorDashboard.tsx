@@ -399,11 +399,10 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
                     </div>
                     <div className="flex items-center justify-end shrink-0">
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                          lesson.status === 'CONCLUIDA'
+                        className={`px-2 py-0.5 rounded text-[10px] font-semibold ${lesson.status === 'CONCLUIDA'
                             ? 'bg-emerald-100 text-emerald-800'
                             : 'bg-blue-100 text-blue-800'
-                        }`}
+                          }`}
                       >
                         {lesson.status === 'CONCLUIDA' ? '✓ Concluída' : 'Agendada'}
                       </span>
@@ -450,11 +449,10 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
                       {formatCurrencyBRL(exp.valorCentavos)}
                     </p>
                     <span
-                      className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded ${
-                        exp.status === 'PAGA'
+                      className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded ${exp.status === 'PAGA'
                           ? 'bg-emerald-100 text-emerald-800'
                           : 'bg-amber-100 text-amber-800'
-                      }`}
+                        }`}
                     >
                       {exp.status}
                     </span>

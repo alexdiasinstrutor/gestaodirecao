@@ -37,6 +37,7 @@ import { StudentPortal } from './components/student/StudentPortal';
 import { AdminMasterPanel } from './components/admin/AdminMasterPanel';
 import { SecurityAgentsModal } from './components/common/SecurityAgentsModal';
 import { PixConfigModal } from './components/common/PixConfigModal';
+import { SmartScrollNav } from './components/common/SmartScrollNav';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { useInterfaceMode } from './hooks/useInterfaceMode';
 import { canAccessModule } from './lib/saasPlans';
@@ -283,9 +284,9 @@ export default function App() {
         {/* Navigation Bar for Instructors and Admins - Always accessible in Full Mode or on Tablet/Desktop */}
         {!isStudent && (
           <div className={`no-print mb-3.5 sm:mb-5 ${isSimplified ? 'hidden md:block' : 'block'}`}>
-            <nav
-              aria-label="Menu de Navegação Principal"
-              className="flex items-center gap-1.5 p-1.5 bg-white rounded-2xl border border-slate-200 shadow-xs overflow-x-auto no-scrollbar"
+            <SmartScrollNav
+              ariaLabel="Menu de Navegação Principal"
+              className="flex items-center lg:justify-between gap-1 xl:gap-1.5 p-1.5 bg-white rounded-2xl border border-slate-200 shadow-xs"
             >
               {visibleNavItems.map((item) => {
                 const Icon = item.icon;
@@ -294,13 +295,13 @@ export default function App() {
                   <button
                     key={item.id}
                     onClick={() => setActiveTab(item.id)}
-                    className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer touch-target shrink-0 ${
+                    className={`flex items-center justify-center lg:flex-1 gap-1.5 px-2.5 xl:px-3 py-2 sm:py-2.5 rounded-xl text-[11px] xl:text-xs font-bold transition-all whitespace-nowrap cursor-pointer touch-target shrink-0 ${
                       isActive
                         ? 'bg-slate-900 text-white shadow-xs'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                     }`}
                   >
-                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-blue-400' : 'text-slate-500'}`} />
+                    <Icon className={`w-3.5 h-3.5 xl:w-4 xl:h-4 shrink-0 ${isActive ? 'text-blue-400' : 'text-slate-500'}`} />
                     <span>{item.label}</span>
                   </button>
                 );
@@ -316,7 +317,7 @@ export default function App() {
                   <span>+ Todos os Menus (Modo Normal)</span>
                 </button>
               )}
-            </nav>
+            </SmartScrollNav>
           </div>
         )}
 
