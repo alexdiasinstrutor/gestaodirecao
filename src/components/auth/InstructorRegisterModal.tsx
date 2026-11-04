@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { X, UserPlus, Car, Shield, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { db } from '../../lib/storage';
-import { isValidCPF, generateCPFFingerprint, getCPFLast4 } from '../../lib/validation';
-import { User, Organization } from '../../types';
+import { isValidCPF, generateCPFFingerprint, getCPFLast4, maskCPF } from '../../lib/validation';
+import { isValidCEPFormat } from '../../lib/cepService';
+import { User, Organization, AddressFields } from '../../types';
+import { AddressCepFields } from '../common/AddressCepFields';
 
 interface InstructorRegisterModalProps {
   onClose: () => void;
@@ -17,10 +19,18 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
     telefone: '',
     nomeAutoescola: '',
     tipo: 'INSTRUTOR_AUTONOMO' as 'INSTRUTOR_AUTONOMO' | 'AUTOESCOLA_CFC',
-    cidade: 'São Paulo',
-    estado: 'SP',
     senha: '',
     confirmarSenha: ''
+  });
+
+  const [address, setAddress] = useState<AddressFields>({
+    estado: 'SP',
+    cep: '',
+    logradouro: '',
+    numero: '',
+    complemento: '',
+    bairro: '',
+    cidade: ''
   });
 
   const [error, setError] = useState<string>('');
@@ -51,6 +61,21 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
       return;
     }
 
+    if (!isValidCEPFormat(address.cep || '')) {
+      setError('Por favor, informe um CEP válido com 8 dígitos para localizar o endereço.');
+      return;
+    }
+
+    if (!address.logradouro?.trim() || !address.bairro?.trim() || !address.cidade?.trim() || !address.estado?.trim()) {
+      setError('Preencha o CEP para carregar Logradouro, Bairro, Cidade e Estado (UF).');
+      return;
+    }
+
+    if (!address.numero?.trim()) {
+      setError('Por favor, informe o número do endereço (ou digite S/N).');
+      return;
+    }
+
     if (!formData.senha || formData.senha.length < 6) {
       setError('A senha de acesso deve ter pelo menos 6 caracteres.');
       return;
@@ -72,8 +97,13 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
         cnpjCpf: formData.cpf,
         telefone: formData.telefone,
         email: formData.email,
-        cidade: formData.cidade,
-        estado: formData.estado,
+        cep: address.cep?.trim(),
+        logradouro: address.logradouro?.trim(),
+        numero: address.numero?.trim(),
+        complemento: address.complemento?.trim(),
+        bairro: address.bairro?.trim(),
+        cidade: address.cidade.trim(),
+        estado: address.estado.trim().toUpperCase(),
         status: 'ATIVO',
         plano: 'PRO',
         criadoEm: new Date().toISOString()
@@ -88,6 +118,16 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
         telefone: formData.telefone,
         cpfUltimos4: getCPFLast4(formData.cpf),
         cpfFingerprint: generateCPFFingerprint(formData.cpf),
+        cpfMascarado: maskCPF(formData.cpf),
+        cpfCompleto: formData.cpf.trim(),
+        cep: address.cep?.trim(),
+        estado: address.estado.trim().toUpperCase(),
+        cidade: address.cidade.trim(),
+        bairro: address.bairro?.trim(),
+        logradouro: address.logradouro?.trim(),
+        numero: address.numero?.trim(),
+        complemento: address.complemento?.trim(),
+        senhaTemporaria: formData.senha,
         twoFactorAtivo: true,
         ultimoAcesso: new Date().toISOString()
       };
@@ -223,25 +263,14 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
               />
             </div>
 
-            <div>
-              <label className="block font-medium text-slate-700 mb-1">Cidade / Estado</label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={formData.cidade}
-                  onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
-                  placeholder="Cidade"
-                  className="w-3/4 px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none"
-                />
-                <input
-                  type="text"
-                  value={formData.estado}
-                  maxLength={2}
-                  onChange={(e) => setFormData({ ...formData, estado: e.target.value.toUpperCase() })}
-                  placeholder="UF"
-                  className="w-1/4 px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none text-center font-mono"
-                />
-              </div>
+            <div className="sm:col-span-2">
+              <AddressCepFields
+                value={address}
+                onChange={setAddress}
+                required={true}
+                title="Endereço do Instrutor / Autoescola (Validação por CEP)"
+                accentColor="blue"
+              />
             </div>
 
             <div>
@@ -256,7 +285,7 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
               />
             </div>
 
-            <div className="sm:col-span-2">
+            <div>
               <label className="block font-medium text-slate-700 mb-1">Confirmar Senha *</label>
               <input
                 type="password"

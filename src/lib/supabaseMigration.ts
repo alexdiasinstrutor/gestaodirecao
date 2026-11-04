@@ -53,6 +53,11 @@ CREATE TABLE IF NOT EXISTS public.organizations (
     cnpj_cpf VARCHAR(30) NOT NULL,
     telefone VARCHAR(30),
     email VARCHAR(255),
+    cep VARCHAR(15),
+    logradouro VARCHAR(255),
+    numero VARCHAR(30),
+    complemento VARCHAR(150),
+    bairro VARCHAR(120),
     cidade VARCHAR(100),
     estado VARCHAR(10),
     status VARCHAR(50) NOT NULL DEFAULT 'ATIVO',
@@ -65,6 +70,10 @@ CREATE TABLE IF NOT EXISTS public.organizations (
     limite_alunos INTEGER DEFAULT 0,
     limite_instrutores INTEGER DEFAULT 0,
     motivo_bloqueio TEXT,
+    chave_pix VARCHAR(255),
+    tipo_chave_pix VARCHAR(30),
+    beneficiario_pix VARCHAR(100),
+    cidade_pix VARCHAR(50),
     criado_em TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -80,11 +89,22 @@ CREATE TABLE IF NOT EXISTS public.users (
     cpf_fingerprint VARCHAR(100),
     cpf_mascarado VARCHAR(30),
     cpf_completo VARCHAR(30),
+    cep VARCHAR(15),
+    estado VARCHAR(10),
+    cidade VARCHAR(100),
+    bairro VARCHAR(120),
+    logradouro VARCHAR(255),
+    numero VARCHAR(30),
+    complemento VARCHAR(150),
     two_factor_ativo BOOLEAN DEFAULT FALSE,
     two_factor_secret VARCHAR(100),
     ultimo_acesso TIMESTAMPTZ,
     avatar_url TEXT,
     senha_temporaria VARCHAR(100),
+    chave_pix VARCHAR(255),
+    tipo_chave_pix VARCHAR(30),
+    beneficiario_pix VARCHAR(100),
+    cidade_pix VARCHAR(50),
     criado_em TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -115,6 +135,13 @@ CREATE TABLE IF NOT EXISTS public.students (
     data_nascimento DATE NOT NULL,
     idade INTEGER NOT NULL CHECK (idade >= 18),
     categoria_cnh VARCHAR(10) NOT NULL DEFAULT 'B',
+    cep VARCHAR(15),
+    estado VARCHAR(10),
+    cidade VARCHAR(100),
+    bairro VARCHAR(120),
+    logradouro VARCHAR(255),
+    numero VARCHAR(30),
+    complemento VARCHAR(150),
     status VARCHAR(50) NOT NULL DEFAULT 'EM_ANDAMENTO',
     aulas_cumpridas INTEGER DEFAULT 0,
     total_aulas_contratadas INTEGER DEFAULT 20,
@@ -125,6 +152,29 @@ CREATE TABLE IF NOT EXISTS public.students (
     historico_transferencias JSONB DEFAULT '[]'::jsonb,
     data_cadastro TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Atualização Incremental (ALTER TABLE) para bancos já existentes (Campos Extras de Endereço Completo via CEP):
+ALTER TABLE public.organizations ADD COLUMN IF NOT EXISTS cep VARCHAR(15);
+ALTER TABLE public.organizations ADD COLUMN IF NOT EXISTS logradouro VARCHAR(255);
+ALTER TABLE public.organizations ADD COLUMN IF NOT EXISTS numero VARCHAR(30);
+ALTER TABLE public.organizations ADD COLUMN IF NOT EXISTS complemento VARCHAR(150);
+ALTER TABLE public.organizations ADD COLUMN IF NOT EXISTS bairro VARCHAR(120);
+
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS cep VARCHAR(15);
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS estado VARCHAR(10);
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS cidade VARCHAR(100);
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS bairro VARCHAR(120);
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS logradouro VARCHAR(255);
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS numero VARCHAR(30);
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS complemento VARCHAR(150);
+
+ALTER TABLE public.students ADD COLUMN IF NOT EXISTS cep VARCHAR(15);
+ALTER TABLE public.students ADD COLUMN IF NOT EXISTS estado VARCHAR(10);
+ALTER TABLE public.students ADD COLUMN IF NOT EXISTS cidade VARCHAR(100);
+ALTER TABLE public.students ADD COLUMN IF NOT EXISTS bairro VARCHAR(120);
+ALTER TABLE public.students ADD COLUMN IF NOT EXISTS logradouro VARCHAR(255);
+ALTER TABLE public.students ADD COLUMN IF NOT EXISTS numero VARCHAR(30);
+ALTER TABLE public.students ADD COLUMN IF NOT EXISTS complemento VARCHAR(150);
 
 -- 6. Tabela: LESSONS (Agenda e Histórico de Aulas Práticas das 06h às 00h)
 CREATE TABLE IF NOT EXISTS public.lessons (

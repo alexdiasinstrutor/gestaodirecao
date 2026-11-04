@@ -10,6 +10,16 @@ export type SaaSPlanType = 'DEMO' | 'BASICO' | 'AVANCADO' | 'MASTER' | 'PRO' | '
 
 export type PixKeyType = 'CPF' | 'CNPJ' | 'EMAIL' | 'TELEFONE' | 'ALEATORIA';
 
+export interface AddressFields {
+  cep?: string;
+  estado?: string;
+  cidade?: string;
+  bairro?: string;
+  logradouro?: string;
+  numero?: string;
+  complemento?: string;
+}
+
 export interface Organization {
   id: string;
   nome: string;
@@ -17,6 +27,11 @@ export interface Organization {
   cnpjCpf: string;
   telefone: string;
   email: string;
+  cep?: string;
+  logradouro?: string;
+  numero?: string;
+  complemento?: string;
+  bairro?: string;
   cidade: string;
   estado: string;
   status: OrganizationStatus;
@@ -52,6 +67,14 @@ export interface User {
   cpfFingerprint: string;
   cpfMascarado?: string;
   cpfCompleto?: string;
+  // Campos de Endereço Completo do Usuário (Instrutor, Master, Gestor, Aluno)
+  cep?: string;
+  estado?: string;
+  cidade?: string;
+  bairro?: string;
+  logradouro?: string;
+  numero?: string;
+  complemento?: string;
   twoFactorAtivo: boolean;
   twoFactorSecret?: string;
   ultimoAcesso?: string;
@@ -114,6 +137,14 @@ export interface Student {
   dataNascimento: string; // YYYY-MM-DD
   idade: number; // Must be >= 18
   categoriaCnh: CnhCategory;
+  // Campos de Endereço Completo do Aluno
+  cep?: string;
+  estado?: string;
+  cidade?: string;
+  bairro?: string;
+  logradouro?: string;
+  numero?: string;
+  complemento?: string;
   status: 'EM_ANDAMENTO' | 'CONCLUIDO' | 'CANCELADO';
   aulasCumpridas: number;
   totalAulasContratadas: number; // Tipicamente 20 aulas

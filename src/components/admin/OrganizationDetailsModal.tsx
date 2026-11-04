@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { db } from '../../lib/storage';
 import { formatCurrencyBRL, formatDateBR } from '../../lib/validation';
+import { formatFullAddress } from '../../lib/cepService';
 import { getPlanDetails } from '../../lib/saasPlans';
 import type { Organization, User, Student, Vehicle } from '../../types';
 
@@ -123,9 +124,9 @@ export const OrganizationDetailsModal: React.FC<OrganizationDetailsModalProps> =
                   <Mail className="w-3.5 h-3.5 text-slate-400" />
                   <span>{organization.email || 'Não informado'}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                  <span>{organization.cidade} - {organization.estado}</span>
+                <div className="flex items-start gap-2">
+                  <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                  <span>{formatFullAddress(organization)}</span>
                 </div>
               </div>
             </div>
@@ -173,9 +174,14 @@ export const OrganizationDetailsModal: React.FC<OrganizationDetailsModalProps> =
                         </span>
                       )}
                     </div>
-                    <span className="text-slate-500 text-[11px] font-mono">
+                    <span className="text-slate-500 text-[11px] font-mono block">
                       {u.email} · Tel: {u.telefone || 'S/N'} · CPF: {u.cpfMascarado || '***'}
                     </span>
+                    {(u.cep || u.logradouro || u.cidade) && (
+                      <span className="text-slate-500 text-[10px] block mt-0.5">
+                        📍 {formatFullAddress(u)}
+                      </span>
+                    )}
                   </div>
 
                   <button
@@ -207,6 +213,11 @@ export const OrganizationDetailsModal: React.FC<OrganizationDetailsModalProps> =
                     <div>
                       <span className="font-semibold text-slate-900">{s.nome}</span>
                       <span className="text-slate-500 font-mono ml-2">CNH {s.categoriaCnh} · {s.cpfMascarado}</span>
+                      {(s.cep || s.logradouro || s.cidade) && (
+                        <span className="text-slate-500 text-[10px] block mt-0.5">
+                          📍 {formatFullAddress(s)}
+                        </span>
+                      )}
                     </div>
                     <span className="text-slate-600 font-mono font-bold">
                       {s.aulasCumpridas}/{s.totalAulasContratadas} aulas

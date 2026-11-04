@@ -10,8 +10,9 @@ import {
   QrCode
 } from 'lucide-react';
 import { SAAS_PLANS, getPlanDetails } from '../../lib/saasPlans';
-import { generateCPFFingerprint } from '../../lib/validation';
-import type { Organization, OrganizationType, SaaSPlanType, User, PixKeyType } from '../../types';
+import { generateCPFFingerprint, maskCPF } from '../../lib/validation';
+import type { Organization, OrganizationType, SaaSPlanType, User, PixKeyType, AddressFields } from '../../types';
+import { AddressCepFields } from '../common/AddressCepFields';
 
 interface OrganizationNewModalProps {
   onClose: () => void;
@@ -27,8 +28,15 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
   const [cnpjCpf, setCnpjCpf] = useState('');
   const [telefone, setTelefone] = useState('');
   const [email, setEmail] = useState('');
-  const [cidade, setCidade] = useState('');
-  const [estado, setEstado] = useState('SP');
+  const [address, setAddress] = useState<AddressFields>({
+    estado: 'SP',
+    cep: '',
+    logradouro: '',
+    numero: '',
+    complemento: '',
+    bairro: '',
+    cidade: ''
+  });
   const [plano, setPlano] = useState<SaaSPlanType>('BASICO');
   const [diasValidade, setDiasValidade] = useState<number>(30);
 
@@ -60,8 +68,13 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
       cnpjCpf: cnpjCpf.trim(),
       telefone: telefone.trim(),
       email: email.trim(),
-      cidade: cidade.trim(),
-      estado: estado.trim().toUpperCase(),
+      cep: address.cep?.trim(),
+      logradouro: address.logradouro?.trim(),
+      numero: address.numero?.trim(),
+      complemento: address.complemento?.trim(),
+      bairro: address.bairro?.trim(),
+      cidade: (address.cidade || '').trim(),
+      estado: (address.estado || 'SP').trim().toUpperCase(),
       status: 'ATIVO',
       plano,
       criadoEm: new Date().toISOString(),
@@ -88,7 +101,15 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
         telefone: userTelefone.trim() || telefone.trim(),
         cpfUltimos4: cleanCpf.slice(-4) || '0000',
         cpfFingerprint: generateCPFFingerprint(cleanCpf),
-        cpfMascarado: '***.***.***-**',
+        cpfMascarado: cleanCpf.length === 11 ? maskCPF(cleanCpf) : '***.***.***-**',
+        cpfCompleto: userCpf.trim() || undefined,
+        cep: address.cep?.trim(),
+        estado: (address.estado || 'SP').trim().toUpperCase(),
+        cidade: (address.cidade || '').trim(),
+        bairro: address.bairro?.trim(),
+        logradouro: address.logradouro?.trim(),
+        numero: address.numero?.trim(),
+        complemento: address.complemento?.trim(),
         twoFactorAtivo: false,
         senhaTemporaria: `Auto@${Math.floor(100000 + Math.random() * 900000)}`,
         aprovadoPorMaster: true
@@ -184,25 +205,13 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
                 />
               </div>
 
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Cidade</label>
-                <input
-                  type="text"
-                  placeholder="São Paulo"
-                  value={cidade}
-                  onChange={(e) => setCidade(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Estado (UF)</label>
-                <input
-                  type="text"
-                  maxLength={2}
-                  value={estado}
-                  onChange={(e) => setEstado(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono uppercase text-center"
+              <div className="sm:col-span-2">
+                <AddressCepFields
+                  value={address}
+                  onChange={setAddress}
+                  required={true}
+                  title="Endereço Completo da Instituição / Instrutor (Validação por CEP)"
+                  accentColor="purple"
                 />
               </div>
             </div>

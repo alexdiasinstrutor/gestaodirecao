@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { X, GraduationCap, ShieldAlert, AlertCircle, CheckCircle2, UserCheck, Package } from 'lucide-react';
 import { db } from '../../lib/storage';
 import { isValidCPF, generateCPFFingerprint, maskCPF, validateMinimumAge, formatCurrencyBRL } from '../../lib/validation';
-import { Student, User, CnhCategory, CNH_CATEGORIES } from '../../types';
+import { isValidCEPFormat } from '../../lib/cepService';
+import { Student, User, CnhCategory, CNH_CATEGORIES, AddressFields } from '../../types';
+import { AddressCepFields } from '../common/AddressCepFields';
 
 interface StudentSelfRegisterModalProps {
   onClose: () => void;
@@ -31,6 +33,16 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
     instrutorId: defaultInstructorId || orgInstructors[0]?.id || 'usr_instrutor_carlos',
     senha: '',
     confirmarSenha: ''
+  });
+
+  const [address, setAddress] = useState<AddressFields>({
+    estado: orgs[0]?.estado || 'SP',
+    cep: '',
+    logradouro: '',
+    numero: '',
+    complemento: '',
+    bairro: '',
+    cidade: orgs[0]?.cidade || ''
   });
 
   const [selectedPackageId, setSelectedPackageId] = useState<string>('');
@@ -98,6 +110,21 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
       return;
     }
 
+    if (!isValidCEPFormat(address.cep || '')) {
+      setError('Por favor, informe um CEP válido com 8 dígitos para localizar o endereço do aluno.');
+      return;
+    }
+
+    if (!address.logradouro?.trim() || !address.bairro?.trim() || !address.cidade?.trim() || !address.estado?.trim()) {
+      setError('Preencha o CEP para carregar Logradouro, Bairro, Cidade e Estado (UF).');
+      return;
+    }
+
+    if (!address.numero?.trim()) {
+      setError('Por favor, informe o número da residência do aluno (ou digite S/N).');
+      return;
+    }
+
     if (!formData.senha || formData.senha.length < 6) {
       setError('A senha deve ter pelo menos 6 dígitos.');
       return;
@@ -130,6 +157,13 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
         dataNascimento: formData.dataNascimento,
         idade: check.age,
         categoriaCnh: formData.categoriaCnh,
+        cep: address.cep?.trim(),
+        estado: address.estado.trim().toUpperCase(),
+        cidade: address.cidade.trim(),
+        bairro: address.bairro?.trim(),
+        logradouro: address.logradouro?.trim(),
+        numero: address.numero?.trim(),
+        complemento: address.complemento?.trim(),
         status: 'EM_ANDAMENTO',
         aulasCumpridas: 0,
         totalAulasContratadas: contractedLessons,
@@ -158,6 +192,16 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
         telefone: formData.telefone,
         cpfUltimos4: formData.cpf.replace(/\D/g, '').slice(-4),
         cpfFingerprint: generateCPFFingerprint(formData.cpf),
+        cpfMascarado: maskCPF(formData.cpf),
+        cpfCompleto: formData.cpf.trim(),
+        cep: address.cep?.trim(),
+        estado: address.estado.trim().toUpperCase(),
+        cidade: address.cidade.trim(),
+        bairro: address.bairro?.trim(),
+        logradouro: address.logradouro?.trim(),
+        numero: address.numero?.trim(),
+        complemento: address.complemento?.trim(),
+        senhaTemporaria: formData.senha,
         twoFactorAtivo: true,
         ultimoAcesso: new Date().toISOString()
       };
@@ -303,6 +347,17 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
                   </option>
                 ))}
               </select>
+            </div>
+
+            {/* Endereço Completo do Aluno com Validação por CEP */}
+            <div className="sm:col-span-2">
+              <AddressCepFields
+                value={address}
+                onChange={setAddress}
+                required={true}
+                title="Endereço Residencial do Aluno (Validação por CEP)"
+                accentColor="emerald"
+              />
             </div>
 
             <div className="sm:col-span-2">

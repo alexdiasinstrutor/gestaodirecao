@@ -27,10 +27,11 @@ import {
 } from 'lucide-react';
 import { db } from '../../lib/storage';
 import { formatDateBR, formatCurrencyBRL } from '../../lib/validation';
-import type { Student, User, Organization, StudentSkills, PaymentRecord, CnhCategory } from '../../types';
+import type { Student, User, Organization, StudentSkills, PaymentRecord, CnhCategory, AddressFields } from '../../types';
 import { CNH_CATEGORIES } from '../../types';
 import { StudentTransferModal } from './StudentTransferModal';
 import { PaymentReceiptModal } from '../common/PaymentReceiptModal';
+import { AddressCepFields } from '../common/AddressCepFields';
 import type { PaymentReceiptData } from '../../lib/receiptPdfGenerator';
 
 interface StudentsViewProps {
@@ -56,8 +57,17 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [activeStudent, setActiveStudent] = useState<Student | null>(null);
 
-  // Edit skills state when viewing student
+  // Edit skills & address state when viewing student
   const [editingSkills, setEditingSkills] = useState<StudentSkills | null>(null);
+  const [editingAddress, setEditingAddress] = useState<AddressFields>({
+    estado: 'SP',
+    cep: '',
+    logradouro: '',
+    numero: '',
+    complemento: '',
+    bairro: '',
+    cidade: ''
+  });
   const [instructorNotes, setInstructorNotes] = useState<string>('');
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
 
@@ -89,6 +99,15 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   const handleOpenStudentModal = (student: Student) => {
     setActiveStudent(student);
     setEditingSkills({ ...student.habilidades });
+    setEditingAddress({
+      estado: student.estado || currentOrg.estado || 'SP',
+      cep: student.cep || '',
+      logradouro: student.logradouro || '',
+      numero: student.numero || '',
+      complemento: student.complemento || '',
+      bairro: student.bairro || '',
+      cidade: student.cidade || currentOrg.cidade || ''
+    });
     setInstructorNotes(student.observacoesInstrutor || '');
     setSavedSuccess(false);
   };
@@ -98,6 +117,13 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
 
     const updatedStudent: Student = {
       ...activeStudent,
+      cep: editingAddress.cep?.trim(),
+      estado: editingAddress.estado?.trim().toUpperCase(),
+      cidade: editingAddress.cidade?.trim(),
+      bairro: editingAddress.bairro?.trim(),
+      logradouro: editingAddress.logradouro?.trim(),
+      numero: editingAddress.numero?.trim(),
+      complemento: editingAddress.complemento?.trim(),
       habilidades: editingSkills,
       observacoesInstrutor: instructorNotes
     };
@@ -518,6 +544,15 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                   <span>Cadastrado: {formatDateBR(activeStudent.dataCadastro)}</span>
                 </div>
               </div>
+
+              {/* Endereço Completo do Aluno (com Busca por CEP e Edição) */}
+              <AddressCepFields
+                value={editingAddress}
+                onChange={setEditingAddress}
+                required={false}
+                title="Endereço Completo do Aluno (Consulta por CEP)"
+                accentColor="blue"
+              />
 
               {/* SEÇÃO: FINANCEIRO & RECIBOS DO ALUNO */}
               {(() => {

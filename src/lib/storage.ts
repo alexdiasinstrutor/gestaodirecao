@@ -1734,6 +1734,13 @@ export const db = {
       telefone: string;
       cpf: string;
       senha: string;
+      cep?: string;
+      estado?: string;
+      cidade?: string;
+      bairro?: string;
+      logradouro?: string;
+      numero?: string;
+      complemento?: string;
     },
     actorId?: string
   ): { success: boolean; user?: User; message?: string } {
@@ -1778,6 +1785,13 @@ export const db = {
       cpfMascarado: maskCPF(cleanCpfDigits),
       cpfUltimos4: cleanCpfDigits.slice(-4),
       cpfFingerprint: generateCPFFingerprint(cleanCpfDigits),
+      cep: (data.cep || '').trim() || undefined,
+      estado: (data.estado || '').trim().toUpperCase() || undefined,
+      cidade: (data.cidade || '').trim() || undefined,
+      bairro: (data.bairro || '').trim() || undefined,
+      logradouro: (data.logradouro || '').trim() || undefined,
+      numero: (data.numero || '').trim() || undefined,
+      complemento: (data.complemento || '').trim() || undefined,
       senhaTemporaria: cleanSenha,
       twoFactorAtivo: true,
       ultimoAcesso: new Date().toISOString()
@@ -1805,6 +1819,13 @@ export const db = {
       email: string;
       telefone: string;
       cpf: string;
+      cep?: string;
+      estado?: string;
+      cidade?: string;
+      bairro?: string;
+      logradouro?: string;
+      numero?: string;
+      complemento?: string;
     },
     actorId?: string
   ): { success: boolean; user?: User; message?: string } {
@@ -1849,6 +1870,13 @@ export const db = {
     users[index].nome = cleanNome;
     users[index].email = cleanEmail;
     users[index].telefone = cleanTelefone;
+    users[index].cep = (data.cep || '').trim() || undefined;
+    users[index].estado = (data.estado || '').trim().toUpperCase() || undefined;
+    users[index].cidade = (data.cidade || '').trim() || undefined;
+    users[index].bairro = (data.bairro || '').trim() || undefined;
+    users[index].logradouro = (data.logradouro || '').trim() || undefined;
+    users[index].numero = (data.numero || '').trim() || undefined;
+    users[index].complemento = (data.complemento || '').trim() || undefined;
     users[index].papel = 'SUPER_ADMIN'; // Garante persistência do papel Master
     users[index].ultimoAcesso = new Date().toISOString();
 

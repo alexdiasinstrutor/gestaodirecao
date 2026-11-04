@@ -27,6 +27,11 @@ function orgToRow(o: Organization): Record<string, any> {
     cnpj_cpf: o.cnpjCpf,
     telefone: o.telefone,
     email: o.email,
+    cep: o.cep || null,
+    logradouro: o.logradouro || null,
+    numero: o.numero || null,
+    complemento: o.complemento || null,
+    bairro: o.bairro || null,
     cidade: o.cidade,
     estado: o.estado,
     status: o.status,
@@ -55,6 +60,11 @@ function rowToOrg(r: any): Organization {
     cnpjCpf: r.cnpj_cpf,
     telefone: r.telefone,
     email: r.email,
+    cep: r.cep || undefined,
+    logradouro: r.logradouro || undefined,
+    numero: r.numero || undefined,
+    complemento: r.complemento || undefined,
+    bairro: r.bairro || undefined,
     cidade: r.cidade,
     estado: r.estado,
     status: r.status,
@@ -87,6 +97,13 @@ function userToRow(u: User): Record<string, any> {
     cpf_fingerprint: u.cpfFingerprint,
     cpf_mascarado: u.cpfMascarado || null,
     cpf_completo: u.cpfCompleto || null,
+    cep: u.cep || null,
+    estado: u.estado || null,
+    cidade: u.cidade || null,
+    bairro: u.bairro || null,
+    logradouro: u.logradouro || null,
+    numero: u.numero || null,
+    complemento: u.complemento || null,
     two_factor_ativo: u.twoFactorAtivo || false,
     two_factor_secret: u.twoFactorSecret || null,
     ultimo_acesso: u.ultimoAcesso || null,
@@ -111,6 +128,13 @@ function rowToUser(r: any): User {
     cpfFingerprint: r.cpf_fingerprint,
     cpfMascarado: r.cpf_mascarado,
     cpfCompleto: r.cpf_completo,
+    cep: r.cep || undefined,
+    estado: r.estado || undefined,
+    cidade: r.cidade || undefined,
+    bairro: r.bairro || undefined,
+    logradouro: r.logradouro || undefined,
+    numero: r.numero || undefined,
+    complemento: r.complemento || undefined,
     twoFactorAtivo: r.two_factor_ativo,
     twoFactorSecret: r.two_factor_secret,
     ultimoAcesso: r.ultimo_acesso,
@@ -136,6 +160,13 @@ function studentToRow(s: Student): Record<string, any> {
     data_nascimento: s.dataNascimento,
     idade: s.idade || 18,
     categoria_cnh: s.categoriaCnh,
+    cep: s.cep || null,
+    estado: s.estado || null,
+    cidade: s.cidade || null,
+    bairro: s.bairro || null,
+    logradouro: s.logradouro || null,
+    numero: s.numero || null,
+    complemento: s.complemento || null,
     status: s.status,
     aulas_cumpridas: s.aulasCumpridas || 0,
     total_aulas_contratadas: s.totalAulasContratadas || 20,
@@ -161,6 +192,13 @@ function rowToStudent(r: any): Student {
     dataNascimento: r.data_nascimento,
     idade: r.idade,
     categoriaCnh: r.categoria_cnh,
+    cep: r.cep || undefined,
+    estado: r.estado || undefined,
+    cidade: r.cidade || undefined,
+    bairro: r.bairro || undefined,
+    logradouro: r.logradouro || undefined,
+    numero: r.numero || undefined,
+    complemento: r.complemento || undefined,
     status: r.status,
     aulasCumpridas: r.aulas_cumpridas,
     totalAulasContratadas: r.total_aulas_contratadas,
@@ -480,6 +518,25 @@ async function supabaseUpsert(table: string, row: Record<string, any>): Promise<
   if (!supabase) return;
   const { error } = await supabase.from(table).upsert(row, { onConflict: 'id' });
   if (error) {
+    // Se a tabela remota no Supabase ainda não executou o ALTER TABLE com os campos extras de endereço,
+    // faz fallback automático removendo apenas as colunas de endereço estendidas para não perder a gravação.
+    if (error.message && (error.message.includes('column') || error.code === 'PGRST204')) {
+      const fallbackRow = { ...row };
+      delete fallbackRow.cep;
+      delete fallbackRow.logradouro;
+      delete fallbackRow.numero;
+      delete fallbackRow.complemento;
+      delete fallbackRow.bairro;
+      if (table !== 'organizations') {
+        delete fallbackRow.cidade;
+        delete fallbackRow.estado;
+      }
+      const retry = await supabase.from(table).upsert(fallbackRow, { onConflict: 'id' });
+      if (retry.error) {
+        console.error(`[Supabase] Erro ao salvar em "${table}" (fallback):`, retry.error.message);
+      }
+      return;
+    }
     console.error(`[Supabase] Erro ao salvar em "${table}":`, error.message);
   }
 }

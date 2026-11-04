@@ -16,7 +16,8 @@ import {
 } from 'lucide-react';
 import { db } from '../../lib/storage';
 import { isValidCPF, maskCPF } from '../../lib/validation';
-import { User } from '../../types';
+import { User, AddressFields } from '../../types';
+import { AddressCepFields } from '../common/AddressCepFields';
 
 interface MasterUserEditModalProps {
   mode: 'NEW' | 'EDIT';
@@ -37,6 +38,15 @@ export const MasterUserEditModal: React.FC<MasterUserEditModalProps> = ({
   const [email, setEmail] = useState('');
   const [telefone, setTelefone] = useState('');
   const [cpf, setCpf] = useState('');
+  const [address, setAddress] = useState<AddressFields>({
+    estado: 'SP',
+    cep: '',
+    logradouro: '',
+    numero: '',
+    complemento: '',
+    bairro: '',
+    cidade: ''
+  });
   const [senha, setSenha] = useState('');
   const [confirmSenha, setConfirmSenha] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -49,11 +59,29 @@ export const MasterUserEditModal: React.FC<MasterUserEditModalProps> = ({
       setEmail(userToEdit.email || '');
       setTelefone(userToEdit.telefone || '');
       setCpf(userToEdit.cpfCompleto || userToEdit.cpfMascarado || '');
+      setAddress({
+        estado: userToEdit.estado || 'SP',
+        cep: userToEdit.cep || '',
+        logradouro: userToEdit.logradouro || '',
+        numero: userToEdit.numero || '',
+        complemento: userToEdit.complemento || '',
+        bairro: userToEdit.bairro || '',
+        cidade: userToEdit.cidade || ''
+      });
     } else {
       setNome('');
       setEmail('');
       setTelefone('');
       setCpf('');
+      setAddress({
+        estado: 'SP',
+        cep: '',
+        logradouro: '',
+        numero: '',
+        complemento: '',
+        bairro: '',
+        cidade: ''
+      });
       setSenha('');
       setConfirmSenha('');
     }
@@ -131,7 +159,14 @@ export const MasterUserEditModal: React.FC<MasterUserEditModalProps> = ({
             email,
             telefone,
             cpf: cleanCpfDigits,
-            senha
+            senha,
+            cep: address.cep,
+            estado: address.estado,
+            cidade: address.cidade,
+            bairro: address.bairro,
+            logradouro: address.logradouro,
+            numero: address.numero,
+            complemento: address.complemento
           },
           currentUser.id
         );
@@ -151,7 +186,14 @@ export const MasterUserEditModal: React.FC<MasterUserEditModalProps> = ({
             nome,
             email,
             telefone,
-            cpf: cleanCpfDigits
+            cpf: cleanCpfDigits,
+            cep: address.cep,
+            estado: address.estado,
+            cidade: address.cidade,
+            bairro: address.bairro,
+            logradouro: address.logradouro,
+            numero: address.numero,
+            complemento: address.complemento
           },
           currentUser.id
         );
@@ -298,6 +340,15 @@ export const MasterUserEditModal: React.FC<MasterUserEditModalProps> = ({
                 </p>
               </div>
             </div>
+
+            {/* Endereço Completo do Administrador Master com Busca por CEP */}
+            <AddressCepFields
+              value={address}
+              onChange={setAddress}
+              required={false}
+              title="Endereço Completo do Master (Validação por CEP)"
+              accentColor="purple"
+            />
 
             {/* Campos de Senha apenas para Novo Master */}
             {mode === 'NEW' && (

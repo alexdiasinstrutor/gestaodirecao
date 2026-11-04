@@ -11,7 +11,8 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { ALL_SYSTEM_MODULES, SAAS_PLANS, getPlanDetails } from '../../lib/saasPlans';
-import type { Organization, OrganizationStatus, SaaSPlanType, PixKeyType } from '../../types';
+import type { Organization, OrganizationStatus, SaaSPlanType, PixKeyType, AddressFields } from '../../types';
+import { AddressCepFields } from '../common/AddressCepFields';
 
 interface OrganizationEditModalProps {
   organization: Organization;
@@ -29,8 +30,15 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
   const [cnpjCpf, setCnpjCpf] = useState(organization.cnpjCpf);
   const [telefone, setTelefone] = useState(organization.telefone || '');
   const [email, setEmail] = useState(organization.email || '');
-  const [cidade, setCidade] = useState(organization.cidade || '');
-  const [estado, setEstado] = useState(organization.estado || 'SP');
+  const [address, setAddress] = useState<AddressFields>({
+    estado: organization.estado || 'SP',
+    cep: organization.cep || '',
+    logradouro: organization.logradouro || '',
+    numero: organization.numero || '',
+    complemento: organization.complemento || '',
+    bairro: organization.bairro || '',
+    cidade: organization.cidade || ''
+  });
   const [status, setStatus] = useState<OrganizationStatus>(organization.status);
   const [plano, setPlano] = useState<SaaSPlanType>(organization.plano);
   const [dataVencimentoPlano, setDataVencimentoPlano] = useState(
@@ -91,8 +99,13 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
       cnpjCpf: cnpjCpf.trim(),
       telefone: telefone.trim(),
       email: email.trim(),
-      cidade: cidade.trim(),
-      estado: estado.trim().toUpperCase(),
+      cep: address.cep?.trim(),
+      logradouro: address.logradouro?.trim(),
+      numero: address.numero?.trim(),
+      complemento: address.complemento?.trim(),
+      bairro: address.bairro?.trim(),
+      cidade: (address.cidade || '').trim(),
+      estado: (address.estado || 'SP').trim().toUpperCase(),
       status,
       plano,
       dataVencimentoPlano,
@@ -183,26 +196,14 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl"
                 />
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                <div className="col-span-2">
-                  <label className="block font-semibold text-slate-700 mb-1">Cidade</label>
-                  <input
-                    type="text"
-                    value={cidade}
-                    onChange={(e) => setCidade(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">UF</label>
-                  <input
-                    type="text"
-                    maxLength={2}
-                    value={estado}
-                    onChange={(e) => setEstado(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono uppercase text-center"
-                  />
-                </div>
+              <div className="sm:col-span-2">
+                <AddressCepFields
+                  value={address}
+                  onChange={setAddress}
+                  required={false}
+                  title="Endereço Completo da Instituição / CFC (Validação por CEP)"
+                  accentColor="purple"
+                />
               </div>
             </div>
           </div>

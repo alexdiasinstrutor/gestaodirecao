@@ -1020,6 +1020,26 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
                         </span>
                       </div>
 
+                      {(master.cep || master.logradouro || master.cidade) && (
+                        <div className="flex items-start justify-between gap-2 text-slate-700 pt-1 border-t border-slate-200/60">
+                          <span className="text-slate-500 font-medium shrink-0">Endereço:</span>
+                          <span className="font-semibold text-slate-800 text-right">
+                            {[
+                              master.logradouro
+                                ? `${master.logradouro}${master.numero ? `, nº ${master.numero}` : ''}${
+                                    master.complemento ? ` (${master.complemento})` : ''
+                                  }`
+                                : '',
+                              master.bairro,
+                              master.cidade && master.estado ? `${master.cidade}/${master.estado}` : master.cidade,
+                              master.cep ? `CEP ${master.cep}` : ''
+                            ]
+                              .filter(Boolean)
+                              .join(' · ')}
+                          </span>
+                        </div>
+                      )}
+
                       <div className="flex items-center justify-between text-slate-700 pt-1 border-t border-slate-200/60">
                         <span className="flex items-center gap-1.5 text-slate-500 font-medium">
                           <Lock className="w-3.5 h-3.5 text-slate-400" />
