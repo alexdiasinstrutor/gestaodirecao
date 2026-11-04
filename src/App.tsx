@@ -43,31 +43,18 @@ import { useInterfaceMode } from './hooks/useInterfaceMode';
 import { canAccessModule } from './lib/saasPlans';
 
 export default function App() {
-  // Initialize storage & seeds on mount, then hydrate from Supabase
+  // Initialize storage & seeds on mount, then hydrate from Supabase (sem login automático)
   useEffect(() => {
     initDatabase();
+    db.setCurrentUser(null);
     syncFromSupabase().then(() => {
-      const u = db.getCurrentUser();
-      if (u?.id === 'usr_admin_master' || u?.id === 'usr_instrutor_carlos') {
-        db.setCurrentUser(null);
-        setCurrentUser(null);
-      } else if (u) {
-        setCurrentUser(u);
-        setCurrentOrg(db.getOrganization(u.organizacaoId));
-      }
+      // Atualiza apenas os dados da organização padrão após sincronizar, mantendo a exigência de login manual
+      setCurrentOrg(db.getOrganizations()[0]);
     });
   }, []);
 
-  const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    initDatabase();
-    const u = db.getCurrentUser();
-    // Do not auto-login as legacy demo user
-    if (u?.id === 'usr_admin_master' || u?.id === 'usr_instrutor_carlos') {
-      db.setCurrentUser(null);
-      return null;
-    }
-    return u;
-  });
+  // Sempre exige autenticação manual por e-mail e senha ao abrir a plataforma (sem entrada automática do Master)
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   const [currentOrg, setCurrentOrg] = useState<Organization | undefined>(() => {
     const user = db.getCurrentUser();

@@ -771,18 +771,8 @@ export function seedCleanProductionData(): { org: Organization; user: User } {
   writeList(STORAGE_KEYS.SYNC_QUEUE, []);
   localStorage.setItem(STORAGE_KEYS.SEEDED, 'true');
 
-  // Não auto-loga no master: exige autenticação do usuário
-  const current = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
-  if (current) {
-    try {
-      const u = JSON.parse(current);
-      if (u.id === 'usr_admin_master' || u.id === 'usr_instrutor_carlos' || u.email === 'admin@sistema.com.br') {
-        localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
-      }
-    } catch {
-      localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
-    }
-  }
+  // Nunca auto-loga em nenhum usuário (incluindo Master): exige login manual com e-mail e senha
+  localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
 
   // Persiste no Supabase caso esteja conectado
   if (supabaseAdapter.enabled) {

@@ -28,8 +28,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   onOpenInstructorRegister,
   onOpenStudentRegister
 }) => {
-  const [email, setEmail] = useState<string>('cassiordcosta@gmail.com');
-  const [password, setPassword] = useState<string>('123456');
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [googleEmail, setGoogleEmail] = useState<string>('');
+  const [googlePassword, setGooglePassword] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [showPasswordRecovery, setShowPasswordRecovery] = useState<boolean>(false);
@@ -47,10 +49,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     setLoading(true);
 
     setTimeout(() => {
-      const user = db.getUserByEmail(email);
+      const user = db.getUserByEmail(email.trim());
 
       if (!user) {
-        setError('Usuário não encontrado. Verifique o e-mail ou cadastre-se como Instrutor.');
+        setError('Usuário não encontrado. Verifique o e-mail de cadastro ou cadastre-se como Instrutor.');
         setLoading(false);
         return;
       }
@@ -68,27 +70,35 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     }, 400);
   };
 
-  const handleQuickLogin = (quickEmail: string) => {
-    setEmail(quickEmail);
-    const user = db.getUserByEmail(quickEmail);
-    if (user) {
-      setPassword(user.senhaTemporaria || '123456');
-      onLoginAttempt(user);
-    }
-  };
+  const handleGoogleLoginSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
 
-  const handleSelectGoogleAccount = (googleEmail: string) => {
+    if (!googleEmail.trim()) {
+      setError('Informe o e-mail da sua conta Google cadastrada.');
+      return;
+    }
+
     setLoading(true);
     setShowGoogleModal(false);
     setTimeout(() => {
-      const user = db.getUserByEmail(googleEmail);
-      setLoading(false);
-      if (user) {
-        onLoginAttempt(user);
-      } else {
-        setError(`Conta Google (${googleEmail}) não encontrada no sistema.`);
+      const user = db.getUserByEmail(googleEmail.trim());
+      if (!user) {
+        setLoading(false);
+        setError(`Conta (${googleEmail.trim()}) não encontrada no sistema. Verifique o e-mail de cadastro.`);
+        return;
       }
-    }, 500);
+
+      const expectedPassword = user.senhaTemporaria || '123456';
+      if (googlePassword !== expectedPassword) {
+        setLoading(false);
+        setError('Senha incorreta para a conta informada.');
+        return;
+      }
+
+      setLoading(false);
+      onLoginAttempt(user);
+    }, 400);
   };
 
   return (
@@ -225,37 +235,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             </button>
           </form>
 
-          {/* Contas Cadastradas no Sistema */}
-          {(() => {
-            const registeredUsers = db.getUsers();
-            if (registeredUsers.length === 0) return null;
-            return (
-              <div className="pt-3 border-t border-slate-100">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 text-center">
-                  Acesso Rápido — Contas Cadastradas
-                </p>
-                <div className="grid grid-cols-1 gap-1.5 max-h-44 overflow-y-auto">
-                  {registeredUsers.map((u) => (
-                    <button
-                      key={u.id}
-                      type="button"
-                      onClick={() => handleQuickLogin(u.email)}
-                      className="w-full flex items-center justify-between p-2 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-sky-50 hover:border-sky-300 text-left transition-colors cursor-pointer"
-                    >
-                      <div className="truncate">
-                        <p className="text-xs font-bold text-slate-900 truncate">{u.nome}</p>
-                        <p className="text-[11px] text-sky-700 font-mono truncate">{u.email}</p>
-                      </div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-900 text-white shrink-0 ml-2">
-                        {u.papel === 'SUPER_ADMIN' ? 'Master' : u.papel === 'ALUNO' ? 'Aluno' : 'Instrutor'}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            );
-          })()}
-
           {/* Registration Links */}
           <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row gap-2">
             <button
@@ -340,30 +319,50 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             </div>
 
             <p className="text-xs text-slate-500">
-              Selecione a conta Google para entrar no sistema:
+              Informe o e-mail Google e a senha da sua conta cadastrada na plataforma:
             </p>
 
-            <div className="space-y-2">
+            <form onSubmit={handleGoogleLoginSubmit} className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  E-mail Google Cadastrado
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={googleEmail}
+                  onChange={(e) => setGoogleEmail(e.target.value)}
+                  placeholder="seuemail@gmail.com"
+                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Senha de Acesso
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={googlePassword}
+                  onChange={(e) => setGooglePassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none"
+                />
+              </div>
+
               <button
-                onClick={() => handleSelectGoogleAccount('cassiordcosta@gmail.com')}
-                className="w-full flex items-center gap-3 p-3 rounded-xl border border-purple-200 bg-purple-50/60 hover:bg-purple-100 text-left transition-colors cursor-pointer"
+                type="submit"
+                className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
               >
-                <div className="w-8 h-8 rounded-full bg-purple-600 text-white font-bold flex items-center justify-center text-xs shrink-0">
-                  CC
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-bold text-slate-900 truncate">Cássio Costa</p>
-                  <p className="text-[11px] text-purple-700 font-mono truncate">cassiordcosta@gmail.com</p>
-                  <span className="inline-block mt-0.5 text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded bg-purple-200 text-purple-900">
-                    Administrador Master
-                  </span>
-                </div>
+                Confirmar e Entrar
               </button>
-            </div>
+            </form>
 
             <button
+              type="button"
               onClick={() => setShowGoogleModal(false)}
-              className="w-full py-2 text-xs font-medium text-slate-500 hover:text-slate-800 text-center"
+              className="w-full py-2 text-xs font-medium text-slate-500 hover:text-slate-800 text-center cursor-pointer"
             >
               Cancelar
             </button>

@@ -352,14 +352,14 @@ export const Header: React.FC<HeaderProps> = ({
                       </div>
                     )}
 
-                    {/* Alternar entre Usuários Cadastrados */}
-                    {(() => {
+                    {/* Alternar entre Usuários Cadastrados (Exclusivo para Super Admin já autenticado auditar perfis) */}
+                    {currentUser.papel === 'SUPER_ADMIN' && (() => {
                       const otherUsers = db.getUsers().filter((u) => u.id !== currentUser.id);
                       if (otherUsers.length === 0) return null;
                       return (
                         <div className="px-2 py-1.5 border-b border-slate-100">
                           <p className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                            Alternar Perfil
+                            Auditar Perfil (Master)
                           </p>
                           <div className="max-h-36 overflow-y-auto space-y-1">
                             {otherUsers.map((u) => (

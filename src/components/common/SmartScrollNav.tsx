@@ -170,3 +170,4 @@ export const SmartScrollNav: React.FC<SmartScrollNavProps> = ({
     </div>
   );
 };
+
