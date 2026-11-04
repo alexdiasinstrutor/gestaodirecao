@@ -36,13 +36,13 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
   });
 
   const [address, setAddress] = useState<AddressFields>({
-    estado: orgs[0]?.estado || 'SP',
+    estado: 'MG',
     cep: '',
     logradouro: '',
     numero: '',
     complemento: '',
     bairro: '',
-    cidade: orgs[0]?.cidade || ''
+    cidade: ''
   });
 
   const [selectedPackageId, setSelectedPackageId] = useState<string>('');

@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { MapPin, Search, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
-import { ESTADOS_BRASIL, formatCEP, lookupAddressByCEP } from '../../lib/cepService';
+import { DEFAULT_UF, ESTADOS_BRASIL, formatCEP, lookupAddressByCEP } from '../../lib/cepService';
 import type { AddressFields } from '../../types';
 
 interface AddressCepFieldsProps {
@@ -53,14 +53,14 @@ export const AddressCepFields: React.FC<AddressCepFieldsProps> = ({
     setSearchingCep(true);
     setCepFeedback(null);
 
-    const res = await lookupAddressByCEP(clean, currentUf || value.estado);
+    const res = await lookupAddressByCEP(clean, currentUf || value.estado || DEFAULT_UF);
     setSearchingCep(false);
 
     if (res.success) {
       onChange({
         ...value,
         cep: res.cep,
-        estado: res.estado || value.estado || 'SP',
+        estado: res.estado || value.estado || DEFAULT_UF,
         cidade: res.cidade || value.cidade || '',
         bairro: res.bairro || value.bairro || '',
         logradouro: res.logradouro || value.logradouro || ''
@@ -116,7 +116,7 @@ export const AddressCepFields: React.FC<AddressCepFieldsProps> = ({
           </label>
           <select
             required={required}
-            value={value.estado || 'SP'}
+            value={value.estado || DEFAULT_UF}
             onChange={(e) =>
               onChange({
                 ...value,

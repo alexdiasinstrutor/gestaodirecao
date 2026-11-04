@@ -43,3 +43,4 @@ ALTER TABLE public.package_offers ALTER COLUMN categoria_cnh TYPE VARCHAR(15);
 
 -- 4. Recarregar o cache do schema PostgREST do Supabase imediatamente
 NOTIFY pgrst, 'reload schema';
+

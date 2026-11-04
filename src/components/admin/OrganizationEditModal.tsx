@@ -31,7 +31,7 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
   const [telefone, setTelefone] = useState(organization.telefone || '');
   const [email, setEmail] = useState(organization.email || '');
   const [address, setAddress] = useState<AddressFields>({
-    estado: organization.estado || 'SP',
+    estado: organization.estado || 'MG',
     cep: organization.cep || '',
     logradouro: organization.logradouro || '',
     numero: organization.numero || '',
@@ -105,7 +105,7 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
       complemento: address.complemento?.trim(),
       bairro: address.bairro?.trim(),
       cidade: (address.cidade || '').trim(),
-      estado: (address.estado || 'SP').trim().toUpperCase(),
+      estado: (address.estado || 'MG').trim().toUpperCase(),
       status,
       plano,
       dataVencimentoPlano,

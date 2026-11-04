@@ -39,7 +39,7 @@ export const MasterUserEditModal: React.FC<MasterUserEditModalProps> = ({
   const [telefone, setTelefone] = useState('');
   const [cpf, setCpf] = useState('');
   const [address, setAddress] = useState<AddressFields>({
-    estado: 'SP',
+    estado: 'MG',
     cep: '',
     logradouro: '',
     numero: '',
@@ -60,7 +60,7 @@ export const MasterUserEditModal: React.FC<MasterUserEditModalProps> = ({
       setTelefone(userToEdit.telefone || '');
       setCpf(userToEdit.cpfCompleto || userToEdit.cpfMascarado || '');
       setAddress({
-        estado: userToEdit.estado || 'SP',
+        estado: userToEdit.estado || 'MG',
         cep: userToEdit.cep || '',
         logradouro: userToEdit.logradouro || '',
         numero: userToEdit.numero || '',
@@ -74,7 +74,7 @@ export const MasterUserEditModal: React.FC<MasterUserEditModalProps> = ({
       setTelefone('');
       setCpf('');
       setAddress({
-        estado: 'SP',
+        estado: 'MG',
         cep: '',
         logradouro: '',
         numero: '',

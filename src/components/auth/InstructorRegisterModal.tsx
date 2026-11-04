@@ -24,7 +24,7 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
   });
 
   const [address, setAddress] = useState<AddressFields>({
-    estado: 'SP',
+    estado: 'MG',
     cep: '',
     logradouro: '',
     numero: '',

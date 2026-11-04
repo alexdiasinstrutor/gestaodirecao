@@ -60,7 +60,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   // Edit skills & address state when viewing student
   const [editingSkills, setEditingSkills] = useState<StudentSkills | null>(null);
   const [editingAddress, setEditingAddress] = useState<AddressFields>({
-    estado: 'SP',
+    estado: 'MG',
     cep: '',
     logradouro: '',
     numero: '',
@@ -100,13 +100,13 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
     setActiveStudent(student);
     setEditingSkills({ ...student.habilidades });
     setEditingAddress({
-      estado: student.estado || currentOrg.estado || 'SP',
+      estado: student.estado || 'MG',
       cep: student.cep || '',
       logradouro: student.logradouro || '',
       numero: student.numero || '',
       complemento: student.complemento || '',
       bairro: student.bairro || '',
-      cidade: student.cidade || currentOrg.cidade || ''
+      cidade: student.cidade || ''
     });
     setInstructorNotes(student.observacoesInstrutor || '');
     setSavedSuccess(false);

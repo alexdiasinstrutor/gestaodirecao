@@ -9,6 +9,8 @@ export interface BrazilianState {
   nome: string;
 }
 
+export const DEFAULT_UF = 'MG';
+
 export const ESTADOS_BRASIL: BrazilianState[] = [
   { uf: 'AC', nome: 'Acre' },
   { uf: 'AL', nome: 'Alagoas' },
@@ -117,7 +119,7 @@ export async function lookupAddressByCEP(
       logradouro: '',
       bairro: '',
       cidade: '',
-      estado: selectedUf || 'SP',
+      estado: selectedUf || DEFAULT_UF,
       message: 'Informe um CEP válido com 8 dígitos numéricos (Ex: 30140-071).'
     };
   }
@@ -137,7 +139,7 @@ export async function lookupAddressByCEP(
           logradouro: data.logradouro || '',
           bairro: data.bairro || '',
           cidade: data.localidade || '',
-          estado: returnedUf || selectedUf || 'SP',
+          estado: returnedUf || selectedUf || DEFAULT_UF,
           stateMismatch: mismatch,
           message: mismatch
             ? `CEP localizado em ${data.localidade}/${returnedUf} (Estado atualizado automaticamente de ${selectedUf} para ${returnedUf}). Preencha o Número e Complemento.`
@@ -164,7 +166,7 @@ export async function lookupAddressByCEP(
           logradouro: data.street || '',
           bairro: data.neighborhood || '',
           cidade: data.city || '',
-          estado: returnedUf || selectedUf || 'SP',
+          estado: returnedUf || selectedUf || DEFAULT_UF,
           stateMismatch: mismatch,
           message: mismatch
             ? `CEP localizado em ${data.city}/${returnedUf} (Estado ajustado automaticamente para ${returnedUf}). Preencha o Número e Complemento.`
@@ -180,7 +182,7 @@ export async function lookupAddressByCEP(
       logradouro: '',
       bairro: '',
       cidade: '',
-      estado: selectedUf || 'SP',
+      estado: selectedUf || DEFAULT_UF,
       message: 'Não foi possível consultar o CEP online agora. Você pode preencher os campos de endereço manualmente.'
     };
   }
@@ -191,7 +193,7 @@ export async function lookupAddressByCEP(
     logradouro: '',
     bairro: '',
     cidade: '',
-    estado: selectedUf || 'SP',
+    estado: selectedUf || DEFAULT_UF,
     message: 'CEP não encontrado na base dos Correios. Verifique os números digitados.'
   };
 }

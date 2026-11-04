@@ -118,8 +118,8 @@ export function seedDemoData() {
     cnpjCpf: '32.194.852/0001-44',
     telefone: '(11) 98765-4321',
     email: 'contato@direcaosegura.com.br',
-    cidade: 'São Paulo',
-    estado: 'SP',
+    cidade: 'Belo Horizonte',
+    estado: 'MG',
     status: 'ATIVO',
     plano: 'MASTER',
     criadoEm: '2026-01-10T08:00:00Z'
@@ -732,8 +732,8 @@ export function seedCleanProductionData(): { org: Organization; user: User } {
     cnpjCpf: '32.194.852/0001-44',
     telefone: '(11) 98765-4321',
     email: 'cassiordcosta@gmail.com',
-    cidade: 'São Paulo',
-    estado: 'SP',
+    cidade: 'Belo Horizonte',
+    estado: 'MG',
     status: 'ATIVO',
     plano: 'MASTER',
     criadoEm: new Date().toISOString()

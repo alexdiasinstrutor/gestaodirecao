@@ -29,7 +29,7 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
   const [telefone, setTelefone] = useState('');
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState<AddressFields>({
-    estado: 'SP',
+    estado: 'MG',
     cep: '',
     logradouro: '',
     numero: '',
@@ -74,7 +74,7 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
       complemento: address.complemento?.trim(),
       bairro: address.bairro?.trim(),
       cidade: (address.cidade || '').trim(),
-      estado: (address.estado || 'SP').trim().toUpperCase(),
+      estado: (address.estado || 'MG').trim().toUpperCase(),
       status: 'ATIVO',
       plano,
       criadoEm: new Date().toISOString(),
@@ -104,7 +104,7 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
         cpfMascarado: cleanCpf.length === 11 ? maskCPF(cleanCpf) : '***.***.***-**',
         cpfCompleto: userCpf.trim() || undefined,
         cep: address.cep?.trim(),
-        estado: (address.estado || 'SP').trim().toUpperCase(),
+        estado: (address.estado || 'MG').trim().toUpperCase(),
         cidade: (address.cidade || '').trim(),
         bairro: address.bairro?.trim(),
         logradouro: address.logradouro?.trim(),
