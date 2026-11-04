@@ -42,21 +42,21 @@ export function generateOfficialDossierPdf(options: DossierPdfOptions = {}): jsP
 
   doc.setFontSize(7.5);
   doc.setTextColor(...greenColor);
-  doc.text('HOMOLOGAÇÃO OFICIAL v5.3 ESTÁVEL', pageWidth - margin, currentY, { align: 'right' });
+  doc.text('HOMOLOGAÇÃO OFICIAL v6.2 ESTÁVEL', pageWidth - margin, currentY, { align: 'right' });
   currentY += 6;
 
   // Título Principal
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(18);
   doc.setTextColor(...darkColor);
-  doc.text('SISTEMA DE GESTÃO DE DIREÇÃO', margin, currentY);
+  doc.text('GESTÃO AD (AUTO DIREÇÃO)', margin, currentY);
   currentY += 6;
 
   // Subtítulo
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9.5);
   doc.setTextColor(...slateColor);
-  doc.text('Dossiê Técnico, Arquitetura de Software, Catálogo de Telas, Finanças e Dicionário de Dados', margin, currentY);
+  doc.text('Dossiê Técnico, Modo Mobile/Normal, Validação de Endereço por CEP (Default MG), Finanças e Banco Supabase', margin, currentY);
   currentY += 6;
 
   // Caixa de Metadados
@@ -69,7 +69,7 @@ export function generateOfficialDossierPdf(options: DossierPdfOptions = {}): jsP
   doc.setTextColor(...darkColor);
   doc.text('Versão da Plataforma:', margin + 4, currentY + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text('v5.3 Auditada e Protegida por Agentes', margin + 35, currentY + 5);
+  doc.text('v6.2 (Mobile/Normal + Busca CEP Default MG)', margin + 35, currentY + 5);
 
   doc.setFont('helvetica', 'bold');
   doc.text('Administrador Master:', margin + 4, currentY + 10);
@@ -82,13 +82,13 @@ export function generateOfficialDossierPdf(options: DossierPdfOptions = {}): jsP
   doc.text('Banco de Dados:', margin + 4, currentY + 15);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...greenColor);
-  doc.text('Google Cloud Firestore + Offline-First (IndexedDB)', margin + 35, currentY + 15);
+  doc.text('Supabase PostgreSQL (CEP/PIX) + Firestore + Local', margin + 35, currentY + 15);
 
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...darkColor);
   doc.text('Data de Homologação:', margin + 105, currentY + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text('Outubro de 2026', margin + 140, currentY + 5);
+  doc.text('Novembro de 2026', margin + 140, currentY + 5);
 
   doc.setFont('helvetica', 'bold');
   doc.text('Normativas Legais:', margin + 105, currentY + 10);
@@ -113,11 +113,11 @@ export function generateOfficialDossierPdf(options: DossierPdfOptions = {}): jsP
   doc.setFontSize(8.5);
   doc.setTextColor(...darkColor);
   const resumoText = [
-    'O Sistema de Administração de Gestão de Direção é uma solução tecnológica full-stack de nível corporativo e pedagógico,',
-    'projetada para Centros de Formação de Condutores (CFCs / Autoescolas), Instrutores Autônomos e Candidatos à CNH.',
-    'A plataforma une em um único ambiente integrado: gestão pedagógica com 8 competências práticas do CONTRAN,',
-    'gestão financeira centesimal de alta precisão (contas a receber, PIX dinâmico Copia e Cola / QR Code, despesas e DRE),',
-    'agenda adaptativa operando das 06:00 às 00:00 (carga noturna obrigatória do CTB) e governança estrita de acessos (RBAC).'
+    'O Gestão AD (Auto Direção) é uma solução tecnológica full-stack de nível corporativo e pedagógico para CFCs, Instrutores e Alunos.',
+    'Inclui: 12 categorias oficiais de CNH (ACC, A, B, AB, C, AC, D, AD, E, AE, PCD, OUTRA), avaliação de 8 competências CONTRAN,',
+    'validação e preenchimento automático de endereço por CEP (ViaCEP/BrasilAPI) com estado padrão MG - Minas Gerais,',
+    'Modo Mobile Simplificado vs. Modo Normal com barra Desktop guiada pelo mouse (SmartScrollNav), login Master explícito sem auto-login,',
+    'gestão Multi-Master com troca/recuperação de senha e sincronização completa no Supabase PostgreSQL.'
   ];
   doc.text(resumoText, margin, currentY);
   currentY += 20;
@@ -284,9 +284,9 @@ export function generateOfficialDossierPdf(options: DossierPdfOptions = {}): jsP
     },
     head: [['Coleção / Entidade', 'Chaves (PK / FK)', 'Campos Principais e Tipos', 'Regras de Negócio e Integridade']],
     body: [
-      ['organizations', 'PK: id (string)', 'nome, tipo, cnpjCpf, telefone, email, cidade, estado, status, plano', 'Tenants (Autoescolas e Autônomos). Isolamento de dados multi-inquilino.'],
-      ['users', 'PK: id (string)\nFK: organizacaoId', 'nome, email, papel (SUPER_ADMIN|ADMIN|INSTRUTOR|ALUNO), cpfFingerprint, 2FA', 'Contas autenticáveis, Google OAuth e hash SHA-256 de CPF.'],
-      ['students', 'PK: id (string)\nFKs: organizacaoId,\ninstrutorId, pacoteId', 'nome, cpfMascarado, cpfFingerprint, dataNasc, idade, categoriaCnh, status, habilidades', 'Ficha do aluno. 1 Aluno = 1 Instrutor; Idade mínima >= 18 anos.'],
+      ['organizations', 'PK: id (string)', 'nome, tipo, cnpjCpf, cep, logradouro, numero, complemento, bairro, cidade, estado (MG), chavePix, plano', 'Tenants (Autoescolas e Autônomos). Endereço por CEP e PIX no Supabase.'],
+      ['users', 'PK: id (string)\nFK: organizacaoId', 'nome, email, papel, cpfFingerprint, cep, logradouro, numero, complemento, bairro, cidade, estado (MG), chavePix', 'Login explícito sem auto-login, Multi-Master, CEP e hash SHA-256 de CPF.'],
+      ['students', 'PK: id (string)\nFKs: organizacaoId,\ninstrutorId, pacoteId', 'nome, cpfMascarado, idade, categoriaCnh (12 cat), cep, logradouro, numero, complemento, bairro, cidade, estado (MG)', 'Ficha do aluno com busca automática por CEP. 1 Aluno = 1 Instrutor.'],
       ['StudentSkills\n(Embutido)', 'Embutido em students', 'baliza, embreagem, transito, cruzamentos, rodovia, sinalizacao, defensiva, simulado (0-10)', '8 competências práticas oficiais CONTRAN avaliadas de 0 a 10.'],
       ['vehicles', 'PK: id (string)\nFK: organizacaoId', 'modelo, placa, ano, tipo (CARRO|MOTO|CAMINHAO|ONIBUS), kmAtual, proximaRevisaoKm', 'Frota veicular de instrução, controle de quilometragem e revisões.'],
       ['lessons', 'PK: id (string)\nFKs: alunoId, instrutorId,\nveiculoId, organizacaoId', 'data, horaInicio (06h-00h), horaFim, topico, status (AGENDADA|CONCLUIDA|FALTA), nota', 'Diário de aulas práticas com suporte a carga noturna e faltas.'],

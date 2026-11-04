@@ -1,6 +1,6 @@
 # DOSSIÊ COMPLETO DO SISTEMA — GESTÃO AD (AUTO DIREÇÃO)
-**Documento Oficial de Registro Técnico, Arquitetura de Software, Interface Adaptativa (Mobile/Tablet/Desktop), Catálogo de Telas, Regras de Negócio e Agentes de Segurança**  
-*Data de Homologação: Novembro de 2026 | Versão da Plataforma: v6.0 Auditada, Responsiva (Modo Mobile & Normal) e Integrada ao Supabase*
+**Documento Oficial de Registro Técnico, Arquitetura de Software, Interface Adaptativa (Mobile/Tablet/Desktop), Validação de Endereço por CEP, Catálogo de Telas, Regras de Negócio e Agentes de Segurança**  
+*Data de Homologação: Novembro de 2026 | Versão da Plataforma: v6.2 Auditada, Responsiva (Modo Mobile & Normal), Validação por CEP (Default MG) e Sincronizada no Supabase*
 
 ---
 
@@ -590,8 +590,17 @@ Representa os clientes empresariais ou autônomos que utilizam a plataforma (Ten
 | `cnpjCpf` | `string` | `string` | Sim | CNPJ formatado (`XX.XXX.XXX/0001-XX`) ou CPF do autônomo. |
 | `telefone` | `string` | `string` | Sim | Telefone de contato e atendimento via WhatsApp. |
 | `email` | `string` | `string` | Sim | E-mail corporativo principal do tenant. |
+| `cep` | `string` | `string` | Não | CEP formatado (`00000-000`) com preenchimento automático de endereço via ViaCEP/BrasilAPI. |
+| `logradouro` | `string` | `string` | Não | Rua, Avenida ou Praça preenchida automaticamente pela busca de CEP. |
+| `numero` | `string` | `string` | Não | Número do imóvel ou `S/N` informado pelo usuário. |
+| `complemento` | `string` | `string` | Não | Complemento do endereço (Sala, Bloco, Apto, etc.). |
+| `bairro` | `string` | `string` | Não | Bairro preenchido automaticamente pela consulta de CEP. |
 | `cidade` | `string` | `string` | Sim | Município de atuação cadastrado junto ao DETRAN. |
-| `estado` | `string` | `string` | Sim | Sigla da Unidade Federativa (UF, 2 caracteres). |
+| `estado` | `string` | `string` | Sim | Sigla da Unidade Federativa (UF, 2 caracteres — Padrão inicial: **`MG`** - Minas Gerais). |
+| `chavePix` | `string` | `string` | Não | Chave PIX oficial da instituição para recebimento dinâmico. |
+| `tipoChavePix` | `PixKeyType` | `string` | Não | Tipo da chave PIX (`'CPF' \| 'CNPJ' \| 'EMAIL' \| 'TELEFONE' \| 'ALEATORIA'`). |
+| `beneficiarioPix` | `string` | `string` | Não | Nome do titular/beneficiário PIX (até 50 caracteres). |
+| `cidadePix` | `string` | `string` | Não | Cidade do beneficiário no payload EMV PIX. |
 | `status` | `'ATIVO' \| 'BLOQUEADO' \| 'PENDENTE_APROVACAO' \| 'VENCIDO' \| 'TESTE'` | `string` | Sim | Situação cadastral da instituição e liberação pelo Master. |
 | `plano` | `'DEMO' \| 'BASICO' \| 'AVANCADO' \| 'MASTER'` | `string` | Sim | Plano SaaS contratado com regras e limites de recursos. |
 | `dataVencimentoPlano` | `string` | `string` | Não | Data de validade da mensalidade/assinatura (`YYYY-MM-DD`). |
@@ -619,7 +628,19 @@ Armazena todos os perfis autenticáveis do sistema (Administradores Master, Gest
 | `cpfUltimos4` | `string` | `string` | Sim | Últimos 4 dígitos do CPF para validações rápidas. |
 | `cpfFingerprint` | `string` | `string` | Sim | Hash criptográfico SHA-256 do CPF completo para busca sem quebra de sigilo. |
 | `cpfMascarado` | `string` | `string` | Não | Representação protegida do documento (ex: `***.***.892-01`). |
-| `cpfCompleto` | `string` | `string` | Não | CPF em claro (usado transitoriamente em memória no cadastro inicial). |
+| `cpfCompleto` | `string` | `string` | Não | CPF em claro (usado para validação cruzada LGPD na recuperação de senha). |
+| `cep` | `string` | `string` | Não | CEP (`00000-000`) com localização automática do endereço completo. |
+| `estado` | `string` | `string` | Não | UF do endereço do usuário (Padrão inicial: **`MG`** - Minas Gerais). |
+| `cidade` | `string` | `string` | Não | Município preenchido automaticamente via CEP. |
+| `bairro` | `string` | `string` | Não | Bairro preenchido automaticamente via CEP. |
+| `logradouro` | `string` | `string` | Não | Rua/Avenida preenchida automaticamente via CEP. |
+| `numero` | `string` | `string` | Não | Número do endereço preenchido manualmente pelo usuário. |
+| `complemento` | `string` | `string` | Não | Complemento opcional (Apto, Bloco, Casa). |
+| `senhaTemporaria` | `string` | `string` | Não | Hash/senha de acesso persistida e sincronizada no Supabase (`users.senha_temporaria`). |
+| `chavePix` | `string` | `string` | Não | Chave PIX individual do instrutor para recebimento direto. |
+| `tipoChavePix` | `PixKeyType` | `string` | Não | Tipo da chave PIX (`'CPF' \| 'CNPJ' \| 'EMAIL' \| 'TELEFONE' \| 'ALEATORIA'`). |
+| `beneficiarioPix` | `string` | `string` | Não | Nome do titular da conta PIX (até 50 caracteres). |
+| `cidadePix` | `string` | `string` | Não | Cidade do titular PIX. |
 | `twoFactorAtivo` | `boolean` | `boolean` | Sim | Flag indicando se a autenticação de 2 fatores está habilitada. |
 | `twoFactorSecret` | `string` | `string` | Não | Segredo TOTP criptografado para geração de códigos 2FA. |
 | `ultimoAcesso` | `string` | `string` | Não | Timestamp ISO 8601 do último login realizado na plataforma. |
@@ -644,7 +665,14 @@ Armazena os dados cadastrais, pedagógicos e status de formação dos candidatos
 | `cpfFingerprint` | `string` | `string` | Sim | Hash SHA-256 do CPF, garantindo que 1 CPF pertença a apenas 1 instrutor. |
 | `dataNascimento` | `string` | `string` | Sim | Data de nascimento no formato `YYYY-MM-DD`. |
 | `idade` | `number` | `number` | Sim | Idade calculada (validação de sistema: deve ser >= 18 anos conforme CTB). |
-| `categoriaCnh` | `'A'\|'B'\|'AB'\|'C'\|'D'\|'E'` | `string` | Sim | Categoria de habilitação pretendida pelo candidato. |
+| `categoriaCnh` | `CnhCategory` | `string` | Sim | Suporte completo às 12 categorias: `'ACC'\|'A'\|'B'\|'AB'\|'C'\|'AC'\|'D'\|'AD'\|'E'\|'AE'\|'PCD'\|'OUTRA'`. |
+| `cep` | `string` | `string` | Não | CEP residencial do aluno (`00000-000`) validado automaticamente. |
+| `estado` | `string` | `string` | Não | UF residencial do aluno (Padrão inicial: **`MG`** - Minas Gerais). |
+| `cidade` | `string` | `string` | Não | Cidade residencial localizada pelo CEP. |
+| `bairro` | `string` | `string` | Não | Bairro residencial localizado pelo CEP. |
+| `logradouro` | `string` | `string` | Não | Logradouro residencial localizado pelo CEP. |
+| `numero` | `string` | `string` | Não | Número da residência informado pelo aluno/instrutor. |
+| `complemento` | `string` | `string` | Não | Complemento residencial (Apto, Bloco, Casa). |
 | `status` | `'EM_ANDAMENTO' \| 'CONCLUIDO' \| 'CANCELADO'` | `string` | Sim | Situação do processo pedagógico de habilitação. |
 | `aulasCumpridas` | `number` | `number` | Sim | Quantidade de aulas práticas já concluídas e assinadas. |
 | `totalAulasContratadas` | `number` | `number` | Sim | Carga horária total contratada (padrão 20 aulas). |
@@ -943,25 +971,39 @@ Controla a fila transacional armazenada localmente no cliente, transmitida ao Fi
 
 ---
 
-## 13. EVOLUÇÃO v6.0: MODO MOBILE SIMPLIFICADO, MULTI-MASTER E GOVERNANÇA COMPLETA
+## 13. EVOLUÇÃO v6.2: IDENTIDADE VISUAL GESTÃO AD, MODO MOBILE/NORMAL, MULTI-MASTER, LOGIN SEGURO E ENDEREÇO AUTOMÁTICO POR CEP (DEFAULT MG)
 
-### 13.1 Detecção Automática de Dispositivo e Modo Mobile Simplificado vs. Modo Normal (`useInterfaceMode.ts`)
+### 13.1 Identidade Visual Oficial "Gestão AD (Auto Direção)" e Menu de Perfil Inteligente (`Logo.tsx` & `Header.tsx`)
+- **Logomarca Oficial e Branding**: Sistema batizado oficialmente como **Gestão AD (Auto Direção)**, contando com componente vetorial exclusivo (`Logo.tsx`) com escudo automotivo, volante estilizado e tipografia corporativa na tela inicial de Login (`LoginScreen.tsx`) e no cabeçalho (`Header.tsx`).
+- **Fechamento Automático do Menu de Perfil**: O dropdown de perfil do usuário no cabeçalho fecha automaticamente ao clicar em qualquer área externa da tela (`mousedown` / `touchstart`), ao pressionar a tecla `Escape` ou ao navegar entre abas do sistema.
+
+### 13.2 Detecção Automática de Dispositivo, Modo Mobile Simplificado vs. Modo Normal e Barra Inteligente (`useInterfaceMode.ts` & `SmartScrollNav.tsx`)
 - **Identificação em Tempo Real da Interface**: O sistema detecta automaticamente a interface física do usuário (`Mobile` `< 768px`, `Tablet` `768px–1023px`, `Desktop` `>= 1024px`) e exibe o indicador correspondente no cabeçalho e na barra superior.
 - **Modo Mobile Simplificado (`SIMPLIFIED`)**:
   - Ativado automaticamente em smartphones (ou sob demanda em qualquer tela), apresentando apenas os recursos essenciais para operação rápida em campo:
     - **Instrutor**: 4 acessos essenciais (`Início`, `Agenda`, `Alunos`, `Cobrar/PIX`), KPIs vitais de recebimento e lista de aulas práticas do dia.
     - **Aluno**: Navegação rápida em 3 abas diretas (`Agendar Aula`, `Pagar PIX`, `Aulas & Notas`).
     - **Administrador Master**: Foco imediato nas abas operacionais (`Instituições & CFCs` e `Equipe Master & Senhas`).
-- **Modo Normal Completo (`FULL`)**:
-  - Ao clicar no botão **"Modo Normal (Todos os Menus)"** (disponível no cabeçalho, na barra de interface, no menu de perfil e na barra inferior móvel), o sistema libera instantaneamente todos os menus (`Finanças & DRE`, `Saúde Financeira`, `Relatórios Automáticos`, `Verificador de Cadastros`, `Planos SaaS`, `Manutenção & Supabase SQL`), mantendo barras de navegação com rolagem horizontal suave (`overflow-x-auto no-scrollbar`) sem quebrar links, tabelas ou modais.
+- **Modo Normal Completo (`FULL`) e Barra de Navegação Desktop Inteligente (`SmartScrollNav.tsx`)**:
+  - Ao clicar no botão **"Modo Normal (Todos os Menus)"**, o sistema libera instantaneamente todos os menus (`Finanças & DRE`, `Saúde Financeira`, `Relatórios Automáticos`, `Verificador de Cadastros`, `Planos SaaS`, `Manutenção & Supabase SQL`).
+  - No **Modo Desktop**, a barra de navegação principal e as sub-abas do Console Master exibem todos os itens distribuídos integralmente na tela sem cortar e contam com **movimentação automática suave guiada pelo mouse** (ao posicionar o mouse na extremidade direita, o menu desliza para a esquerda; na extremidade esquerda, desliza para a direita) além de setas indicadoras laterais.
 
-### 13.2 Gestão Completa de Administradores Master (`SUPER_ADMIN`) e Troca de Senha
+### 13.3 Segurança de Autenticação Master (Remoção de Entrada Automática) e Governança Multi-Master
+- **Autenticação Explícita Obrigatória do Master**: Foi removida qualquer entrada automática (auto-login) ou autopreenchimento da conta Master ao iniciar ou limpar a plataforma. Para entrar como Administrador Master, o usuário deve digitar explicitamente o seu e-mail de cadastro (`cassiordcosta@gmail.com` ou outro Master cadastrado) e a respectiva senha na tela de login (`LoginScreen.tsx`).
 - **Troca de Senha no Módulo Master (`MasterPasswordModal.tsx`)**: Qualquer usuário Master pode alterar sua própria senha ou redefinir a senha de outro Master diretamente pela interface, com sincronização imediata no `localStorage` e no **Supabase PostgreSQL** (`users.senha_temporaria`).
 - **Recuperação de Senha por E-mail + CPF (`PasswordRecoveryModal.tsx`)**: Validação estrita cruzando E-mail e CPF cadastrado (em conformidade com a LGPD), envio de código de 6 dígitos e gravação persistente da nova senha validada no `LoginScreen.tsx`.
-- **Edição de Dados Cadastrais e Multi-Master (`MasterUserEditModal.tsx`)**: Permite editar Nome, E-mail, Telefone e CPF do Administrador Master e incluir novos usuários com papel `SUPER_ADMIN` na aba **"Equipe Master & Senhas"** do `AdminMasterPanel.tsx`.
+- **Edição de Dados Cadastrais e Multi-Master (`MasterUserEditModal.tsx`)**: Permite editar Nome, E-mail, Telefone, CPF e Endereço completo do Administrador Master e incluir novos usuários com papel `SUPER_ADMIN` na aba **"Equipe Master & Senhas"** do `AdminMasterPanel.tsx`.
 
-### 13.3 Suporte às 12 Categorias Oficiais de CNH e Configuração PIX Dinâmica
-- **12 Categorias de CNH**: `ACC`, `A`, `B`, `AB`, `C`, `AC`, `D`, `AD`, `E`, `AE`, `PCD` e `OUTRA` disponíveis em matrículas, pacotes e filtros.
+### 13.4 Validação e Preenchimento Automático de Endereço por CEP com Estado Padrão MG (`cepService.ts` & `AddressCepFields.tsx`)
+- **Estado Padrão `MG - Minas Gerais`**: Todos os formulários de cadastro e edição de endereço iniciam com o estado **`MG - Minas Gerais`** pré-selecionado por padrão (`DEFAULT_UF = 'MG'`).
+- **Busca Automática de CEP (ViaCEP + Fallback BrasilAPI)**:
+  - Ao selecionar o Estado (UF) e digitar os 8 dígitos do CEP (`00000-000`), o sistema consulta automaticamente a base nacional dos Correios (ViaCEP com contingência automática na BrasilAPI).
+  - Preenche instantaneamente **Logradouro (Rua/Avenida)**, **Bairro**, **Cidade/Município** e **Estado (UF)**, posicionando o cursor automaticamente no campo **Número** e deixando **Número** e **Complemento** prontos para preenchimento manual.
+- **Sincronização Completa no Banco de Dados (Local e Supabase PostgreSQL)**:
+  - Todas as 7 colunas de endereço (`cep`, `logradouro`, `numero`, `complemento`, `bairro`, `cidade`, `estado`) estão criadas, validadas (`200 OK`) e sincronizadas em tempo real nas tabelas `organizations`, `users` e `students` do projeto Supabase (`ozizhwejagjlhmaygvlf`).
+
+### 13.5 Suporte às 12 Categorias Oficiais de CNH e Configuração PIX Dinâmica
+- **12 Categorias de CNH**: `ACC`, `A`, `B`, `AB`, `C`, `AC`, `D`, `AD`, `E`, `AE`, `PCD` e `OUTRA` disponíveis em matrículas, pacotes, fichas de alunos e filtros.
 - **Configuração PIX Completa (`PixConfigModal.tsx`)**: Edição de Tipo de Chave, Chave PIX, Cidade e Nome do Beneficiário expandido para até **50 caracteres**, gerando automaticamente o payload EMV Copia e Cola e o QR Code escaneável para pagamento dos alunos.
 
 ---
@@ -972,6 +1014,6 @@ Este Dossiê constitui o registro definitivo e exaustivo de todas as funcionalid
 
 *Homologado para produção e operação contínua.*  
 *Administração Master: cassiordcosta@gmail.com*  
-*Versão do Sistema: v6.0 Estável, Responsiva (Modo Mobile & Normal), Auditada e Protegida (Go-Live & Supabase)*
+*Versão do Sistema: v6.2 Estável, Responsiva (Modo Mobile & Normal), Com Busca Automática por CEP (Default MG), Auditada e Sincronizada no Supabase*
 
 

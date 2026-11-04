@@ -2,7 +2,7 @@
 
 export const DOSSIER_METADATA = {
   title: 'Dossiê Técnico Homologado - Gestão AD (Auto Direção)',
-  version: 'v6.0 Auditada, Responsiva (Modo Mobile & Normal) e Integrada ao Supabase',
+  version: 'v6.2 Auditada, Responsiva (Modo Mobile & Normal), Busca Automática por CEP (Default MG) e Sincronizada no Supabase',
   date: 'Novembro de 2026',
   masterAdmin: 'cassiordcosta@gmail.com',
   regulations: 'CTB, CONTRAN e LGPD (Lei 13.709/2018)'
@@ -24,11 +24,11 @@ export function getOfficialDossierHtml(): string {
       <div class="meta-grid">
         <div class="meta-item">
           <strong>Versão da Plataforma:</strong>
-          <span>v6.0 Estável, Homologada e Pronta para Produção (Modo Mobile Simplificado + Normal)</span>
+          <span>v6.2 Estável, Homologada e Pronta para Produção (Modo Mobile/Normal + Busca por CEP com Default MG)</span>
         </div>
         <div class="meta-item">
           <strong>Administrador Master:</strong>
-          <span>cassiordcosta@gmail.com (Suporte Multi-Master Ativo)</span>
+          <span>cassiordcosta@gmail.com (Login Explícito sem Auto-Login + Multi-Master)</span>
         </div>
         <div class="meta-item">
           <strong>Data de Registro:</strong>
@@ -36,7 +36,7 @@ export function getOfficialDossierHtml(): string {
         </div>
         <div class="meta-item">
           <strong>Tipo de Banco de Dados:</strong>
-          <span>Supabase PostgreSQL Dual-Write + Cloud Firestore + Offline-First</span>
+          <span>Supabase PostgreSQL Dual-Write (Colunas de CEP e PIX ativas) + Cloud Firestore + Offline-First</span>
         </div>
       </div>
     </header>
@@ -46,11 +46,13 @@ export function getOfficialDossierHtml(): string {
       <h2>1. Resumo Executivo e Identificação do Sistema (Gestão AD)</h2>
       <p>O <strong>Gestão AD (Auto Direção)</strong> é uma plataforma tecnológica de nível corporativo e pedagógico desenvolvida para atender com máxima segurança, conformidade e rigor operacional:</p>
       <ul>
+        <li><strong>Identidade Visual Oficial "Gestão AD (Auto Direção)"</strong>: Logomarca vetorial oficial (<code>Logo.tsx</code>) e tela de login redesenhada exigindo autenticação explícita por e-mail e senha (sem entrada automática do Master).</li>
         <li><strong>Instrutores de Trânsito Autônomos</strong>: Gestão individual de carteira de alunos nas 12 categorias oficiais de CNH (ACC, A, B, AB, C, AC, D, AD, E, AE, PCD e OUTRA), agendas diurnas/noturnas, PIX dinâmico editável (beneficiário de até 50 caracteres) e faturamento.</li>
         <li><strong>Centros de Formação de Condutores (CFCs / Autoescolas)</strong>: Gestão unificada de múltiplos instrutores, frota de veículos, DRE consolidado e controle financeiro.</li>
         <li><strong>Candidatos à Habilitação (Alunos)</strong>: Acompanhamento aula a aula do processo de aprendizagem, notas de habilidades, agendamentos e quitações via QR Code PIX.</li>
-        <li><strong>Interface Adaptativa Inteligente (Mobile / Tablet / Desktop)</strong>: Detecção automática do dispositivo com <strong>Modo Mobile Simplificado</strong> (exibindo apenas os recursos essenciais para Instrutor, Aluno e Master em campo) e alternância em 1 clique para o <strong>Modo Normal (Completo)</strong> com todos os menus e painéis.</li>
-        <li><strong>Governança Master Avançada</strong>: Gestão completa da equipe de Administradores Master (<code>SUPER_ADMIN</code>), incluindo troca de senha direta no Módulo Master, recuperação de senha por e-mail + CPF (LGPD), edição cadastral e inclusão de novos usuários Master.</li>
+        <li><strong>Validação e Preenchimento Automático de Endereço por CEP (Estado Padrão MG - Minas Gerais)</strong>: Em todos os cadastros de usuários (Instrutor, Aluno, CFC e Master), o estado inicia em <strong>MG - Minas Gerais</strong>; o usuário digita o CEP (<code>00000-000</code>), o sistema localiza automaticamente Logradouro, Bairro, Cidade e UF (ViaCEP + BrasilAPI), deixando Número e Complemento para o usuário preencher e persistindo todas as colunas no Supabase.</li>
+        <li><strong>Interface Adaptativa Inteligente & Barra Desktop Guiada pelo Mouse (SmartScrollNav)</strong>: Detecção automática do dispositivo (Mobile, Tablet, Desktop) com <strong>Modo Mobile Simplificado</strong> e <strong>Modo Normal (Completo)</strong>. No Desktop, o menu aparece inteiro sem cortar e desliza suavemente conforme a posição do mouse nas extremidades (direita/esquerda). Fechamento automático do dropdown de perfil ao clicar fora.</li>
+        <li><strong>Governança Master Avançada</strong>: Gestão completa da equipe de Administradores Master (<code>SUPER_ADMIN</code>), incluindo troca de senha direta no Módulo Master, recuperação de senha por e-mail + CPF (LGPD), edição cadastral completa (com endereço por CEP) e inclusão de novos usuários Master.</li>
       </ul>
     </section>
 
@@ -202,22 +204,22 @@ export function getOfficialDossierHtml(): string {
             <td><strong>organizations</strong></td>
             <td><code>id (string)</code></td>
             <td>—</td>
-            <td>nome, tipo, cnpjCpf, telefone, email, cidade, estado, status, plano, criadoEm</td>
-            <td>Tenants (Autoescolas e Instrutores Autônomos). Isolamento de dados multi-inquilino.</td>
+            <td>nome, tipo, cnpjCpf, telefone, email, cep, logradouro, numero, complemento, bairro, cidade, estado (default MG), chavePix, status, plano, criadoEm</td>
+            <td>Tenants (Autoescolas e Instrutores Autônomos). Isolamento multi-inquilino e endereço completo por CEP sincronizado no Supabase.</td>
           </tr>
           <tr>
             <td><strong>users</strong></td>
             <td><code>id (string)</code></td>
             <td><code>organizacaoId</code></td>
-            <td>nome, email, papel (SUPER_ADMIN | ADMIN_ORG | INSTRUTOR | ALUNO), telefone, cpfFingerprint, cpfUltimos4, twoFactorAtivo</td>
-            <td>Contas autenticáveis, controle de acesso RBAC e auditoria de login.</td>
+            <td>nome, email, papel (SUPER_ADMIN | ADMIN_ORG | INSTRUTOR | ALUNO), telefone, cpfFingerprint, cep, logradouro, numero, complemento, bairro, cidade, estado (default MG), chavePix, senhaTemporaria</td>
+            <td>Contas autenticáveis sem auto-login, Multi-Master, endereço completo por CEP e controle RBAC.</td>
           </tr>
           <tr>
             <td><strong>students</strong></td>
             <td><code>id (string)</code></td>
             <td><code>organizacaoId</code>,<br><code>instrutorId</code>,<br><code>pacoteId</code></td>
-            <td>nome, email, telefone, cpfMascarado, cpfFingerprint, dataNascimento, idade, categoriaCnh, status, aulasCumpridas, habilidades (StudentSkills)</td>
-            <td>Ficha cadastral do aluno. Vínculo 1 CPF = 1 Instrutor e idade mínima >= 18 anos.</td>
+            <td>nome, email, telefone, cpfMascarado, cpfFingerprint, dataNascimento, idade, categoriaCnh (12 categorias), cep, logradouro, numero, complemento, bairro, cidade, estado (default MG), status, aulasCumpridas, habilidades</td>
+            <td>Ficha cadastral do aluno com validação de CEP. Vínculo 1 CPF = 1 Instrutor e idade mínima >= 18 anos.</td>
           </tr>
           <tr>
             <td><strong>StudentSkills</strong><br><small>(Objeto Embutido)</small></td>
@@ -650,8 +652,8 @@ export function printOfficialDossier(): boolean {
 }
 
 export function downloadDossierMarkdownFile(): void {
-  const markdownContent = `# DOSSIÊ COMPLETO DO SISTEMA DE GESTÃO DE DIREÇÃO
-Versão: v5.3 Estável e Homologada | Outubro de 2026
+  const markdownContent = `# DOSSIÊ COMPLETO DO SISTEMA — GESTÃO AD (AUTO DIREÇÃO)
+Versão: v6.2 Estável e Homologada (Modo Mobile/Normal + Busca por CEP Default MG + Supabase) | Novembro de 2026
 Administrador Master: cassiordcosta@gmail.com
 Normativas: CTB, CONTRAN e LGPD
 
@@ -661,7 +663,7 @@ Documento completo disponível na raiz do repositório em DOSSIE.md.`;
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'DOSSIE_SISTEMA_GESTAO_DIRECAO_v5.3.md';
+  a.download = 'DOSSIE_GESTAO_AD_v6.2.md';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

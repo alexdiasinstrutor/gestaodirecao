@@ -172,7 +172,7 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
     setIsPrinting(true);
     setPrintSuccessFeedback('Compilando e gerando arquivo PDF oficial com 16 coleções e 17 telas...');
     setTimeout(() => {
-      const ok = downloadOfficialDossierPdf('DOSSIE_OFICIAL_GESTAO_DIRECAO_v5.3.pdf');
+      const ok = downloadOfficialDossierPdf('DOSSIE_OFICIAL_GESTAO_AD_v6.2.pdf');
       setIsPrinting(false);
       if (ok) {
         setPrintSuccessFeedback('Arquivo PDF oficial gerado e baixado com sucesso no seu dispositivo!');
@@ -417,10 +417,10 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                     Dossiê Técnico Homologado
                   </span>
                   <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 mt-2">
-                    Sistema de Administração de Gestão de Direção
+                    Gestão AD (Auto Direção)
                   </h1>
                   <p className="text-xs text-slate-500 mt-1">
-                    Versão 5.2 Estável e Auditada · Registrado em Outubro de 2026
+                    Versão 6.2 Estável, Responsiva (Modo Mobile & Normal), Com Busca por CEP (Default MG) e Sincronizada no Supabase · Novembro de 2026
                   </p>
                 </div>
 
@@ -1508,17 +1508,17 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Smartphone className="w-4 h-4 text-purple-600" />
-                        <h4 className="text-xs font-bold text-slate-900">Modo Mobile Simplificado vs Modo Normal</h4>
+                        <h4 className="text-xs font-bold text-slate-900">Modo Mobile Simplificado, Modo Normal & SmartScrollNav</h4>
                       </div>
                       <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
                         APROVADO
                       </span>
                     </div>
                     <p className="text-xs text-slate-600 leading-relaxed">
-                      Detecção automática da interface física (<code className="text-purple-600 font-mono">Mobile / Tablet / Desktop</code>). No Modo Simplificado, exibe apenas os recursos essenciais para Instrutor, Aluno e Master; ao clicar em <strong>Modo Normal</strong>, libera todos os menus com responsividade total.
+                      Detecção automática da interface física (<code className="text-purple-600 font-mono">Mobile / Tablet / Desktop</code>). No Desktop em Modo Normal, exibe todos os menus completos sem cortar e desliza suavemente com a posição do mouse nas extremidades (<code className="text-purple-600 font-mono">SmartScrollNav</code>). Menu de perfil fecha automaticamente ao clicar fora.
                     </p>
                     <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
-                      Hook: useInterfaceMode (SIMPLIFIED vs FULL)
+                      Componentes: useInterfaceMode, SmartScrollNav, Header
                     </div>
                   </div>
                 )}
@@ -1529,17 +1529,38 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <KeyRound className="w-4 h-4 text-blue-600" />
-                        <h4 className="text-xs font-bold text-slate-900">Gestão Multi-Master, Troca de Senha e PIX Dinâmico</h4>
+                        <h4 className="text-xs font-bold text-slate-900">Login Master Explícito, Multi-Master e PIX Dinâmico</h4>
                       </div>
                       <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
                         APROVADO
                       </span>
                     </div>
                     <p className="text-xs text-slate-600 leading-relaxed">
-                      Módulo Master com troca direta de senha, recuperação por e-mail + CPF, edição cadastral e inclusão de novos usuários Master. Suporte às 12 categorias de CNH e configuração PIX editável com beneficiário de até 50 caracteres.
+                      Remoção do auto-login do Master (exige digitar e-mail e senha). Módulo Master com troca direta de senha, recuperação por e-mail + CPF, edição cadastral e inclusão de novos usuários Master. Suporte às 12 categorias de CNH e configuração PIX editável (50 caracteres).
                     </p>
                     <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
                       Sincronização Dual-Write: LocalStorage + Supabase PostgreSQL
+                    </div>
+                  </div>
+                )}
+
+                {/* ARQUITETURA Item Novo: Validação e Preenchimento Automático por CEP (Default MG) */}
+                {(validationFilter === 'TODOS' || validationFilter === 'ARQUITETURA') && (
+                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Database className="w-4 h-4 text-emerald-600" />
+                        <h4 className="text-xs font-bold text-slate-900">Endereço Completo por CEP (Default MG) no Supabase</h4>
+                      </div>
+                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                        APROVADO
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      Todos os cadastros (Instrutor, Aluno, CFC e Master) iniciam com o estado <strong className="text-emerald-700">MG - Minas Gerais</strong> como padrão e preenchem automaticamente Logradouro, Bairro, Cidade e UF ao digitar o CEP (ViaCEP + BrasilAPI), gravando nas tabelas <code className="text-emerald-600 font-mono">organizations</code>, <code className="text-emerald-600 font-mono">users</code> e <code className="text-emerald-600 font-mono">students</code> do Supabase.
+                    </p>
+                    <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
+                      Módulos: cepService.ts + AddressCepFields.tsx + supabaseAdapter.ts
                     </div>
                   </div>
                 )}

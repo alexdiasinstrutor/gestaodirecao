@@ -50,7 +50,7 @@ export const OfficialDossierPdfViewer: React.FC<OfficialDossierPdfViewerProps> =
             </span>
             <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
               <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-              v6.0 Homologada
+              v6.2 Homologada
             </span>
             <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-slate-100 text-slate-700">
               PDF Real (jsPDF Engine)
@@ -166,7 +166,7 @@ export const OfficialDossierPdfViewer: React.FC<OfficialDossierPdfViewerProps> =
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs mt-3">
             <div>
               <span className="text-slate-500 block text-[11px]">Versão da Plataforma:</span>
-              <strong className="text-slate-900 font-mono">v6.0 Estável</strong>
+              <strong className="text-slate-900 font-mono">v6.2 Estável (CEP + MG)</strong>
             </div>
             <div>
               <span className="text-slate-500 block text-[11px]">Administrador Master:</span>
@@ -179,8 +179,8 @@ export const OfficialDossierPdfViewer: React.FC<OfficialDossierPdfViewerProps> =
               <strong className="text-emerald-700">Supabase SQL + Firestore</strong>
             </div>
             <div>
-              <span className="text-slate-500 block text-[11px]">Interface Adaptativa:</span>
-              <strong className="text-slate-800">Modo Mobile & Normal</strong>
+              <span className="text-slate-500 block text-[11px]">Endereço & Interface:</span>
+              <strong className="text-slate-800">Busca CEP (MG) & Mobile</strong>
             </div>
           </div>
         </div>
@@ -189,16 +189,18 @@ export const OfficialDossierPdfViewer: React.FC<OfficialDossierPdfViewerProps> =
         <section className="space-y-2.5">
           <h2 className="text-base font-bold text-slate-900 border-b border-slate-200 pb-1 flex items-center gap-2">
             <span className="w-5 h-5 rounded bg-blue-600 text-white flex items-center justify-center text-xs font-bold">1</span>
-            Resumo Executivo e Identificação do Sistema
+            Resumo Executivo, Identidade Visual e Novas Melhorias Homologadas
           </h2>
           <p className="text-xs text-slate-700 leading-relaxed">
             O <strong>Gestão AD (Auto Direção)</strong> é uma plataforma full-stack de gestão pedagógica, operacional e financeira desenvolvida para Centros de Formação de Condutores (CFCs / Autoescolas), Instrutores de Trânsito Autônomos e Candidatos à Habilitação.
           </p>
           <ul className="list-disc pl-5 text-xs text-slate-700 space-y-1">
+            <li><strong>Identidade Visual Oficial "Gestão AD (Auto Direção)"</strong>: Logomarca vetorial oficial (<code>Logo.tsx</code>) e tela de login redesenhada sem auto-login automático do Master (exige digitar e-mail cadastrado e senha).</li>
             <li><strong>Gestão Pedagógica CONTRAN & 12 Categorias de CNH</strong>: Suporte às 12 categorias oficiais (ACC, A, B, AB, C, AC, D, AD, E, AE, PCD e OUTRA) e avaliação de 8 competências práticas de 0 a 10.</li>
+            <li><strong>Validação Automática de Endereço por CEP (Estado Padrão MG - Minas Gerais)</strong>: Em todos os cadastros (Instrutor, Aluno, CFC e Master), o estado inicia em <strong>MG - Minas Gerais</strong>; ao digitar o CEP, o sistema localiza automaticamente Logradouro, Bairro, Cidade e UF (ViaCEP + BrasilAPI), deixando Número e Complemento para preenchimento manual e salvando no Supabase.</li>
+            <li><strong>Modo Mobile Simplificado, Modo Normal & Menu Inteligente (SmartScrollNav)</strong>: Detecta automaticamente Mobile, Tablet ou Desktop. No Modo Normal Desktop, exibe todos os menus completos sem cortar e movimenta a barra suavemente conforme a posição do mouse nas extremidades (direita/esquerda). Fechamento automático do menu de perfil ao clicar fora.</li>
+            <li><strong>Governança Master Avançada (Multi-Master & Senhas)</strong>: Módulo Master com troca direta de senha, recuperação de senha por e-mail + CPF (LGPD), edição de dados cadastrais e endereço do Master e inclusão de novos usuários <code>SUPER_ADMIN</code>.</li>
             <li><strong>Gestão Financeira em Centavos & PIX Editável</strong>: Contas a receber, carnês, baixa de parcelas e configuração dinâmica de Chave PIX + Beneficiário (até 50 caracteres) com geração automática de QR Code EMV.</li>
-            <li><strong>Modo Mobile Simplificado & Modo Normal (Detecção Automática)</strong>: Identifica automaticamente a interface física (Mobile, Tablet ou Desktop), oferecendo o Modo Mobile Simplificado com os recursos essenciais para Instrutor, Aluno e Master, e o botão Modo Normal que libera todos os menus e painéis sem quebra visual.</li>
-            <li><strong>Governança Master Avançada (Multi-Master & Senhas)</strong>: Módulo Master com troca direta de senha, recuperação de senha por e-mail + CPF (LGPD), edição de dados cadastrais do Master e inclusão de novos usuários <code>SUPER_ADMIN</code>.</li>
           </ul>
         </section>
 
@@ -346,20 +348,20 @@ export const OfficialDossierPdfViewer: React.FC<OfficialDossierPdfViewerProps> =
                 <tr>
                   <td className="p-2 font-bold border-r border-slate-200">organizations</td>
                   <td className="p-2 border-r border-slate-200">PK: <code>id</code></td>
-                  <td className="p-2 border-r border-slate-200">nome, tipo, cnpjCpf, telefone, email, plano, status</td>
-                  <td className="p-2">Particionamento multi-inquilino.</td>
+                  <td className="p-2 border-r border-slate-200">nome, tipo, cnpjCpf, cep, logradouro, numero, complemento, bairro, cidade, estado (MG), chavePix, plano, status</td>
+                  <td className="p-2">Particionamento multi-inquilino + Endereço completo por CEP no Supabase.</td>
                 </tr>
                 <tr>
                   <td className="p-2 font-bold border-r border-slate-200">users</td>
                   <td className="p-2 border-r border-slate-200">PK: <code>id</code><br />FK: <code>organizacaoId</code></td>
-                  <td className="p-2 border-r border-slate-200">nome, email, papel, telefone, cpfFingerprint, twoFactorAtivo</td>
-                  <td className="p-2">Google OAuth e hash criptográfico de CPF.</td>
+                  <td className="p-2 border-r border-slate-200">nome, email, papel, telefone, cpfFingerprint, cep, logradouro, numero, complemento, bairro, cidade, estado (MG), chavePix</td>
+                  <td className="p-2">Login explícito sem auto-login, Multi-Master, CEP e hash de CPF.</td>
                 </tr>
                 <tr>
                   <td className="p-2 font-bold border-r border-slate-200">students</td>
                   <td className="p-2 border-r border-slate-200">PK: <code>id</code><br />FK: <code>instrutorId</code></td>
-                  <td className="p-2 border-r border-slate-200">nome, cpfMascarado, cpfFingerprint, idade, categoriaCnh, habilidades</td>
-                  <td className="p-2">1 Aluno = 1 Instrutor; Idade mínima &ge; 18 anos.</td>
+                  <td className="p-2 border-r border-slate-200">nome, cpfMascarado, idade, categoriaCnh (12 categorias), cep, logradouro, numero, complemento, bairro, cidade, estado (MG), habilidades</td>
+                  <td className="p-2">1 Aluno = 1 Instrutor; Idade &ge; 18 anos; Endereço validado por CEP.</td>
                 </tr>
                 <tr>
                   <td className="p-2 font-bold border-r border-slate-200">StudentSkills</td>
@@ -470,10 +472,10 @@ export const OfficialDossierPdfViewer: React.FC<OfficialDossierPdfViewerProps> =
         <section className="border-t-2 border-slate-300 pt-6 space-y-4">
           <div className="border-2 border-dashed border-emerald-600 bg-emerald-50/60 p-4 rounded-xl text-center space-y-1">
             <span className="inline-block bg-emerald-600 text-white text-xs font-bold px-3 py-1 rounded uppercase tracking-wider">
-              Termo Oficial de Homologação v5.3
+              Termo Oficial de Homologação v6.2
             </span>
             <p className="text-xs text-emerald-950 font-medium pt-1">
-              Sistema integralmente auditado, protegido por agentes autônomos e homologado para operação contínua.
+              Sistema integralmente auditado, com validação de endereço por CEP (padrão MG), sincronizado no Supabase e homologado para operação contínua.
             </p>
             <p className="text-[11px] text-emerald-800 font-mono">
               Validação Criptográfica: SHA256-AGD-7F9A2B4C8E01-2026-STABLE
