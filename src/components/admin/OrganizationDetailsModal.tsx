@@ -57,9 +57,8 @@ export const OrganizationDetailsModal: React.FC<OrganizationDetailsModalProps> =
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${planInfo.corBadge}`}>
                 PLANO {organization.plano}
               </span>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                organization.status === 'ATIVO' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'
-              }`}>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${organization.status === 'ATIVO' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'
+                }`}>
                 {organization.status}
               </span>
             </div>

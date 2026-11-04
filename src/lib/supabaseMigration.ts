@@ -395,12 +395,12 @@ export function generateSupabaseDataDumpSQL(): string {
 
   // 1. Organizations
   for (const o of orgs) {
-    lines.push(`INSERT INTO public.organizations (id, nome, tipo, cnpj_cpf, telefone, email, cidade, estado, status, plano, data_vencimento_plano, valor_mensalidade_centavos, chave_acesso, modulos_customizados, criado_em) VALUES (${escapeStr(o.id)}, ${escapeStr(o.nome)}, ${escapeStr(o.tipo)}, ${escapeStr(o.cnpjCpf)}, ${escapeStr(o.telefone)}, ${escapeStr(o.email)}, ${escapeStr(o.cidade)}, ${escapeStr(o.estado)}, ${escapeStr(o.status)}, ${escapeStr(o.plano)}, ${escapeDate(o.dataVencimentoPlano)}, ${o.valorMensalidadeCentavos || 0}, ${escapeStr(o.chaveAcesso)}, ${escapeJson(o.modulosCustomizados || [])}, ${escapeStr(o.criadoEm || new Date().toISOString())}) ON CONFLICT (id) DO UPDATE SET nome = EXCLUDED.nome, status = EXCLUDED.status, plano = EXCLUDED.plano;`);
+    lines.push(`INSERT INTO public.organizations (id, nome, tipo, cnpj_cpf, telefone, email, cep, logradouro, numero, complemento, bairro, cidade, estado, status, plano, data_vencimento_plano, valor_mensalidade_centavos, chave_acesso, modulos_customizados, chave_pix, tipo_chave_pix, beneficiario_pix, cidade_pix, criado_em) VALUES (${escapeStr(o.id)}, ${escapeStr(o.nome)}, ${escapeStr(o.tipo)}, ${escapeStr(o.cnpjCpf)}, ${escapeStr(o.telefone)}, ${escapeStr(o.email)}, ${escapeStr(o.cep)}, ${escapeStr(o.logradouro)}, ${escapeStr(o.numero)}, ${escapeStr(o.complemento)}, ${escapeStr(o.bairro)}, ${escapeStr(o.cidade)}, ${escapeStr(o.estado)}, ${escapeStr(o.status)}, ${escapeStr(o.plano)}, ${escapeDate(o.dataVencimentoPlano)}, ${o.valorMensalidadeCentavos || 0}, ${escapeStr(o.chaveAcesso)}, ${escapeJson(o.modulosCustomizados || [])}, ${escapeStr(o.chavePix)}, ${escapeStr(o.tipoChavePix)}, ${escapeStr(o.beneficiarioPix)}, ${escapeStr(o.cidadePix)}, ${escapeStr(o.criadoEm || new Date().toISOString())}) ON CONFLICT (id) DO UPDATE SET nome = EXCLUDED.nome, cep = EXCLUDED.cep, logradouro = EXCLUDED.logradouro, numero = EXCLUDED.numero, complemento = EXCLUDED.complemento, bairro = EXCLUDED.bairro, cidade = EXCLUDED.cidade, estado = EXCLUDED.estado, status = EXCLUDED.status, plano = EXCLUDED.plano;`);
   }
 
   // 2. Users
   for (const u of users) {
-    lines.push(`INSERT INTO public.users (id, organizacao_id, nome, email, papel, telefone, cpf_ultimos_4, cpf_fingerprint, cpf_mascarado, cpf_completo, two_factor_ativo, ultimo_acesso) VALUES (${escapeStr(u.id)}, ${escapeStr(u.organizacaoId)}, ${escapeStr(u.nome)}, ${escapeStr(u.email)}, ${escapeStr(u.papel)}, ${escapeStr(u.telefone)}, ${escapeStr(u.cpfUltimos4)}, ${escapeStr(u.cpfFingerprint)}, ${escapeStr(u.cpfMascarado)}, ${escapeStr(u.cpfCompleto)}, ${u.twoFactorAtivo ? 'TRUE' : 'FALSE'}, ${escapeStr(u.ultimoAcesso || new Date().toISOString())}) ON CONFLICT (id) DO NOTHING;`);
+    lines.push(`INSERT INTO public.users (id, organizacao_id, nome, email, papel, telefone, cpf_ultimos_4, cpf_fingerprint, cpf_mascarado, cpf_completo, cep, estado, cidade, bairro, logradouro, numero, complemento, two_factor_ativo, senha_temporaria, chave_pix, tipo_chave_pix, beneficiario_pix, cidade_pix, ultimo_acesso) VALUES (${escapeStr(u.id)}, ${escapeStr(u.organizacaoId)}, ${escapeStr(u.nome)}, ${escapeStr(u.email)}, ${escapeStr(u.papel)}, ${escapeStr(u.telefone)}, ${escapeStr(u.cpfUltimos4)}, ${escapeStr(u.cpfFingerprint)}, ${escapeStr(u.cpfMascarado)}, ${escapeStr(u.cpfCompleto)}, ${escapeStr(u.cep)}, ${escapeStr(u.estado)}, ${escapeStr(u.cidade)}, ${escapeStr(u.bairro)}, ${escapeStr(u.logradouro)}, ${escapeStr(u.numero)}, ${escapeStr(u.complemento)}, ${u.twoFactorAtivo ? 'TRUE' : 'FALSE'}, ${escapeStr(u.senhaTemporaria)}, ${escapeStr(u.chavePix)}, ${escapeStr(u.tipoChavePix)}, ${escapeStr(u.beneficiarioPix)}, ${escapeStr(u.cidadePix)}, ${escapeStr(u.ultimoAcesso || new Date().toISOString())}) ON CONFLICT (id) DO UPDATE SET nome = EXCLUDED.nome, email = EXCLUDED.email, telefone = EXCLUDED.telefone, cep = EXCLUDED.cep, estado = EXCLUDED.estado, cidade = EXCLUDED.cidade, bairro = EXCLUDED.bairro, logradouro = EXCLUDED.logradouro, numero = EXCLUDED.numero, complemento = EXCLUDED.complemento;`);
   }
 
   // 3. Vehicles
@@ -410,7 +410,7 @@ export function generateSupabaseDataDumpSQL(): string {
 
   // 4. Students
   for (const s of students) {
-    lines.push(`INSERT INTO public.students (id, organizacao_id, instrutor_id, nome, email, telefone, cpf_mascarado, cpf_fingerprint, data_nascimento, idade, categoria_cnh, status, aulas_cumpridas, total_aulas_contratadas, habilidades, observacoes_instrutor, pacote_id, pacote_nome, data_cadastro) VALUES (${escapeStr(s.id)}, ${escapeStr(s.organizacaoId)}, ${escapeStr(s.instrutorId)}, ${escapeStr(s.nome)}, ${escapeStr(s.email)}, ${escapeStr(s.telefone)}, ${escapeStr(s.cpfMascarado)}, ${escapeStr(s.cpfFingerprint)}, ${escapeDate(s.dataNascimento)}, ${s.idade || 18}, ${escapeStr(s.categoriaCnh)}, ${escapeStr(s.status)}, ${s.aulasCumpridas || 0}, ${s.totalAulasContratadas || 20}, ${escapeJson(s.habilidades)}, ${escapeStr(s.observacoesInstrutor)}, ${escapeStr(s.pacoteId)}, ${escapeStr(s.pacoteNome)}, ${escapeStr(s.dataCadastro || new Date().toISOString())}) ON CONFLICT (id) DO NOTHING;`);
+    lines.push(`INSERT INTO public.students (id, organizacao_id, instrutor_id, nome, email, telefone, cpf_mascarado, cpf_fingerprint, data_nascimento, idade, categoria_cnh, cep, estado, cidade, bairro, logradouro, numero, complemento, status, aulas_cumpridas, total_aulas_contratadas, habilidades, observacoes_instrutor, pacote_id, pacote_nome, data_cadastro) VALUES (${escapeStr(s.id)}, ${escapeStr(s.organizacaoId)}, ${escapeStr(s.instrutorId)}, ${escapeStr(s.nome)}, ${escapeStr(s.email)}, ${escapeStr(s.telefone)}, ${escapeStr(s.cpfMascarado)}, ${escapeStr(s.cpfFingerprint)}, ${escapeDate(s.dataNascimento)}, ${s.idade || 18}, ${escapeStr(s.categoriaCnh)}, ${escapeStr(s.cep)}, ${escapeStr(s.estado)}, ${escapeStr(s.cidade)}, ${escapeStr(s.bairro)}, ${escapeStr(s.logradouro)}, ${escapeStr(s.numero)}, ${escapeStr(s.complemento)}, ${escapeStr(s.status)}, ${s.aulasCumpridas || 0}, ${s.totalAulasContratadas || 20}, ${escapeJson(s.habilidades)}, ${escapeStr(s.observacoesInstrutor)}, ${escapeStr(s.pacoteId)}, ${escapeStr(s.pacoteNome)}, ${escapeStr(s.dataCadastro || new Date().toISOString())}) ON CONFLICT (id) DO UPDATE SET cep = EXCLUDED.cep, estado = EXCLUDED.estado, cidade = EXCLUDED.cidade, bairro = EXCLUDED.bairro, logradouro = EXCLUDED.logradouro, numero = EXCLUDED.numero, complemento = EXCLUDED.complemento;`);
   }
 
   // 5. Lessons
@@ -524,6 +524,11 @@ export async function syncDataToSupabase(
       cnpj_cpf: o.cnpjCpf,
       telefone: o.telefone,
       email: o.email,
+      cep: o.cep || null,
+      logradouro: o.logradouro || null,
+      numero: o.numero || null,
+      complemento: o.complemento || null,
+      bairro: o.bairro || null,
       cidade: o.cidade,
       estado: o.estado,
       status: o.status,
@@ -531,7 +536,11 @@ export async function syncDataToSupabase(
       data_vencimento_plano: o.dataVencimentoPlano || null,
       valor_mensalidade_centavos: o.valorMensalidadeCentavos || 0,
       chave_acesso: o.chaveAcesso || null,
-      modulos_customizados: o.modulosCustomizados || []
+      modulos_customizados: o.modulosCustomizados || [],
+      chave_pix: o.chavePix || null,
+      tipo_chave_pix: o.tipoChavePix || null,
+      beneficiario_pix: o.beneficiarioPix || null,
+      cidade_pix: o.cidadePix || null
     }))},
     { table: 'users', data: allData.users.map(u => ({
       id: u.id,
@@ -544,7 +553,19 @@ export async function syncDataToSupabase(
       cpf_fingerprint: u.cpfFingerprint,
       cpf_mascarado: u.cpfMascarado || null,
       cpf_completo: u.cpfCompleto || null,
-      two_factor_ativo: u.twoFactorAtivo || false
+      cep: u.cep || null,
+      estado: u.estado || null,
+      cidade: u.cidade || null,
+      bairro: u.bairro || null,
+      logradouro: u.logradouro || null,
+      numero: u.numero || null,
+      complemento: u.complemento || null,
+      two_factor_ativo: u.twoFactorAtivo || false,
+      senha_temporaria: u.senhaTemporaria || null,
+      chave_pix: u.chavePix || null,
+      tipo_chave_pix: u.tipoChavePix || null,
+      beneficiario_pix: u.beneficiarioPix || null,
+      cidade_pix: u.cidadePix || null
     }))},
     { table: 'vehicles', data: allData.vehicles.map(v => ({
       id: v.id,
@@ -569,6 +590,13 @@ export async function syncDataToSupabase(
       data_nascimento: s.dataNascimento,
       idade: s.idade || 18,
       categoria_cnh: s.categoriaCnh,
+      cep: s.cep || null,
+      estado: s.estado || null,
+      cidade: s.cidade || null,
+      bairro: s.bairro || null,
+      logradouro: s.logradouro || null,
+      numero: s.numero || null,
+      complemento: s.complemento || null,
       status: s.status,
       aulas_cumpridas: s.aulasCumpridas || 0,
       total_aulas_contratadas: s.totalAulasContratadas || 20,
