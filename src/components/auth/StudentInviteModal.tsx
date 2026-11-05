@@ -90,11 +90,11 @@ export const StudentInviteModal: React.FC<StudentInviteModalProps> = ({
           {/* Instructor Referral Badge */}
           <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between">
             <div>
-              <p className="text-[11px] font-bold text-blue-900">Instrutor Responsável</p>
+              <p className="text-xs font-bold text-blue-900">Instrutor Responsável</p>
               <p className="text-xs font-semibold text-slate-800">{instructor.nome}</p>
             </div>
             <div className="text-right">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">Código para o Aluno</span>
+              <span className="text-xs uppercase font-bold font-bold text-slate-400 block">Código para o Aluno</span>
               <span className="font-mono font-extrabold text-blue-700 text-xs px-2.5 py-1 rounded bg-blue-100 border border-blue-200 inline-block">
                 {referralCode}
               </span>
@@ -121,7 +121,7 @@ export const StudentInviteModal: React.FC<StudentInviteModalProps> = ({
                 ))}
               </select>
               {selectedCouponCode && (
-                <p className="text-[10px] text-purple-700 font-semibold">
+                <p className="text-xs text-purple-700 font-semibold">
                   ✓ O código do cupom será injetado no link e na mensagem para aplicação automática.
                 </p>
               )}
@@ -179,7 +179,7 @@ export const StudentInviteModal: React.FC<StudentInviteModalProps> = ({
                 type="text"
                 readOnly
                 value={inviteUrl}
-                className="w-full min-w-0 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-600 font-mono text-[11px] select-all truncate"
+                className="w-full min-w-0 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-600 font-mono text-xs select-all truncate"
               />
               <button
                 onClick={handleCopyLink}
@@ -197,7 +197,7 @@ export const StudentInviteModal: React.FC<StudentInviteModalProps> = ({
               <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
               Mensagem Pronta para Envio
             </p>
-            <p className="text-[11px] text-slate-600 whitespace-pre-line leading-relaxed font-sans bg-white p-2.5 rounded-lg border border-slate-100">
+            <p className="text-xs text-slate-600 whitespace-pre-line leading-relaxed font-sans bg-white p-2.5 rounded-lg border border-slate-100">
               {inviteMessage}
             </p>
           </div>

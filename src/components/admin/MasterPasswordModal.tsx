@@ -83,7 +83,7 @@ export const MasterPasswordModal: React.FC<MasterPasswordModalProps> = ({
               <h2 className="text-sm sm:text-base font-extrabold text-white">
                 {isSelf ? 'Alterar Minha Senha Master' : 'Alterar Senha do Administrador Master'}
               </h2>
-              <p className="text-[11px] text-purple-200/80">
+              <p className="text-xs text-purple-200/80">
                 Segurança de Acesso e Governança do Sistema
               </p>
             </div>
@@ -101,13 +101,13 @@ export const MasterPasswordModal: React.FC<MasterPasswordModalProps> = ({
         <div className="p-5 space-y-4">
           <div className="p-3 bg-purple-50/70 border border-purple-200/80 rounded-xl flex items-center justify-between text-xs">
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 block">
+              <span className="text-xs font-bold uppercase tracking-wider text-purple-700 block">
                 Usuário Master
               </span>
               <p className="font-bold text-slate-900">{user.nome}</p>
-              <p className="text-slate-600 font-mono text-[11px]">{user.email}</p>
+              <p className="text-slate-600 font-mono text-xs">{user.email}</p>
             </div>
-            <span className="px-2 py-0.5 rounded-md bg-purple-600 text-white text-[10px] font-bold">
+            <span className="px-2 py-0.5 rounded-md bg-purple-600 text-white text-xs font-bold">
               SUPER_ADMIN
             </span>
           </div>
@@ -165,7 +165,7 @@ export const MasterPasswordModal: React.FC<MasterPasswordModalProps> = ({
             </div>
 
             {/* Informações de Recuperação e Sincronização */}
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5 text-[11px] text-slate-600">
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5 text-xs text-slate-600">
               <div className="flex items-center gap-1.5 text-slate-800 font-semibold">
                 <Mail className="w-3.5 h-3.5 text-purple-600 shrink-0" />
                 <span>Recuperação e Validação por E-mail</span>

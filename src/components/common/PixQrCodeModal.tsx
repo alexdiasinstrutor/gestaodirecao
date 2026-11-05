@@ -100,11 +100,11 @@ export const PixQrCodeModal: React.FC<PixQrCodeModalProps> = ({
         {/* Student & Invoice Info */}
         <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-left space-y-1">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] text-slate-500 font-medium">Aluno / Pagador:</span>
+            <span className="text-xs text-slate-500 font-medium">Aluno / Pagador:</span>
             <span className="text-xs font-bold text-slate-900">{alunoNome}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-[11px] text-slate-500 font-medium">Referência:</span>
+            <span className="text-xs text-slate-500 font-medium">Referência:</span>
             <span className="text-xs text-slate-700">{descricao}</span>
           </div>
           <div className="flex items-center justify-between pt-1 border-t border-slate-200">
@@ -122,7 +122,7 @@ export const PixQrCodeModal: React.FC<PixQrCodeModalProps> = ({
             alt="QR Code PIX Escaneável"
             className="w-48 h-48 sm:w-56 sm:h-56 mx-auto rounded-xl"
           />
-          <p className="text-[10px] text-slate-400 mt-1 font-medium">
+          <p className="text-xs text-slate-600 font-medium mt-1 font-medium">
             Aponte a câmera no aplicativo do seu banco para pagar
           </p>
         </div>
@@ -130,22 +130,22 @@ export const PixQrCodeModal: React.FC<PixQrCodeModalProps> = ({
         {/* Beneficiary & Key info */}
         <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-left text-xs space-y-1">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] text-emerald-800 font-semibold">Beneficiário:</span>
-            <span className="text-[11px] text-emerald-950 font-bold truncate max-w-[200px]">
+            <span className="text-xs text-emerald-800 font-semibold">Beneficiário:</span>
+            <span className="text-xs text-emerald-950 font-bold truncate max-w-[200px]">
               {beneficiario}
             </span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-[11px] text-emerald-800 font-semibold">Chave PIX:</span>
+            <span className="text-xs text-emerald-800 font-semibold">Chave PIX:</span>
             <div className="flex items-center gap-1.5">
-              <span className="font-mono text-[11px] text-emerald-950 font-extrabold truncate max-w-[170px]">
+              <span className="font-mono text-xs text-emerald-950 font-extrabold truncate max-w-[170px]">
                 {chavePix}
               </span>
               <button
                 type="button"
                 onClick={handleCopyKey}
                 title="Copiar Chave PIX"
-                className="p-1 rounded bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-bold cursor-pointer"
+                className="p-1 rounded bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-bold cursor-pointer"
               >
                 {chaveCopied ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
               </button>

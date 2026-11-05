@@ -316,21 +316,21 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
         {/* Stepper Visual */}
         <div className="bg-slate-100 px-6 py-2 border-b border-slate-200 flex items-center justify-between text-xs">
           <div className={`flex items-center gap-1.5 font-bold ${step >= 1 ? 'text-blue-600' : 'text-slate-400'}`}>
-            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${step >= 1 ? 'bg-blue-600 text-white' : 'bg-slate-300 text-slate-700'}`}>
+            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${step >= 1 ? 'bg-blue-600 text-white' : 'bg-slate-300 text-slate-700'}`}>
               1
             </span>
             <span>Plano & Cupom</span>
           </div>
           <div className="h-0.5 w-10 bg-slate-300" />
           <div className={`flex items-center gap-1.5 font-bold ${step >= 2 ? 'text-blue-600' : 'text-slate-400'}`}>
-            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${step >= 2 ? 'bg-blue-600 text-white' : 'bg-slate-300 text-slate-700'}`}>
+            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${step >= 2 ? 'bg-blue-600 text-white' : 'bg-slate-300 text-slate-700'}`}>
               2
             </span>
             <span>Dados & Endereço</span>
           </div>
           <div className="h-0.5 w-10 bg-slate-300" />
           <div className={`flex items-center gap-1.5 font-bold ${step >= 3 ? 'text-blue-600' : 'text-slate-400'}`}>
-            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${step >= 3 ? 'bg-blue-600 text-white' : 'bg-slate-300 text-slate-700'}`}>
+            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${step >= 3 ? 'bg-blue-600 text-white' : 'bg-slate-300 text-slate-700'}`}>
               3
             </span>
             <span>Senha & Ativação</span>
@@ -354,7 +354,7 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
                   <Sparkles className="w-4 h-4 text-blue-600" />
                   Selecione o plano ideal para sua atividade profissional
                 </p>
-                <p className="text-[11px] text-blue-800 mt-0.5">
+                <p className="text-xs text-blue-800 mt-0.5">
                   Você pode usar um cupom de desconto promocional fornecido pela administração (período grátis ou desconto na mensalidade).
                 </p>
               </div>
@@ -392,22 +392,22 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
                     >
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${plan.corBadge}`}>
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${plan.corBadge}`}>
                             {plan.nome.split(' ')[1] || plan.id}
                           </span>
                           {isSelected && <Check className="w-4 h-4 text-blue-600" />}
                         </div>
                         <div>
                           <h4 className="font-bold text-slate-900 text-sm">{plan.nome}</h4>
-                          <p className="text-[10px] text-slate-500 mt-0.5 leading-snug">{plan.tagline}</p>
+                          <p className="text-xs text-slate-500 mt-0.5 leading-snug">{plan.tagline}</p>
                         </div>
                         <div className="pt-2 border-t border-slate-100">
                           <div className="font-mono font-black text-lg text-slate-900">
                             {formatCurrencyBRL(plan.precoSugeridoMensalCentavos)}
-                            <span className="text-[10px] font-normal text-slate-500">/mês</span>
+                            <span className="text-xs font-normal text-slate-500">/mês</span>
                           </div>
                         </div>
-                        <ul className="space-y-1 text-[10px] text-slate-600 pt-1">
+                        <ul className="space-y-1 text-xs text-slate-600 pt-1">
                           {plan.destaques.slice(0, 3).map((d, i) => (
                             <li key={i} className="flex items-start gap-1">
                               <span className="text-blue-600 font-bold">•</span>
@@ -417,7 +417,7 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
                         </ul>
                       </div>
                       <div className="mt-3 pt-2 border-t border-slate-100 text-center">
-                        <span className={`text-[11px] font-bold ${isSelected ? 'text-blue-700' : 'text-slate-500'}`}>
+                        <span className={`text-xs font-bold ${isSelected ? 'text-blue-700' : 'text-slate-500'}`}>
                           {isSelected ? '✓ Plano Selecionado' : 'Selecionar'}
                         </span>
                       </div>
@@ -437,7 +437,7 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
                     <button
                       type="button"
                       onClick={handleRemoveCoupon}
-                      className="text-[10px] text-red-600 hover:underline cursor-pointer"
+                      className="text-xs text-red-600 hover:underline cursor-pointer"
                     >
                       Remover cupom
                     </button>
@@ -467,14 +467,14 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
                       <span className="font-mono font-bold text-purple-900 text-xs block">
                         CUPOM ATIVO: {appliedCoupon.codigo}
                       </span>
-                      <span className="text-[11px] text-purple-700 font-medium">{couponResult?.resumo}</span>
+                      <span className="text-xs text-purple-700 font-medium">{couponResult?.resumo}</span>
                     </div>
                     <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
                   </div>
                 )}
 
-                {couponError && <p className="text-[11px] text-red-600 font-medium">{couponError}</p>}
-                {couponSuccess && !couponError && <p className="text-[11px] text-emerald-700 font-medium">{couponSuccess}</p>}
+                {couponError && <p className="text-xs text-red-600 font-medium">{couponError}</p>}
+                {couponSuccess && !couponError && <p className="text-xs text-emerald-700 font-medium">{couponSuccess}</p>}
               </div>
 
               {/* Botão de Avançar */}
@@ -610,23 +610,23 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
             <form onSubmit={handleSubmit} className="space-y-4 animate-in fade-in duration-150">
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
                 <h4 className="font-bold text-slate-900 text-xs">Resumo da sua Adesão:</h4>
-                <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-700">
+                <div className="grid grid-cols-2 gap-2 text-xs text-slate-700">
                   <div>
-                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Plano Contratado</span>
+                    <span className="text-slate-400 block text-xs uppercase font-bold font-bold">Plano Contratado</span>
                     <strong>{selectedPlanDef.nome}</strong>
                   </div>
                   <div>
-                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Condição de Acesso</span>
+                    <span className="text-slate-400 block text-xs uppercase font-bold font-bold">Condição de Acesso</span>
                     <strong className="text-purple-700">
                       {appliedCoupon ? couponResult?.resumo : `${formatCurrencyBRL(selectedPlanDef.precoSugeridoMensalCentavos)}/mês`}
                     </strong>
                   </div>
                   <div>
-                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Titular</span>
+                    <span className="text-slate-400 block text-xs uppercase font-bold font-bold">Titular</span>
                     <span>{formData.nome}</span>
                   </div>
                   <div>
-                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Login de Acesso</span>
+                    <span className="text-slate-400 block text-xs uppercase font-bold font-bold">Login de Acesso</span>
                     <span className="font-mono">{formData.email}</span>
                   </div>
                 </div>
@@ -658,7 +658,7 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
                 </div>
               </div>
 
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-600 text-[11px] flex items-center gap-2">
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-600 text-xs flex items-center gap-2">
                 <Shield className="w-4 h-4 text-blue-600 shrink-0" />
                 <span>
                   Ao concluir o cadastro, você terá acesso imediato com isolamento de dados por organização e autenticação 2FA ativada.

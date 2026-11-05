@@ -283,26 +283,26 @@ export const CouponsManager: React.FC<CouponsManagerProps> = ({ scope, currentUs
                       <Copy className="w-3 h-3 opacity-60" />
                     </button>
                     <p className="font-bold text-slate-900 mt-1.5">{describeCoupon(c)}</p>
-                    {c.descricao && <p className="text-slate-500 text-[11px]">{c.descricao}</p>}
+                    {c.descricao && <p className="text-slate-500 text-xs">{c.descricao}</p>}
                   </div>
-                  <span className={`px-2 py-0.5 rounded-full border text-[10px] font-bold shrink-0 ${statusClass}`}>{statusLabel}</span>
+                  <span className={`px-2 py-0.5 rounded-full border text-xs font-bold shrink-0 ${statusClass}`}>{statusLabel}</span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-600">
+                <div className="grid grid-cols-2 gap-2 text-xs text-slate-600">
                   <div>
-                    <span className="block text-[10px] uppercase font-bold text-slate-400">Vale para</span>
+                    <span className="block text-xs uppercase font-bold font-bold text-slate-400">Vale para</span>
                     {targetLabel(c.planosPermitidos)}
                   </div>
                   <div>
-                    <span className="block text-[10px] uppercase font-bold text-slate-400">Validade</span>
+                    <span className="block text-xs uppercase font-bold font-bold text-slate-400">Validade</span>
                     {c.validoAte ? `Até ${formatDateBR(c.validoAte)}` : 'Sem data limite'}
                   </div>
                   <div>
-                    <span className="block text-[10px] uppercase font-bold text-slate-400">Usos</span>
+                    <span className="block text-xs uppercase font-bold font-bold text-slate-400">Usos</span>
                     {c.usosRealizados} / {c.limiteUsos ? c.limiteUsos : '∞'}
                   </div>
                   <div>
-                    <span className="block text-[10px] uppercase font-bold text-slate-400">Criado por</span>
+                    <span className="block text-xs uppercase font-bold font-bold text-slate-400">Criado por</span>
                     {c.criadoPorNome}
                   </div>
                 </div>
@@ -344,10 +344,10 @@ export const CouponsManager: React.FC<CouponsManagerProps> = ({ scope, currentUs
                 {historyCouponId === c.id && (
                   <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 space-y-1.5">
                     {historyRedemptions.length === 0 ? (
-                      <p className="text-[11px] text-slate-500">Nenhum resgate registrado.</p>
+                      <p className="text-xs text-slate-500">Nenhum resgate registrado.</p>
                     ) : (
                       historyRedemptions.slice(0, 10).map((r) => (
-                        <div key={r.id} className="flex justify-between gap-2 text-[11px]">
+                        <div key={r.id} className="flex justify-between gap-2 text-xs">
                           <span className="text-slate-600">{formatDateTimeBR(r.resgatadoEm)}</span>
                           <span className="font-mono text-slate-900">
                             {r.mesesGratis ? `${r.mesesGratis} meses grátis` : `-${formatCurrencyBRL(r.valorDescontoCentavos)}`}
@@ -416,7 +416,7 @@ export const CouponsManager: React.FC<CouponsManagerProps> = ({ scope, currentUs
                       key={t}
                       type="button"
                       onClick={() => setForm({ ...form, tipoDesconto: t })}
-                      className={`px-2 py-2 rounded-xl border font-bold cursor-pointer text-[11px] ${
+                      className={`px-2 py-2 rounded-xl border font-bold cursor-pointer text-xs ${
                         form.tipoDesconto === t ? 'border-blue-600 bg-blue-50 text-blue-800' : 'border-slate-200 hover:bg-slate-50'
                       }`}
                     >
@@ -530,7 +530,7 @@ export const CouponsManager: React.FC<CouponsManagerProps> = ({ scope, currentUs
                   {isPlatform ? 'Planos onde o cupom vale' : 'Pacotes onde o cupom vale'} (nenhum marcado = todos)
                 </label>
                 {targets.length === 0 ? (
-                  <p className="text-[11px] text-slate-500">Nenhum pacote cadastrado — o cupom valerá para todos os pacotes futuros.</p>
+                  <p className="text-xs text-slate-500">Nenhum pacote cadastrado — o cupom valerá para todos os pacotes futuros.</p>
                 ) : (
                   <div className="space-y-1.5 max-h-40 overflow-y-auto">
                     {targets.map((t) => (

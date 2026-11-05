@@ -233,7 +233,7 @@ export const MasterUserEditModal: React.FC<MasterUserEditModalProps> = ({
                   ? 'Editar Meus Dados Cadastrais (Master)'
                   : 'Editar Dados do Administrador Master'}
               </h2>
-              <p className="text-[11px] text-purple-200/80">
+              <p className="text-xs text-purple-200/80">
                 Acesso de Governança Global do Sistema Gestão AD
               </p>
             </div>
@@ -295,7 +295,7 @@ export const MasterUserEditModal: React.FC<MasterUserEditModalProps> = ({
                   className="w-full pl-9 pr-3 py-2.5 text-xs border border-slate-300 rounded-xl focus:border-purple-600 focus:outline-none bg-slate-50/50 focus:bg-white transition-colors"
                 />
               </div>
-              <p className="text-[10px] text-slate-500 mt-1">
+              <p className="text-xs text-slate-500 mt-1">
                 Utilizado para login e para o recebimento de códigos de recuperação de senha.
               </p>
             </div>
@@ -335,7 +335,7 @@ export const MasterUserEditModal: React.FC<MasterUserEditModalProps> = ({
                     className="w-full pl-9 pr-3 py-2.5 text-xs border border-slate-300 rounded-xl focus:border-purple-600 focus:outline-none bg-slate-50/50 focus:bg-white font-mono transition-colors"
                   />
                 </div>
-                <p className="text-[10px] text-slate-500 mt-1">
+                <p className="text-xs text-slate-500 mt-1">
                   Exigido para validação LGPD na recuperação de senha.
                 </p>
               </div>

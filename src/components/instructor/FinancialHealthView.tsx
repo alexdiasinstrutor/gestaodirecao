@@ -195,14 +195,14 @@ export const FinancialHealthView: React.FC<FinancialHealthViewProps> = ({
 
           {/* SCORE CARD */}
           <div className="bg-white/10 backdrop-blur-md border border-white/20 p-5 rounded-2xl flex flex-col items-center justify-center shrink-0 min-w-[240px]">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-200">
+            <span className="text-xs font-bold uppercase tracking-wider text-indigo-200">
               Score de Saúde Financeira
             </span>
             <div className="flex items-baseline gap-1 my-1">
               <span className="text-4xl sm:text-5xl font-black font-mono text-white">{healthScore}</span>
               <span className="text-sm font-semibold text-indigo-200">/ 100</span>
             </div>
-            <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${scoreLevel.color}`}>
+            <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${scoreLevel.color}`}>
               {scoreLevel.label}
             </span>
             <div className="w-full bg-white/20 h-2 rounded-full overflow-hidden mt-3">
@@ -270,7 +270,7 @@ export const FinancialHealthView: React.FC<FinancialHealthViewProps> = ({
             {veiculosComAlerta.length > 0 ? (
               <div className="space-y-1">
                 {veiculosComAlerta.map((v) => (
-                  <div key={v.id} className="flex justify-between items-center text-[11px]">
+                  <div key={v.id} className="flex justify-between items-center text-xs">
                     <span className="font-semibold">{v.modelo} ({v.ano}):</span>
                     <span className={v.urgente ? 'text-red-600 font-bold' : 'text-slate-600'}>
                       {v.anosRestantes === 0 ? 'Prazo Vencido no Detran' : `${v.anosRestantes} ano(s) restante(s)`}
@@ -370,7 +370,7 @@ export const FinancialHealthView: React.FC<FinancialHealthViewProps> = ({
 
             {/* Simulador rápido de pacote */}
             <div className="pt-3 border-t border-indigo-100/80">
-              <label className="block text-[11px] font-bold text-slate-700 mb-1">
+              <label className="block text-xs font-bold text-slate-700 mb-1">
                 Simule um Pacote de Aulas (R$):
               </label>
               <div className="flex items-center gap-2">
@@ -452,13 +452,13 @@ export const FinancialHealthView: React.FC<FinancialHealthViewProps> = ({
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-100">
                 <span className="font-bold text-emerald-900 block mb-1">Preventiva Programada</span>
-                <p className="text-slate-600 text-[11px]">
+                <p className="text-slate-600 text-xs">
                   Troca de pastilhas e óleo a cada 5.000 km. Custo: ~R$ 350. Carro roda 100% confiável.
                 </p>
               </div>
               <div className="p-2.5 rounded-xl bg-red-50 border border-red-100">
                 <span className="font-bold text-red-900 block mb-1">Quebra Inesperada</span>
-                <p className="text-slate-600 text-[11px]">
+                <p className="text-slate-600 text-xs">
                   Embreagem queima no dia de exame. Custo: Guincho + Peça + 3 dias sem dar aula (~R$ 2.800).
                 </p>
               </div>
@@ -566,7 +566,7 @@ export const FinancialHealthView: React.FC<FinancialHealthViewProps> = ({
                 onChange={(e) => setSimConsumoKmLitro(parseFloat(e.target.value) || 1)}
                 className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-mono font-bold"
               />
-              <span className="text-[10px] text-slate-500 mt-0.5 block">Ex: 8.0 a 9.5 km/l em 1ª e 2ª marcha</span>
+              <span className="text-xs text-slate-500 mt-0.5 block">Ex: 8.0 a 9.5 km/l em 1ª e 2ª marcha</span>
             </div>
 
             <div>
@@ -579,7 +579,7 @@ export const FinancialHealthView: React.FC<FinancialHealthViewProps> = ({
                 onChange={(e) => setSimKmPorAula(parseFloat(e.target.value) || 0)}
                 className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-mono font-bold"
               />
-              <span className="text-[10px] text-slate-500 mt-0.5 block">Geralmente entre 12 km e 16 km</span>
+              <span className="text-xs text-slate-500 mt-0.5 block">Geralmente entre 12 km e 16 km</span>
             </div>
 
             <div>
@@ -619,14 +619,14 @@ export const FinancialHealthView: React.FC<FinancialHealthViewProps> = ({
                 onChange={(e) => setSimAulasPorMes(parseInt(e.target.value) || 1)}
                 className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-mono font-bold"
               />
-              <span className="text-[10px] text-slate-500 mt-0.5 block">Ex: 80 aulas (4 por dia x 20 dias)</span>
+              <span className="text-xs text-slate-500 mt-0.5 block">Ex: 80 aulas (4 por dia x 20 dias)</span>
             </div>
           </div>
 
           {/* Resultado da Aula */}
           <div className="bg-gradient-to-b from-slate-900 to-indigo-950 text-white p-6 rounded-2xl flex flex-col justify-between space-y-4 shadow-lg">
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-300">
+              <span className="text-xs font-bold uppercase tracking-wider text-indigo-300">
                 Resultado Econômico Unitário
               </span>
               <div className="mt-2 space-y-2">
@@ -656,11 +656,11 @@ export const FinancialHealthView: React.FC<FinancialHealthViewProps> = ({
                   {formatCurrencyBRL(Math.round(lucroLiquidoAula * 100))}
                 </span>
               </div>
-              <div className="flex justify-between items-center text-[11px] text-slate-300">
+              <div className="flex justify-between items-center text-xs text-slate-300">
                 <span>Margem Líquida Real:</span>
                 <span className="font-bold text-white font-mono">{margemLucroPercent.toFixed(1)}%</span>
               </div>
-              <div className="bg-white/10 p-2.5 rounded-xl text-[11px] text-slate-200 mt-2">
+              <div className="bg-white/10 p-2.5 rounded-xl text-xs text-slate-200 mt-2">
                 Em {simAulasPorMes} aulas/mês, seu <strong>ganho limpo</strong> estimado é de{' '}
                 <span className="text-emerald-300 font-bold">{formatCurrencyBRL(Math.round(lucroMensalReal * 100))}</span>.
               </div>
@@ -738,13 +738,13 @@ export const FinancialHealthView: React.FC<FinancialHealthViewProps> = ({
                     <h4 className={`font-semibold ${isChecked ? 'line-through text-slate-400' : 'text-slate-900'}`}>
                       {item.title}
                     </h4>
-                    <p className="text-slate-500 text-[11px] mt-0.5">{item.desc}</p>
+                    <p className="text-slate-500 text-xs mt-0.5">{item.desc}</p>
                   </div>
                 </button>
                 {item.subTab && onNavigateToFinanceTab && (
                   <button
                     onClick={() => onNavigateToFinanceTab(item.subTab!)}
-                    className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 shrink-0 cursor-pointer"
+                    className="text-xs font-bold text-indigo-600 hover:text-indigo-800 shrink-0 cursor-pointer"
                   >
                     {item.linkText} →
                   </button>
@@ -752,7 +752,7 @@ export const FinancialHealthView: React.FC<FinancialHealthViewProps> = ({
                 {item.tab && onNavigateTab && !item.subTab && (
                   <button
                     onClick={() => onNavigateTab(item.tab!)}
-                    className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 shrink-0 cursor-pointer"
+                    className="text-xs font-bold text-indigo-600 hover:text-indigo-800 shrink-0 cursor-pointer"
                   >
                     {item.linkText} →
                   </button>

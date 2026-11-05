@@ -277,11 +277,11 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
           </div>
 
           <div className="bg-white/10 backdrop-blur-md px-4 sm:px-5 py-3 rounded-2xl border border-white/10 text-left md:text-right">
-            <span className="text-[11px] text-emerald-300 font-medium block">Carga Horária Obrigatória</span>
+            <span className="text-xs text-emerald-300 font-semibold block">Carga Horária Obrigatória</span>
             <span className="text-xl sm:text-2xl font-extrabold font-mono text-white">
               {student.aulasCumpridas} / {student.totalAulasContratadas} Aulas
             </span>
-            <span className="text-[11px] text-slate-300 block">{progressPercent}% do curso prático concluído</span>
+            <span className="text-xs text-slate-200 font-medium block mt-0.5">{progressPercent}% do curso prático concluído</span>
           </div>
         </div>
 
@@ -367,7 +367,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                 <Calendar className="w-4 h-4 text-blue-600 shrink-0" />
                 <span>Agendar Nova Aula Prática</span>
               </h2>
-              <span className="text-[11px] text-slate-500">
+              <span className="text-xs text-slate-600 font-medium">
                 Apenas horários liberados
               </span>
             </div>
@@ -402,15 +402,15 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                   <label className="block font-semibold text-slate-700">
                     Horários Liberados para {formatDateBR(scheduleDate)}:
                   </label>
-                  <span className="text-[10px] text-slate-500 font-medium">
+                  <span className="text-xs text-slate-600 font-medium">
                     Faixa: 06h às 00h
                   </span>
                 </div>
                 {availableSlotsOnDate.length === 0 ? (
-                  <div className="p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-center text-slate-400">
-                    <Clock className="w-6 h-6 mx-auto mb-1 text-slate-300" />
-                    <p>Nenhum horário livre ou liberado pelo instrutor para esta data.</p>
-                    <p className="text-[11px] mt-0.5 text-slate-500">Experimente selecionar outro dia no calendário acima.</p>
+                  <div className="p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-center text-slate-600">
+                    <Clock className="w-6 h-6 mx-auto mb-1 text-slate-400" />
+                    <p className="font-medium">Nenhum horário livre ou liberado pelo instrutor para esta data.</p>
+                    <p className="text-xs mt-0.5 text-slate-500 font-medium">Experimente selecionar outro dia no calendário acima.</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -440,14 +440,14 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                               }`}
                             >
                               <span className="font-mono text-xs">{slot.horaInicio}</span>
-                              <span className="text-[9px] font-medium opacity-80">
+                              <span className="text-xs font-semibold opacity-90">
                                 {isNight ? '🌙 Noturno' : isMorning ? '☀️ Manhã' : '🌤️ Tarde'}
                               </span>
                             </button>
                           );
                         })}
                     </div>
-                    <p className="text-[10px] text-slate-400 text-right">
+                    <p className="text-xs text-slate-600 font-medium text-right">
                       * Aulas a partir das 19h contam como prática noturna.
                     </p>
                   </div>
@@ -551,10 +551,10 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                     <p className="font-bold text-slate-900 truncate">
                       {formatDateBR(lsn.data)} às {lsn.horaInicio} - {lsn.horaFim}
                     </p>
-                    <p className="text-slate-500 text-[11px] truncate">{lsn.topico}</p>
+                    <p className="text-slate-600 text-xs font-medium truncate">{lsn.topico}</p>
                   </div>
                   <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-semibold shrink-0 ${
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold shrink-0 ${
                       lsn.status === 'CONCLUIDA'
                         ? 'bg-emerald-100 text-emerald-800'
                         : 'bg-blue-100 text-blue-800'
@@ -585,9 +585,9 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="min-w-0">
                       <p className="font-bold text-slate-900 break-words">{acc.descricao}</p>
-                      <p className="text-[11px] text-slate-500 mt-0.5">
+                      <p className="text-xs text-slate-600 font-medium mt-0.5">
                         Vencimento: {formatDateBR(acc.dataVencimento)} · Saldo:{' '}
-                        <strong className="text-slate-900 font-mono">{formatCurrencyBRL(acc.saldoDevedorCentavos)}</strong>
+                        <strong className="text-slate-900 font-mono font-bold">{formatCurrencyBRL(acc.saldoDevedorCentavos)}</strong>
                       </p>
                     </div>
 
@@ -626,7 +626,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                   {/* Formulário Retrátil de Cupom para esta fatura */}
                   {couponTargetAccId === acc.id && acc.saldoDevedorCentavos > 0 && (
                     <div className="pt-2 border-t border-purple-100 bg-purple-50/70 p-3 rounded-xl space-y-2">
-                      <div className="flex items-center gap-1.5 text-purple-900 font-bold text-[11px]">
+                      <div className="flex items-center gap-1.5 text-purple-900 font-bold text-xs">
                         <Tag className="w-3.5 h-3.5 text-purple-600" />
                         <span>Informe o código do cupom de desconto recebido:</span>
                       </div>
@@ -650,7 +650,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
 
                       {couponFeedback && (
                         <div
-                          className={`p-2 rounded-lg text-[11px] flex items-center gap-1.5 ${
+                          className={`p-2.5 rounded-xl text-xs font-medium flex items-center gap-1.5 ${
                             couponFeedback.type === 'success'
                               ? 'bg-emerald-100 text-emerald-800'
                               : 'bg-red-100 text-red-800'
@@ -691,13 +691,13 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                 alt="QR Code PIX Escaneável"
                 className="w-44 h-44 mx-auto rounded-xl"
               />
-              <p className="text-[10px] text-slate-400 mt-1 font-medium">
+              <p className="text-xs text-slate-600 mt-1 font-medium">
                 Aponte a câmera do app do seu banco
               </p>
             </div>
 
             <div>
-              <p className="text-xs text-slate-500 break-words">{selectedAccountForPix.descricao}</p>
+              <p className="text-xs text-slate-600 font-medium break-words">{selectedAccountForPix.descricao}</p>
               <p className="text-xl font-extrabold font-mono text-emerald-700 mt-0.5">
                 {formatCurrencyBRL(selectedAccountForPix.saldoDevedorCentavos)}
               </p>
@@ -706,7 +706,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
             {/* Inserir Cupom de Desconto dentro do Modal PIX */}
             {selectedAccountForPix.saldoDevedorCentavos > 0 && (
               <div className="p-3 bg-purple-50/70 border border-purple-200 rounded-2xl text-left space-y-2">
-                <span className="text-[11px] font-bold text-purple-900 flex items-center gap-1">
+                <span className="text-xs font-bold text-purple-900 flex items-center gap-1">
                   <Ticket className="w-3.5 h-3.5 text-purple-600" />
                   <span>Tem cupom de desconto do seu instrutor?</span>
                 </span>
@@ -730,7 +730,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
 
                 {couponFeedback && (
                   <div
-                    className={`p-2 rounded-lg text-[11px] flex items-center gap-1.5 ${
+                    className={`p-2.5 rounded-xl text-xs font-medium flex items-center gap-1.5 ${
                       couponFeedback.type === 'success'
                         ? 'bg-emerald-100 text-emerald-800'
                         : 'bg-red-100 text-red-800'
@@ -750,24 +750,24 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
             {/* Chave e Beneficiário Info */}
             <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-left text-xs space-y-1">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] text-emerald-800 font-semibold">Beneficiário:</span>
-                <span className="text-[11px] text-emerald-950 font-bold truncate max-w-[180px]">
+                <span className="text-xs text-emerald-800 font-semibold">Beneficiário:</span>
+                <span className="text-xs text-emerald-950 font-bold truncate max-w-[180px]">
                   {pixConfig.beneficiarioPix}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-[11px] text-emerald-800 font-semibold">Chave PIX:</span>
+                <span className="text-xs text-emerald-800 font-semibold">Chave PIX:</span>
                 <div className="flex items-center gap-1">
-                  <span className="font-mono text-[11px] text-emerald-950 font-extrabold truncate max-w-[150px]">
+                  <span className="font-mono text-xs text-emerald-950 font-extrabold truncate max-w-[150px]">
                     {pixConfig.chavePix}
                   </span>
                   <button
                     type="button"
                     onClick={handleCopyKey}
-                    className="p-1 rounded bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] cursor-pointer"
+                    className="p-1 rounded bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs cursor-pointer"
                     title="Copiar Chave PIX"
                   >
-                    {chaveCopied ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                    {chaveCopied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                   </button>
                 </div>
               </div>
@@ -791,7 +791,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                   </>
                 )}
               </button>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-xs text-slate-600 font-medium">
                 Abra o app do seu banco, escolha <strong>PIX Copia e Cola</strong> e efetue o pagamento. O instrutor receberá a confirmação imediatamente.
               </p>
             </div>

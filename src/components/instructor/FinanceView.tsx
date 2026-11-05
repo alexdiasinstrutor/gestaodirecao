@@ -540,7 +540,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                       <p className="text-xs text-slate-500">{student?.telefone || 'Telefone não informado'}</p>
                     </div>
                     <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-semibold shrink-0 ${
+                      className={`px-2 py-0.5 rounded text-xs font-semibold shrink-0 ${
                         acc.status === 'PAGO'
                           ? 'bg-emerald-100 text-emerald-800'
                           : acc.status === 'VENCIDO'
@@ -558,19 +558,19 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
 
                   <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-slate-100">
                     <div>
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Vencimento</span>
+                      <span className="text-xs uppercase font-bold font-bold text-slate-400 block">Vencimento</span>
                       <span className="font-mono text-slate-800 font-semibold">{formatDateBR(acc.dataVencimento)}</span>
                     </div>
                     <div>
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Valor Total</span>
+                      <span className="text-xs uppercase font-bold font-bold text-slate-400 block">Valor Total</span>
                       <span className="font-mono font-bold text-slate-900">{formatCurrencyBRL(acc.valorTotalCentavos)}</span>
                     </div>
                     <div>
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Valor Pago</span>
+                      <span className="text-xs uppercase font-bold font-bold text-slate-400 block">Valor Pago</span>
                       <span className="font-mono font-semibold text-emerald-700">{formatCurrencyBRL(acc.valorPagoCentavos)}</span>
                     </div>
                     <div>
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Saldo Devedor</span>
+                      <span className="text-xs uppercase font-bold font-bold text-slate-400 block">Saldo Devedor</span>
                       <span className="font-mono font-black text-rose-700">{formatCurrencyBRL(acc.saldoDevedorCentavos)}</span>
                     </div>
                   </div>
@@ -621,7 +621,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
           <div className="hidden md:block border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-xs">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase text-[10px]">
+                <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase text-xs font-bold text-slate-700">
                   <tr>
                     <th className="py-3 px-4">Aluno</th>
                     <th className="py-3 px-4">Descrição</th>
@@ -640,10 +640,10 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                       <tr key={acc.id} className="hover:bg-slate-50/70 transition-colors">
                         <td className="py-3 px-4 font-bold text-slate-900 whitespace-nowrap">
                           {student?.nome || 'Aluno'}
-                          <span className="block text-[11px] text-slate-400 font-normal">{student?.telefone}</span>
+                          <span className="block text-xs text-slate-600 font-medium font-normal">{student?.telefone}</span>
                         </td>
                         <td className="py-3 px-4 text-slate-600">{acc.descricao}</td>
-                        <td className="py-3 px-4 font-mono text-[11px] whitespace-nowrap">
+                        <td className="py-3 px-4 font-mono text-xs whitespace-nowrap">
                           {formatDateBR(acc.dataVencimento)}
                         </td>
                         <td className="py-3 px-4 font-bold text-slate-900 font-mono">
@@ -657,7 +657,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                         </td>
                         <td className="py-3 px-4 whitespace-nowrap">
                           <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                            className={`px-2 py-0.5 rounded text-xs font-semibold ${
                               acc.status === 'PAGO'
                                 ? 'bg-emerald-100 text-emerald-800'
                                 : acc.status === 'VENCIDO'
@@ -677,7 +677,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                                   setSelectedAccountForDiscount(acc);
                                   setShowDiscountModal(true);
                                 }}
-                                className="px-2 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 font-bold rounded-lg text-[11px] transition-colors cursor-pointer flex items-center gap-1"
+                                className="px-2 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 font-bold rounded-lg text-xs transition-colors cursor-pointer flex items-center gap-1"
                                 title="Aplicar cupom ou desconto no saldo deste aluno"
                               >
                                 <Ticket className="w-3 h-3 text-purple-600" />
@@ -686,7 +686,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                               <button
                                 type="button"
                                 onClick={() => setSelectedAccountForQrModal(acc)}
-                                className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold rounded-lg text-[11px] transition-colors cursor-pointer flex items-center gap-1"
+                                className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold rounded-lg text-xs transition-colors cursor-pointer flex items-center gap-1"
                                 title="Visualizar QR Code e Copia e Cola PIX"
                               >
                                 <QrCode className="w-3 h-3 text-emerald-600" />
@@ -700,7 +700,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                               </button>
                             </div>
                           ) : (
-                            <span className="text-[11px] text-emerald-700 font-medium flex items-center justify-end gap-1">
+                            <span className="text-xs text-emerald-700 font-medium flex items-center justify-end gap-1">
                               <CheckCircle2 className="w-3.5 h-3.5" />
                               Quitado
                             </span>
@@ -734,7 +734,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-xs">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase text-[10px]">
+                  <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase text-xs font-bold text-slate-700">
                     <tr>
                       <th className="py-3 px-4">Aluno / Pagador</th>
                       <th className="py-3 px-4">Data Pagamento</th>
@@ -751,11 +751,11 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                         <tr key={pay.id} className="hover:bg-slate-50/70 transition-colors">
                           <td className="py-3 px-4 font-bold text-slate-900 whitespace-nowrap">
                             {student?.nome || 'Aluno'}
-                            <span className="block text-[11px] text-slate-400 font-mono font-normal">
+                            <span className="block text-xs text-slate-600 font-medium font-mono font-normal">
                               CPF: {student?.cpfMascarado || '***.***.***-**'}
                             </span>
                           </td>
-                          <td className="py-3 px-4 font-mono text-[11px] whitespace-nowrap">
+                          <td className="py-3 px-4 font-mono text-xs whitespace-nowrap">
                             {formatDateBR(pay.dataPagamento)}
                           </td>
                           <td className="py-3 px-4 font-semibold text-blue-700 whitespace-nowrap">
@@ -765,7 +765,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                           <td className="py-3 px-4 font-black font-mono text-emerald-700 whitespace-nowrap">
                             {formatCurrencyBRL(pay.valorCentavos)}
                           </td>
-                          <td className="py-3 px-4 font-mono text-slate-500 text-[11px] whitespace-nowrap">
+                          <td className="py-3 px-4 font-mono text-slate-500 text-xs whitespace-nowrap">
                             {pay.comprovanteNumero || 'AUT-REG'}
                           </td>
                           <td className="py-3 px-4 text-right whitespace-nowrap">
@@ -856,12 +856,12 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
                       <h4 className="font-bold text-slate-900 text-sm break-words">{exp.descricao}</h4>
-                      <span className="inline-block px-2 py-0.5 mt-1 rounded bg-slate-100 text-slate-700 text-[10px] font-semibold">
+                      <span className="inline-block px-2 py-0.5 mt-1 rounded bg-slate-100 text-slate-700 text-xs font-semibold">
                         {exp.categoria.replace(/_/g, ' ')}
                       </span>
                     </div>
                     <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-semibold shrink-0 ${
+                      className={`px-2 py-0.5 rounded text-xs font-semibold shrink-0 ${
                         exp.status === 'PAGA'
                           ? 'bg-emerald-100 text-emerald-800'
                           : 'bg-amber-100 text-amber-800'
@@ -873,13 +873,13 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
 
                   <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-slate-100">
                     <div>
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Veículo</span>
+                      <span className="text-xs uppercase font-bold font-bold text-slate-400 block">Veículo</span>
                       <span className="text-slate-700 font-medium break-words">
                         {vehicle ? `${vehicle.modelo.split(' ')[0]} (${vehicle.placa})` : 'Geral / Nenhum'}
                       </span>
                     </div>
                     <div>
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Vencimento</span>
+                      <span className="text-xs uppercase font-bold font-bold text-slate-400 block">Vencimento</span>
                       <span className="font-mono text-slate-800 font-semibold">{formatDateBR(exp.dataVencimento)}</span>
                     </div>
                     <div className="col-span-2 pt-1 border-t border-slate-100 flex items-center justify-between">
@@ -898,7 +898,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
           <div className="hidden md:block border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-xs">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase text-[10px]">
+                <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase text-xs font-bold text-slate-700">
                   <tr>
                     <th className="py-3 px-4">Descrição</th>
                     <th className="py-3 px-4">Categoria</th>
@@ -915,20 +915,20 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                       <tr key={exp.id} className="hover:bg-slate-50/70 transition-colors">
                         <td className="py-3 px-4 font-bold text-slate-900">{exp.descricao}</td>
                         <td className="py-3 px-4">
-                          <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-semibold">
+                          <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-xs font-semibold">
                             {exp.categoria.replace('_', ' ')}
                           </span>
                         </td>
                         <td className="py-3 px-4 text-slate-600">
                           {vehicle ? `${vehicle.modelo.split(' ')[0]} (${vehicle.placa})` : 'Geral'}
                         </td>
-                        <td className="py-3 px-4 font-mono text-[11px]">{formatDateBR(exp.dataVencimento)}</td>
+                        <td className="py-3 px-4 font-mono text-xs">{formatDateBR(exp.dataVencimento)}</td>
                         <td className="py-3 px-4 font-bold text-slate-900 font-mono">
                           {formatCurrencyBRL(exp.valorCentavos)}
                         </td>
                         <td className="py-3 px-4">
                           <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                            className={`px-2 py-0.5 rounded text-xs font-semibold ${
                               exp.status === 'PAGA'
                                 ? 'bg-emerald-100 text-emerald-800'
                                 : 'bg-amber-100 text-amber-800'
@@ -975,7 +975,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                   <h4 className="text-xs sm:text-sm font-bold text-white">
                     Novo Guia: Saúde Financeira & Metodologia dos 4 Potes
                   </h4>
-                  <p className="text-[11px] sm:text-xs text-indigo-200">
+                  <p className="text-xs sm:text-xs text-indigo-200">
                     Aprenda a provisionar a troca de veículos pelo DETRAN, calcular o custo real por aula e evitar imprevistos.
                   </p>
                 </div>
@@ -997,7 +997,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                 <div key={inv.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
                   <div className="flex items-start justify-between">
                     <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 bg-purple-50 px-2 py-0.5 rounded">
+                      <span className="text-xs font-bold uppercase tracking-wider text-purple-700 bg-purple-50 px-2 py-0.5 rounded">
                         {inv.categoria.replace(/_/g, ' ')}
                       </span>
                       <h3 className="text-base font-bold text-slate-900 mt-1">{inv.titulo}</h3>
@@ -1179,7 +1179,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                   <h2 className="text-base sm:text-lg font-extrabold text-slate-900">
                     Declaração Fiscal de Rendimentos IRPF / Carnê-Leão
                   </h2>
-                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold uppercase tracking-wider">
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold uppercase tracking-wider">
                     Autônomo (PF)
                   </span>
                 </div>
@@ -1239,49 +1239,49 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             {/* Cards de Resumo Fiscal do Ano */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                <span className="text-[10px] uppercase font-bold text-slate-500 block">
+                <span className="text-xs uppercase font-bold font-bold text-slate-500 block">
                   1. Receita Bruta Anual (PF)
                 </span>
                 <p className="text-xl font-black text-slate-900 font-mono mt-1">
                   {formatCurrencyBRL(irpfReportData.totais.receitaBrutaCentavos)}
                 </p>
-                <span className="text-[10px] text-slate-500 mt-0.5 block">
+                <span className="text-xs text-slate-500 mt-0.5 block">
                   Total de rendimentos pagos por alunos
                 </span>
               </div>
 
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                <span className="text-[10px] uppercase font-bold text-slate-500 block">
+                <span className="text-xs uppercase font-bold font-bold text-slate-500 block">
                   2. Despesas Livro-Caixa
                 </span>
                 <p className="text-xl font-black text-rose-700 font-mono mt-1">
                   {formatCurrencyBRL(irpfReportData.totais.despesasLivroCaixaCentavos)}
                 </p>
-                <span className="text-[10px] text-slate-500 mt-0.5 block">
+                <span className="text-xs text-slate-500 mt-0.5 block">
                   Deduções estritamente operacionais
                 </span>
               </div>
 
               <div className="bg-emerald-50/70 p-4 rounded-xl border border-emerald-200">
-                <span className="text-[10px] uppercase font-bold text-emerald-800 block">
+                <span className="text-xs uppercase font-bold font-bold text-emerald-800 block">
                   3. Rendimento Líquido Tributável
                 </span>
                 <p className="text-xl font-black text-emerald-700 font-mono mt-1">
                   {formatCurrencyBRL(irpfReportData.totais.rendimentoLiquidoCentavos)}
                 </p>
-                <span className="text-[10px] text-emerald-800 mt-0.5 block font-semibold">
+                <span className="text-xs text-emerald-800 mt-0.5 block font-semibold">
                   Base de cálculo Carnê-Leão
                 </span>
               </div>
 
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                <span className="text-[10px] uppercase font-bold text-slate-500 block">
+                <span className="text-xs uppercase font-bold font-bold text-slate-500 block">
                   4. Investimentos Acumulados
                 </span>
                 <p className="text-xl font-black text-purple-700 font-mono mt-1">
                   {formatCurrencyBRL(irpfReportData.totais.totalInvestimentosCentavos)}
                 </p>
-                <span className="text-[10px] text-slate-500 mt-0.5 block">
+                <span className="text-xs text-slate-500 mt-0.5 block">
                   Reserva & renovação de frota
                 </span>
               </div>
@@ -1305,7 +1305,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             <div className="border border-slate-200 rounded-xl overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase text-[10px]">
+                  <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase text-xs font-bold text-slate-700">
                     <tr>
                       <th className="py-2.5 px-3">Mês</th>
                       <th className="py-2.5 px-3 text-right">Receita Bruta (R$)</th>
@@ -1375,7 +1375,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             <div className="border border-slate-200 rounded-xl overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase text-[10px]">
+                  <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase text-xs font-bold text-slate-700">
                     <tr>
                       <th className="py-2.5 px-3">Nome do Aluno</th>
                       <th className="py-2.5 px-3">CPF (Obrigatório RFB)</th>
@@ -1400,11 +1400,11 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                         <td className="py-2.5 px-3 text-right font-black font-mono text-emerald-700 whitespace-nowrap">
                           {formatCurrencyBRL(aluno.totalAnoCentavos)}
                         </td>
-                        <td className="py-2.5 px-3 text-slate-600 text-[11px]">
+                        <td className="py-2.5 px-3 text-slate-600 text-xs">
                           {aluno.metodos.join(', ')}
                         </td>
                         <td className="py-2.5 px-3 text-center font-mono">
-                          <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold text-[11px]">
+                          <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold text-xs">
                             {aluno.totalPagamentos} recibos
                           </span>
                         </td>
@@ -1437,7 +1437,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
 
               <div className="border border-slate-200 rounded-xl overflow-hidden">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase text-[10px]">
+                  <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase text-xs font-bold text-slate-700">
                     <tr>
                       <th className="py-2 px-3">Categoria Operacional</th>
                       <th className="py-2 px-3 text-center">Lançamentos</th>
@@ -1482,7 +1482,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
 
               <div className="border border-slate-200 rounded-xl overflow-hidden">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase text-[10px]">
+                  <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase text-xs font-bold text-slate-700">
                     <tr>
                       <th className="py-2 px-3">Plano de Investimento</th>
                       <th className="py-2 px-3 text-right">Acumulado</th>
@@ -1494,7 +1494,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                       <tr key={idx} className="hover:bg-slate-50/70">
                         <td className="py-2.5 px-3 font-semibold text-slate-800">
                           {inv.titulo}
-                          <span className="block text-[10px] text-purple-700 uppercase font-mono">
+                          <span className="block text-xs text-purple-700 uppercase font-mono">
                             {inv.categoria.replace('_', ' ')}
                           </span>
                         </td>
@@ -1585,14 +1585,14 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                       </option>
                     ))}
                   </select>
-                  <p className="text-[11px] text-blue-700">
+                  <p className="text-xs text-blue-700">
                     Taxa estimada da maquininha: ~{(paymentForm.parcelas === 1 ? 3.0 : 3.5 + paymentForm.parcelas * 0.5).toFixed(1)}% deduzida no DRE.
                   </p>
                 </div>
               )}
 
               {paymentForm.metodo === 'PIX' && (
-                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-[11px] text-emerald-800 space-y-1.5">
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 space-y-1.5">
                   <div className="flex items-center justify-between">
                     <p className="font-semibold flex items-center gap-1.5">
                       <QrCode className="w-3.5 h-3.5" />
@@ -1601,13 +1601,13 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                     <button
                       type="button"
                       onClick={() => setShowPixConfigModal(true)}
-                      className="text-[10px] text-emerald-700 hover:text-emerald-950 font-bold underline cursor-pointer"
+                      className="text-xs text-emerald-700 hover:text-emerald-950 font-bold underline cursor-pointer"
                     >
                       Alterar chave
                     </button>
                   </div>
                   <p className="font-mono font-bold text-sm text-emerald-950">{pixConfig.chavePix}</p>
-                  <p className="text-[10px] text-emerald-700">Beneficiário: {pixConfig.beneficiarioPix}</p>
+                  <p className="text-xs text-emerald-700">Beneficiário: {pixConfig.beneficiarioPix}</p>
                 </div>
               )}
 

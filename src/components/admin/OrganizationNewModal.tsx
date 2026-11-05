@@ -130,7 +130,7 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
             </div>
             <div>
               <h2 className="text-base font-bold text-white">Cadastrar Nova Instituição / CFC</h2>
-              <p className="text-[11px] text-slate-400">Cadastre a empresa, defina o plano e gere a chave de acesso</p>
+              <p className="text-xs text-slate-600 font-medium">Cadastre a empresa, defina o plano e gere a chave de acesso</p>
             </div>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-white p-1 cursor-pointer">
@@ -141,7 +141,7 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
         {/* Formulário */}
         <form onSubmit={handleSubmit} className="p-5 sm:p-6 overflow-y-auto space-y-4 text-xs flex-1">
           <div className="space-y-3">
-            <span className="font-bold text-slate-900 uppercase text-[10px] tracking-wider block">
+            <span className="font-bold text-slate-900 uppercase text-xs font-bold text-slate-700 tracking-wider block">
               1. Dados da Instituição ou Instrutor
             </span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -219,7 +219,7 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
 
           {/* Plano e Vigência */}
           <div className="pt-3 border-t border-slate-200 space-y-3">
-            <span className="font-bold text-slate-900 uppercase text-[10px] tracking-wider block">
+            <span className="font-bold text-slate-900 uppercase text-xs font-bold text-slate-700 tracking-wider block">
               2. Definição do Pacote & Vigência
             </span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -258,11 +258,11 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
           <div className="pt-3 border-t border-slate-200 space-y-3">
             <div className="flex items-center gap-1.5">
               <QrCode className="w-4 h-4 text-emerald-600" />
-              <span className="font-bold text-slate-900 uppercase text-[10px] tracking-wider block">
+              <span className="font-bold text-slate-900 uppercase text-xs font-bold text-slate-700 tracking-wider block">
                 3. Configuração de Recebimento PIX (Opcional)
               </span>
             </div>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-xs text-slate-500">
               Chave que receberá os pagamentos dos alunos via QR Code dinâmico e mensagens automáticas de cobrança.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -321,7 +321,7 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
           {/* Usuário Inicial */}
           <div className="pt-3 border-t border-slate-200 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-slate-900 uppercase text-[10px] tracking-wider">
+              <span className="font-bold text-slate-900 uppercase text-xs font-bold text-slate-700 tracking-wider">
                 4. Usuário Gestor / Instrutor Titular
               </span>
               <label className="flex items-center gap-1.5 cursor-pointer">
@@ -331,7 +331,7 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
                   onChange={(e) => setCriarUsuarioInicial(e.target.checked)}
                   className="rounded text-purple-600"
                 />
-                <span className="text-[11px] font-semibold text-slate-600">Criar acesso de login</span>
+                <span className="text-xs font-semibold text-slate-600">Criar acesso de login</span>
               </label>
             </div>
 
@@ -379,7 +379,7 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-mono"
                   />
                 </div>
-                <div className="sm:col-span-2 text-[11px] text-purple-700 bg-purple-50 p-2 rounded-xl">
+                <div className="sm:col-span-2 text-xs text-purple-700 bg-purple-50 p-2 rounded-xl">
                   💡 Uma <strong>senha temporária</strong> e a <strong>chave de acesso</strong> serão geradas automaticamente e exibidas na tela para você encaminhar ao cliente.
                 </div>
               </div>

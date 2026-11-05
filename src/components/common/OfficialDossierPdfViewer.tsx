@@ -45,14 +45,14 @@ export const OfficialDossierPdfViewer: React.FC<OfficialDossierPdfViewerProps> =
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-3 sticky top-0 z-10 backdrop-blur-md bg-white/95">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-blue-100 text-blue-800 border border-blue-200">
+            <span className="px-2 py-0.5 rounded-full text-xs font-extrabold uppercase bg-blue-100 text-blue-800 border border-blue-200">
               Documento Oficial A4
             </span>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+            <span className="px-2 py-0.5 rounded-full text-xs font-extrabold uppercase bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
               <CheckCircle2 className="w-3 h-3 text-emerald-600" />
               v6.2 Homologada
             </span>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-slate-100 text-slate-700">
+            <span className="px-2 py-0.5 rounded-full text-xs font-mono bg-slate-100 text-slate-700">
               PDF Real (jsPDF Engine)
             </span>
           </div>
@@ -151,7 +151,7 @@ export const OfficialDossierPdfViewer: React.FC<OfficialDossierPdfViewerProps> =
             <span className="font-mono font-bold tracking-wider uppercase text-blue-700">
               REPÚBLICA FEDERATIVA DO BRASIL · SISTEMA NACIONAL DE TRÂNSITO
             </span>
-            <span className="font-mono text-[11px] bg-slate-100 px-2.5 py-0.5 rounded">
+            <span className="font-mono text-xs bg-slate-100 px-2.5 py-0.5 rounded">
               HOMOLOGADO: NOVEMBRO DE 2026
             </span>
           </div>
@@ -165,21 +165,21 @@ export const OfficialDossierPdfViewer: React.FC<OfficialDossierPdfViewerProps> =
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs mt-3">
             <div>
-              <span className="text-slate-500 block text-[11px]">Versão da Plataforma:</span>
+              <span className="text-slate-500 block text-xs">Versão da Plataforma:</span>
               <strong className="text-slate-900 font-mono">v6.2 Estável (CEP + MG)</strong>
             </div>
             <div>
-              <span className="text-slate-500 block text-[11px]">Administrador Master:</span>
+              <span className="text-slate-500 block text-xs">Administrador Master:</span>
               <strong className="text-purple-700 font-mono truncate block" title="cassiordcosta@gmail.com">
                 cassiordcosta@gmail.com
               </strong>
             </div>
             <div>
-              <span className="text-slate-500 block text-[11px]">Banco de Dados:</span>
+              <span className="text-slate-500 block text-xs">Banco de Dados:</span>
               <strong className="text-emerald-700">Supabase SQL + Firestore</strong>
             </div>
             <div>
-              <span className="text-slate-500 block text-[11px]">Endereço & Interface:</span>
+              <span className="text-slate-500 block text-xs">Endereço & Interface:</span>
               <strong className="text-slate-800">Busca CEP (MG) & Mobile</strong>
             </div>
           </div>
@@ -259,71 +259,71 @@ export const OfficialDossierPdfViewer: React.FC<OfficialDossierPdfViewerProps> =
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
             <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
               <strong className="text-slate-900">1. Autenticação e Login Multi-Método:</strong>
-              <p className="text-slate-600 text-[11px]">Google OAuth, e-mail/senha, recuperação com CPF e 2FA.</p>
+              <p className="text-slate-600 text-xs">Google OAuth, e-mail/senha, recuperação com CPF e 2FA.</p>
             </div>
             <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
               <strong className="text-slate-900">2. Auto-Cadastro de Instrutores:</strong>
-              <p className="text-slate-600 text-[11px]">Validação de credencial de trânsito e criação de tenant.</p>
+              <p className="text-slate-600 text-xs">Validação de credencial de trânsito e criação de tenant.</p>
             </div>
             <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
               <strong className="text-slate-900">3. Auto-Matrícula Vinculada de Aluno:</strong>
-              <p className="text-slate-600 text-[11px]">Vínculo por link exclusivo com instrutor fixo e idade &ge; 18 anos.</p>
+              <p className="text-slate-600 text-xs">Vínculo por link exclusivo com instrutor fixo e idade &ge; 18 anos.</p>
             </div>
             <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
               <strong className="text-slate-900">4. Gerador de Convites WhatsApp:</strong>
-              <p className="text-slate-600 text-[11px]">Geração e disparo de links de convite via deep link nativo.</p>
+              <p className="text-slate-600 text-xs">Geração e disparo de links de convite via deep link nativo.</p>
             </div>
             <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
               <strong className="text-slate-900">5. Painel Geral (Dashboard):</strong>
-              <p className="text-slate-600 text-[11px]">KPIs de faturamento, taxa de aprovação e próximas aulas.</p>
+              <p className="text-slate-600 text-xs">KPIs de faturamento, taxa de aprovação e próximas aulas.</p>
             </div>
             <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
               <strong className="text-slate-900">6. Gestão de Alunos & Progresso:</strong>
-              <p className="text-slate-600 text-[11px]">Fichas cadastrais, reatribuição e emissão de ficha A4.</p>
+              <p className="text-slate-600 text-xs">Fichas cadastrais, reatribuição e emissão de ficha A4.</p>
             </div>
             <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
               <strong className="text-slate-900">7. Radar e Avaliação de Habilidades:</strong>
-              <p className="text-slate-600 text-[11px]">8 competências práticas CONTRAN avaliadas de 0 a 10.</p>
+              <p className="text-slate-600 text-xs">8 competências práticas CONTRAN avaliadas de 0 a 10.</p>
             </div>
             <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
               <strong className="text-slate-900">8. Agenda Prática Diurna e Noturna:</strong>
-              <p className="text-slate-600 text-[11px]">Operação das 06:00 às 00:00 com bloqueio e registro de faltas.</p>
+              <p className="text-slate-600 text-xs">Operação das 06:00 às 00:00 com bloqueio e registro de faltas.</p>
             </div>
             <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
               <strong className="text-slate-900">9. Finanças & Contas a Receber:</strong>
-              <p className="text-slate-600 text-[11px]">Títulos em centavos, parcelamentos e comprovantes.</p>
+              <p className="text-slate-600 text-xs">Títulos em centavos, parcelamentos e comprovantes.</p>
             </div>
             <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
               <strong className="text-slate-900">10. Gateway PIX Dinâmico:</strong>
-              <p className="text-slate-600 text-[11px]">Geração instantânea de EMV Copia e Cola e QR Code.</p>
+              <p className="text-slate-600 text-xs">Geração instantânea de EMV Copia e Cola e QR Code.</p>
             </div>
             <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
               <strong className="text-slate-900">11. Despesas Operacionais e Frota:</strong>
-              <p className="text-slate-600 text-[11px]">Combustível, manutenção e custos categorizados por placa.</p>
+              <p className="text-slate-600 text-xs">Combustível, manutenção e custos categorizados por placa.</p>
             </div>
             <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
               <strong className="text-slate-900">12. Metas de Investimento e Reservas:</strong>
-              <p className="text-slate-600 text-[11px]">Projeções financeiras para novos veículos e reservas.</p>
+              <p className="text-slate-600 text-xs">Projeções financeiras para novos veículos e reservas.</p>
             </div>
             <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
               <strong className="text-slate-900">13. Demonstrativo de Resultados (DRE):</strong>
-              <p className="text-slate-600 text-[11px]">Receita bruta, custos operacionais e apuração do Lucro Líquido.</p>
+              <p className="text-slate-600 text-xs">Receita bruta, custos operacionais e apuração do Lucro Líquido.</p>
             </div>
             <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
               <strong className="text-slate-900">14. Central de Notificações WhatsApp:</strong>
-              <p className="text-slate-600 text-[11px]">Modelos prontos de lembretes de aula e cobranças de débitos.</p>
+              <p className="text-slate-600 text-xs">Modelos prontos de lembretes de aula e cobranças de débitos.</p>
             </div>
             <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
               <strong className="text-slate-900">15. Portal do Aluno:</strong>
-              <p className="text-slate-600 text-[11px]">Acesso responsivo móvel para acompanhamento do candidato.</p>
+              <p className="text-slate-600 text-xs">Acesso responsivo móvel para acompanhamento do candidato.</p>
             </div>
             <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
               <strong className="text-slate-900">16. Console Master e Verificador de Cadastros:</strong>
-              <p className="text-slate-600 text-[11px]">Varredura de integridade e reatribuição de carteiras.</p>
+              <p className="text-slate-600 text-xs">Varredura de integridade e reatribuição de carteiras.</p>
             </div>
             <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg sm:col-span-2">
               <strong className="text-slate-900">17. Painel de Agentes de Segurança e Banco de Dados:</strong>
-              <p className="text-slate-600 text-[11px]">Watchdog, Code Guard com snapshots e sincronização Firestore.</p>
+              <p className="text-slate-600 text-xs">Watchdog, Code Guard com snapshots e sincronização Firestore.</p>
             </div>
           </div>
         </section>
@@ -477,7 +477,7 @@ export const OfficialDossierPdfViewer: React.FC<OfficialDossierPdfViewerProps> =
             <p className="text-xs text-emerald-950 font-medium pt-1">
               Sistema integralmente auditado, com validação de endereço por CEP (padrão MG), sincronizado no Supabase e homologado para operação contínua.
             </p>
-            <p className="text-[11px] text-emerald-800 font-mono">
+            <p className="text-xs text-emerald-800 font-mono">
               Validação Criptográfica: SHA256-AGD-7F9A2B4C8E01-2026-STABLE
             </p>
           </div>
@@ -486,15 +486,15 @@ export const OfficialDossierPdfViewer: React.FC<OfficialDossierPdfViewerProps> =
             <div className="text-center space-y-1">
               <div className="border-t border-slate-800 w-3/4 mx-auto pt-2" />
               <strong className="text-xs text-slate-950 block">Cássio R. D. Costa</strong>
-              <span className="text-[11px] text-slate-600 block">Administrador Master do Sistema</span>
-              <span className="text-[10px] text-slate-500 font-mono">cassiordcosta@gmail.com</span>
+              <span className="text-xs text-slate-600 block">Administrador Master do Sistema</span>
+              <span className="text-xs text-slate-500 font-mono">cassiordcosta@gmail.com</span>
             </div>
 
             <div className="text-center space-y-1">
               <div className="border-t border-slate-800 w-3/4 mx-auto pt-2" />
               <strong className="text-xs text-slate-950 block">Comitê de Auditoria & Governança</strong>
-              <span className="text-[11px] text-slate-600 block">Segurança da Informação e LGPD</span>
-              <span className="text-[10px] text-slate-500 font-mono">Certificação v5.3 Estável</span>
+              <span className="text-xs text-slate-600 block">Segurança da Informação e LGPD</span>
+              <span className="text-xs text-slate-500 font-mono">Certificação v5.3 Estável</span>
             </div>
           </div>
         </section>

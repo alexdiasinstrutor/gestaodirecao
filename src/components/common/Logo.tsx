@@ -17,10 +17,10 @@ export const Logo: React.FC<LogoProps> = ({
 }) => {
   // Dimension definitions
   const dimensions = {
-    sm: { icon: 28, textMain: 'text-base', textSub: 'text-[9px]', gap: 'gap-2' },
-    md: { icon: 40, textMain: 'text-xl', textSub: 'text-[11px]', gap: 'gap-3' },
-    lg: { icon: 54, textMain: 'text-2xl sm:text-3xl', textSub: 'text-xs', gap: 'gap-3.5' },
-    xl: { icon: 72, textMain: 'text-3xl sm:text-4xl', textSub: 'text-sm', gap: 'gap-4' }
+    sm: { icon: 28, textMain: 'text-base', textSub: 'text-xs', gap: 'gap-2' },
+    md: { icon: 40, textMain: 'text-xl', textSub: 'text-xs font-semibold', gap: 'gap-3' },
+    lg: { icon: 54, textMain: 'text-2xl sm:text-3xl', textSub: 'text-sm font-semibold', gap: 'gap-3.5' },
+    xl: { icon: 72, textMain: 'text-3xl sm:text-4xl', textSub: 'text-base font-semibold', gap: 'gap-4' }
   }[size];
 
   const isDark = theme === 'dark';

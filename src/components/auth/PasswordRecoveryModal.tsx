@@ -180,7 +180,7 @@ export const PasswordRecoveryModal: React.FC<PasswordRecoveryModalProps> = ({
                   <ShieldCheck className="w-4 h-4 text-blue-600" />
                   <span>Protocolo de Segurança e Proteção LGPD</span>
                 </div>
-                <p className="text-[11px] text-blue-800 leading-relaxed">
+                <p className="text-xs text-blue-800 leading-relaxed">
                   Para proteger o acesso ao sistema, a recuperação de senha exige a conferência simultânea do
                   <strong> e-mail de cadastro</strong> e do <strong>CPF obrigatório</strong> do usuário.
                 </p>
@@ -201,7 +201,7 @@ export const PasswordRecoveryModal: React.FC<PasswordRecoveryModalProps> = ({
                     className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none font-mono text-xs"
                   />
                 </div>
-                <p className="text-[10px] text-slate-400 mt-1">
+                <p className="text-xs text-slate-600 font-medium mt-1">
                   Administrador: <span className="font-mono text-blue-600">cassiordcosta@gmail.com</span>
                 </p>
               </div>
@@ -218,7 +218,7 @@ export const PasswordRecoveryModal: React.FC<PasswordRecoveryModalProps> = ({
                   placeholder="000.000.000-00"
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none font-mono text-xs"
                 />
-                <p className="text-[10px] text-slate-400 mt-1">
+                <p className="text-xs text-slate-600 font-medium mt-1">
                   Dica para teste do Administrador Master: <span className="font-mono text-blue-600 font-bold">111.222.333-00</span>
                 </p>
               </div>
@@ -255,11 +255,11 @@ export const PasswordRecoveryModal: React.FC<PasswordRecoveryModalProps> = ({
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                     <span>E-mail de Recuperação Disparado!</span>
                   </div>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-mono font-bold">
+                  <span className="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-mono font-bold">
                     Expira em 15 min
                   </span>
                 </div>
-                <div className="text-[11px] text-emerald-800 space-y-1 bg-white p-2.5 rounded-lg border border-emerald-100 font-mono">
+                <div className="text-xs text-emerald-800 space-y-1 bg-white p-2.5 rounded-lg border border-emerald-100 font-mono">
                   <p><span className="text-slate-400">Destinatário:</span> {validatedUser.email}</p>
                   <p><span className="text-slate-400">Usuário:</span> {validatedUser.nome}</p>
                   <p><span className="text-slate-400">Código de 6 Dígitos:</span> <strong className="text-emerald-700 text-sm tracking-wider">{sentCode}</strong></p>
@@ -267,7 +267,7 @@ export const PasswordRecoveryModal: React.FC<PasswordRecoveryModalProps> = ({
               </div>
 
               {resendNotice && (
-                <div className="p-2 bg-blue-50 border border-blue-200 text-blue-800 text-[11px] rounded-lg text-center font-medium">
+                <div className="p-2 bg-blue-50 border border-blue-200 text-blue-800 text-xs rounded-lg text-center font-medium">
                   {resendNotice}
                 </div>
               )}

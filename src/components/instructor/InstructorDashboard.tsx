@@ -95,14 +95,14 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
       <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-blue-950 text-white rounded-2xl p-4 sm:p-6 shadow-xl border border-slate-800">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3.5">
           <div>
-            <span className="text-[11px] font-semibold text-blue-400 tracking-wider uppercase">
+            <span className="text-xs font-bold text-blue-300 tracking-wider uppercase">
               {isSimplified ? 'Operação Rápida do Instrutor' : 'Painel de Gestão & Indicadores'}
             </span>
             <h1 className="text-lg sm:text-2xl font-extrabold text-white mt-0.5">
               Olá, {currentUser.nome.split(' ')[0]}! 🚗
             </h1>
             {!isSimplified && (
-              <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-xl">
+              <p className="text-xs sm:text-sm text-slate-200 mt-1 max-w-xl">
                 Organização: <strong className="text-white">{currentOrg.nome}</strong>. Acompanhe seus recebíveis, aulas práticas agendadas e controle financeiro.
               </p>
             )}
@@ -163,21 +163,21 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs font-bold text-slate-900">Seu Plano:</span>
-                <span className={`px-2 py-0.5 rounded-full border text-[11px] font-extrabold ${planDetails.corBadge}`}>
+                <span className={`px-2 py-0.5 rounded-full border text-xs font-extrabold ${planDetails.corBadge}`}>
                   {planDetails.nome}
                 </span>
                 {currentOrg.status === 'TESTE' && (
-                  <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 text-[10px] font-bold">
+                  <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 text-xs font-bold">
                     Período de Teste
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-slate-600 mt-0.5">
+              <p className="text-xs text-slate-700 font-medium mt-1">
                 {currentOrg.dataVencimentoPlano ? (
                   <>
-                    Próxima Cobrança / Validade: <strong className="text-slate-900 font-mono">{formatDateBR(currentOrg.dataVencimentoPlano)}</strong>
+                    Próxima Cobrança / Validade: <strong className="text-slate-900 font-mono font-bold">{formatDateBR(currentOrg.dataVencimentoPlano)}</strong>
                     {currentOrg.valorMensalidadeCentavos !== undefined && currentOrg.valorMensalidadeCentavos > 0 && (
-                      <span> · Mensalidade: <strong className="text-slate-900 font-mono">{formatCurrencyBRL(currentOrg.valorMensalidadeCentavos)}</strong></span>
+                      <span> · Mensalidade: <strong className="text-slate-900 font-mono font-bold">{formatCurrencyBRL(currentOrg.valorMensalidadeCentavos)}</strong></span>
                     )}
                   </>
                 ) : (
@@ -189,9 +189,9 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
 
           <div className="flex items-center gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-purple-100 shrink-0">
             <div className="text-left sm:text-right">
-              <span className="text-[10px] uppercase font-bold text-purple-700 block">Cupons de Alunos</span>
+              <span className="text-xs uppercase font-extrabold text-purple-800 block">Cupons de Alunos</span>
               <span className="text-sm font-extrabold text-slate-900">
-                {instructorCoupons.length} gerado(s) <span className="text-[11px] font-normal text-slate-500">({activeCouponsCount} ativos · {totalCouponsUsed} resgates)</span>
+                {instructorCoupons.length} gerado(s) <span className="text-xs font-medium text-slate-600">({activeCouponsCount} ativos · {totalCouponsUsed} resgates)</span>
               </span>
             </div>
             <button
@@ -218,7 +218,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
             </div>
             <div className="min-w-0">
               <p className="text-xs font-extrabold text-slate-900 truncate">Agenda Hoje</p>
-              <p className="text-[11px] text-blue-600 font-semibold">{todayLessons.length} aula(s)</p>
+              <p className="text-xs text-blue-700 font-bold">{todayLessons.length} aula(s)</p>
             </div>
           </button>
 
@@ -232,7 +232,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
             </div>
             <div className="min-w-0">
               <p className="text-xs font-extrabold text-slate-900 truncate">Meus Alunos</p>
-              <p className="text-[11px] text-indigo-600 font-semibold">{students.length} ativo(s)</p>
+              <p className="text-xs text-indigo-700 font-bold">{students.length} ativo(s)</p>
             </div>
           </button>
 
@@ -246,7 +246,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
             </div>
             <div className="min-w-0">
               <p className="text-xs font-extrabold text-slate-900 truncate">Cobrar / PIX</p>
-              <p className="text-[11px] text-emerald-700 font-semibold">{overdueAccounts.length} pendente(s)</p>
+              <p className="text-xs text-emerald-800 font-bold">{overdueAccounts.length} pendente(s)</p>
             </div>
           </button>
 
@@ -260,7 +260,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
             </div>
             <div className="min-w-0">
               <p className="text-xs font-extrabold text-slate-900 truncate">Gerar Cupom</p>
-              <p className="text-[11px] text-purple-700 font-semibold">{instructorCoupons.length} gerado(s)</p>
+              <p className="text-xs text-purple-800 font-bold">{instructorCoupons.length} gerado(s)</p>
             </div>
           </button>
 
@@ -274,7 +274,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
             </div>
             <div className="min-w-0">
               <p className="text-xs font-extrabold text-white truncate">Modo Normal</p>
-              <p className="text-[11px] text-sky-300 font-semibold">Todos os Menus</p>
+              <p className="text-xs text-sky-200 font-bold">Todos os Menus</p>
             </div>
           </button>
         </div>
@@ -285,7 +285,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
         {/* Recebido */}
         <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between gap-1">
-            <span className="text-xs font-medium text-slate-500">Recebido Total</span>
+            <span className="text-xs font-semibold text-slate-600">Recebido Total</span>
             <div className="p-1.5 sm:p-2 rounded-xl bg-emerald-50 text-emerald-600 shrink-0">
               <TrendingUp className="w-4 h-4" />
             </div>
@@ -294,8 +294,8 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
             <p className="text-base sm:text-xl font-extrabold text-slate-900 tracking-tight truncate">
               {formatCurrencyBRL(totalRecebidoCentavos)}
             </p>
-            <p className="text-[11px] text-emerald-700 font-medium flex items-center gap-1 mt-0.5">
-              <ArrowUpRight className="w-3 h-3 shrink-0" />
+            <p className="text-xs text-emerald-800 font-semibold flex items-center gap-1 mt-0.5">
+              <ArrowUpRight className="w-3.5 h-3.5 shrink-0" />
               <span className="truncate">Entradas confirmadas</span>
             </p>
           </div>
@@ -304,7 +304,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
         {/* Em Aberto / Pendente */}
         <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between gap-1">
-            <span className="text-xs font-medium text-slate-500">A Receber</span>
+            <span className="text-xs font-semibold text-slate-600">A Receber</span>
             <div className="p-1.5 sm:p-2 rounded-xl bg-blue-50 text-blue-600 shrink-0">
               <DollarSign className="w-4 h-4" />
             </div>
@@ -313,7 +313,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
             <p className="text-base sm:text-xl font-extrabold text-blue-700 tracking-tight truncate">
               {formatCurrencyBRL(totalPendenteCentavos)}
             </p>
-            <p className="text-[11px] text-slate-500 mt-0.5 truncate">Parcelas a vencer</p>
+            <p className="text-xs text-slate-600 font-medium mt-0.5 truncate">Parcelas a vencer</p>
           </div>
         </div>
 
@@ -322,7 +322,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
             {/* Inadimplência / Vencido */}
             <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-red-200 bg-red-50/20 shadow-xs flex flex-col justify-between">
               <div className="flex items-center justify-between gap-1">
-                <span className="text-xs font-medium text-red-700">Atrasados / Vencidos</span>
+                <span className="text-xs font-semibold text-red-700">Atrasados / Vencidos</span>
                 <div className="p-1.5 sm:p-2 rounded-xl bg-red-100 text-red-700 shrink-0">
                   <AlertTriangle className="w-4 h-4" />
                 </div>
@@ -333,10 +333,10 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
                 </p>
                 <button
                   onClick={() => onNavigate('WHATSAPP')}
-                  className="text-[11px] text-red-700 font-semibold hover:underline flex items-center gap-1 mt-0.5 cursor-pointer"
+                  className="text-xs text-red-700 font-bold hover:underline flex items-center gap-1 mt-0.5 cursor-pointer"
                 >
                   <span>{overdueAccounts.length} cobrança(s)</span>
-                  <ArrowRight className="w-3 h-3 shrink-0" />
+                  <ArrowRight className="w-3.5 h-3.5 shrink-0" />
                 </button>
               </div>
             </div>
@@ -344,7 +344,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
             {/* Saldo Líquido Operacional */}
             <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
               <div className="flex items-center justify-between gap-1">
-                <span className="text-xs font-medium text-slate-500">Saldo Líquido</span>
+                <span className="text-xs font-semibold text-slate-600">Saldo Líquido</span>
                 <div className="p-1.5 sm:p-2 rounded-xl bg-slate-100 text-slate-800 shrink-0">
                   <DollarSign className="w-4 h-4" />
                 </div>
@@ -353,7 +353,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
                 <p className={`text-base sm:text-xl font-extrabold tracking-tight truncate ${saldoLiquidoCentavos >= 0 ? 'text-slate-900' : 'text-red-600'}`}>
                   {formatCurrencyBRL(saldoLiquidoCentavos)}
                 </p>
-                <p className="text-[11px] text-slate-500 mt-0.5 truncate">
+                <p className="text-xs text-slate-600 font-medium mt-0.5 truncate">
                   Receitas (-) Despesas
                 </p>
               </div>
@@ -370,7 +370,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
               <Users className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs text-slate-500 truncate">Alunos Ativos</p>
+              <p className="text-xs font-medium text-slate-600 truncate">Alunos Ativos</p>
               <p className="text-base font-bold text-slate-900">{students.length}</p>
             </div>
           </div>
@@ -380,7 +380,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
               <Calendar className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs text-slate-500 truncate">Aulas Hoje</p>
+              <p className="text-xs font-medium text-slate-600 truncate">Aulas Hoje</p>
               <p className="text-base font-bold text-slate-900">{todayLessons.length}</p>
             </div>
           </div>
@@ -390,7 +390,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
               <Fuel className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs text-slate-500 truncate">Despesas Pagas</p>
+              <p className="text-xs font-medium text-slate-600 truncate">Despesas Pagas</p>
               <p className="text-base font-bold text-slate-900 truncate">{formatCurrencyBRL(totalDespesasPagasCentavos)}</p>
             </div>
           </div>
@@ -400,7 +400,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
               <TrendingUp className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs text-slate-500 truncate">Investimentos</p>
+              <p className="text-xs font-medium text-slate-600 truncate">Investimentos</p>
               <p className="text-base font-bold text-slate-900 truncate">{formatCurrencyBRL(totalInvestimentosCentavos)}</p>
             </div>
           </div>
@@ -450,12 +450,12 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
           </div>
 
           {todayLessons.length === 0 ? (
-            <div className="p-6 text-center text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-              <Clock className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-              <p className="text-xs">Nenhuma aula agendada para hoje até o momento.</p>
+            <div className="p-6 text-center text-slate-600 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+              <Clock className="w-8 h-8 mx-auto mb-2 text-slate-400" />
+              <p className="text-xs font-medium">Nenhuma aula agendada para hoje até o momento.</p>
               <button
                 onClick={() => onNavigate('SCHEDULE')}
-                className="mt-2 text-xs text-blue-600 font-semibold hover:underline cursor-pointer"
+                className="mt-2 text-xs text-blue-700 font-bold hover:underline cursor-pointer"
               >
                 Liberar horários na agenda
               </button>
@@ -476,14 +476,14 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="font-bold text-slate-900 leading-snug truncate">{student?.nome || 'Aluno'}</p>
-                        <p className="text-[11px] text-slate-500 truncate">
+                        <p className="text-xs text-slate-600 font-medium truncate">
                           {lesson.topico} · {vehicle?.modelo.split(' ')[0] || 'Carro'}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center justify-end shrink-0">
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-semibold ${lesson.status === 'CONCLUIDA'
+                        className={`px-2.5 py-1 rounded-lg text-xs font-bold ${lesson.status === 'CONCLUIDA'
                             ? 'bg-emerald-100 text-emerald-800'
                             : 'bg-blue-100 text-blue-800'
                           }`}
@@ -508,7 +508,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
               </h2>
               <button
                 onClick={() => onNavigate('FINANCE')}
-                className="text-xs font-semibold text-blue-600 hover:text-blue-800 cursor-pointer self-start sm:self-auto"
+                className="text-xs font-bold text-blue-600 hover:text-blue-800 cursor-pointer self-start sm:self-auto"
               >
                 Ver Finanças & DRE →
               </button>
@@ -522,9 +522,9 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
                 >
                   <div className="min-w-0 flex-1">
                     <p className="font-bold text-slate-900 leading-snug break-words">{exp.descricao}</p>
-                    <p className="text-[11px] text-slate-500 flex flex-wrap items-center gap-1 mt-0.5">
-                      <span className="font-medium text-slate-600">{exp.categoria.replace(/_/g, ' ')}</span>
-                      <span className="text-slate-300">·</span>
+                    <p className="text-xs text-slate-600 flex flex-wrap items-center gap-1 mt-0.5">
+                      <span className="font-semibold text-slate-700">{exp.categoria.replace(/_/g, ' ')}</span>
+                      <span className="text-slate-400">·</span>
                       <span>Vencimento: {formatDateBR(exp.dataVencimento)}</span>
                     </p>
                   </div>
@@ -533,7 +533,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
                       {formatCurrencyBRL(exp.valorCentavos)}
                     </p>
                     <span
-                      className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded ${exp.status === 'PAGA'
+                      className={`inline-block text-xs font-bold px-2.5 py-1 rounded-lg ${exp.status === 'PAGA'
                           ? 'bg-emerald-100 text-emerald-800'
                           : 'bg-amber-100 text-amber-800'
                         }`}

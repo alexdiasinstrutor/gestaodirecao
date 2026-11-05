@@ -268,7 +268,7 @@ export const PixConfigModal: React.FC<PixConfigModalProps> = ({
                 placeholder="Ex: Alex Dias da Silva"
                 className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-600"
               />
-              <span className="text-[10px] text-slate-400">Nome que aparece no comprovante bancário (máx 50 carac.)</span>
+              <span className="text-xs text-slate-600 font-medium">Nome que aparece no comprovante bancário (máx 50 carac.)</span>
             </div>
 
             {/* Cidade do Beneficiário */}
@@ -285,7 +285,7 @@ export const PixConfigModal: React.FC<PixConfigModalProps> = ({
                 placeholder="Ex: SAO PAULO"
                 className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-600"
               />
-              <span className="text-[10px] text-slate-400">Município da conta bancária (padrão BACEN, máx 15 carac.)</span>
+              <span className="text-xs text-slate-600 font-medium">Município da conta bancária (padrão BACEN, máx 15 carac.)</span>
             </div>
           </div>
 
@@ -297,7 +297,7 @@ export const PixConfigModal: React.FC<PixConfigModalProps> = ({
                   <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
                   Demonstração em Tempo Real do Código Gerado:
                 </span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">
                   BR Code BACEN Ativo
                 </span>
               </div>
@@ -311,16 +311,16 @@ export const PixConfigModal: React.FC<PixConfigModalProps> = ({
                   />
                 )}
                 <div className="flex-1 min-w-0 space-y-1 w-full text-center sm:text-left">
-                  <p className="text-[11px] font-semibold text-slate-700 truncate">
+                  <p className="text-xs font-semibold text-slate-700 truncate">
                     Beneficiário: <strong>{beneficiario}</strong> ({cidade})
                   </p>
-                  <p className="text-[11px] text-slate-500 font-mono truncate">
+                  <p className="text-xs text-slate-500 font-mono truncate">
                     Chave: <strong className="text-emerald-700">{chavePix}</strong>
                   </p>
                   <button
                     type="button"
                     onClick={handleCopyTestPix}
-                    className="mt-1 py-1 px-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-[11px] font-semibold inline-flex items-center gap-1 cursor-pointer transition-colors"
+                    className="mt-1 py-1 px-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-semibold inline-flex items-center gap-1 cursor-pointer transition-colors"
                   >
                     {testCopied ? (
                       <>

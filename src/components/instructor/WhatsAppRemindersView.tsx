@@ -157,11 +157,11 @@ export const WhatsAppRemindersView: React.FC<WhatsAppRemindersViewProps> = ({
           </div>
 
           <div className="bg-white/10 backdrop-blur-md px-4 py-3 rounded-xl border border-white/10 text-right">
-            <span className="text-[11px] text-emerald-300 font-medium block">Total em Atraso</span>
+            <span className="text-xs text-emerald-300 font-medium block">Total em Atraso</span>
             <span className="text-xl font-mono font-bold text-white">
               {formatCurrencyBRL(overdueAccounts.reduce((a, b) => a + b.saldoDevedorCentavos, 0))}
             </span>
-            <span className="text-[11px] text-slate-300 block">{overdueAccounts.length} cobrança(s) pendente(s)</span>
+            <span className="text-xs text-slate-300 block">{overdueAccounts.length} cobrança(s) pendente(s)</span>
           </div>
         </div>
       </div>
@@ -182,17 +182,17 @@ export const WhatsAppRemindersView: React.FC<WhatsAppRemindersViewProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-slate-900">Chave PIX de Recebimento Ativa:</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full font-extrabold uppercase bg-emerald-100 text-emerald-800">
+              <span className="text-xs px-2 py-0.5 rounded-full font-extrabold uppercase bg-emerald-100 text-emerald-800">
                 {pixConfig.tipoChavePix}
               </span>
-              <span className="text-[10px] text-slate-400">
+              <span className="text-xs text-slate-600 font-medium">
                 ({pixConfig.origem === 'INSTRUTOR' ? 'Chave do Instrutor' : pixConfig.origem === 'ORGANIZACAO' ? 'Chave da Autoescola' : 'Padrão'})
               </span>
             </div>
             <p className="text-sm font-mono font-extrabold text-emerald-700 mt-0.5">
               {pixConfig.chavePix}
             </p>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-xs text-slate-500">
               Titular: <strong>{pixConfig.beneficiarioPix}</strong> · Cidade: <strong>{pixConfig.cidadePix}</strong>
             </p>
           </div>
@@ -214,7 +214,7 @@ export const WhatsAppRemindersView: React.FC<WhatsAppRemindersViewProps> = ({
           <label className="block text-xs font-bold text-slate-900">
             Modelo Padrão de Mensagem de Cobrança:
           </label>
-          <span className="text-[11px] text-slate-500">
+          <span className="text-xs text-slate-500">
             💡 Você pode clicar em <strong>"Editar Mensagem"</strong> em qualquer aluno para customizar o texto livremente.
           </span>
         </div>
@@ -229,7 +229,7 @@ export const WhatsAppRemindersView: React.FC<WhatsAppRemindersViewProps> = ({
             <p className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
               <span>🚗</span> Lembrete Gentil
             </p>
-            <p className="text-[11px] text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5">
               Tom amigável e descontraído para atrasos recentes de até 5 dias.
             </p>
           </button>
@@ -244,7 +244,7 @@ export const WhatsAppRemindersView: React.FC<WhatsAppRemindersViewProps> = ({
             <p className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
               <span>📄</span> Padrão Comercial
             </p>
-            <p className="text-[11px] text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5">
               Mensagem profissional, educada e direta com dados da fatura e PIX.
             </p>
           </button>
@@ -259,7 +259,7 @@ export const WhatsAppRemindersView: React.FC<WhatsAppRemindersViewProps> = ({
             <p className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
               <span>⚠️</span> Notificação Formal
             </p>
-            <p className="text-[11px] text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5">
               Aviso formal para atrasos maiores com menção ao bloqueio de agenda.
             </p>
           </button>
@@ -301,18 +301,18 @@ export const WhatsAppRemindersView: React.FC<WhatsAppRemindersViewProps> = ({
                       <div className="min-w-0 flex-1">
                         <h3 className="text-sm font-bold text-slate-900 truncate">{student?.nome}</h3>
                         <p className="text-xs text-slate-500 flex flex-wrap items-center gap-1.5 mt-0.5">
-                          <span className="flex items-center gap-1 font-mono text-[11px]">
+                          <span className="flex items-center gap-1 font-mono text-xs">
                             <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                             {student?.telefone}
                           </span>
                           <span className="text-slate-300">·</span>
-                          <span className="text-[11px]">Venceu em: <strong>{formatDateBR(acc.dataVencimento)}</strong></span>
+                          <span className="text-xs">Venceu em: <strong>{formatDateBR(acc.dataVencimento)}</strong></span>
                         </p>
                       </div>
                     </div>
 
                     <div className="text-left sm:text-right shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 flex sm:block items-baseline justify-between sm:justify-end">
-                      <span className="text-[11px] text-slate-400 block mr-2 sm:mr-0">Saldo Devedor:</span>
+                      <span className="text-xs text-slate-600 font-medium block mr-2 sm:mr-0">Saldo Devedor:</span>
                       <span className="text-base font-extrabold font-mono text-red-600">
                         {formatCurrencyBRL(acc.saldoDevedorCentavos)}
                       </span>
@@ -322,10 +322,10 @@ export const WhatsAppRemindersView: React.FC<WhatsAppRemindersViewProps> = ({
                   {/* Message Box: View Mode or Edit Mode */}
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
+                      <span className="text-xs font-bold text-slate-700 flex items-center gap-1">
                         <span>Texto da Mensagem:</span>
                         {hasCustom && (
-                          <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px] font-bold">
+                          <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 text-xs font-bold">
                             Personalizada
                           </span>
                         )}
@@ -336,7 +336,7 @@ export const WhatsAppRemindersView: React.FC<WhatsAppRemindersViewProps> = ({
                           <button
                             type="button"
                             onClick={() => handleResetCustomMessage(acc.id)}
-                            className="text-[11px] text-slate-400 hover:text-slate-700 flex items-center gap-1 cursor-pointer"
+                            className="text-xs text-slate-600 font-medium hover:text-slate-700 flex items-center gap-1 cursor-pointer"
                             title="Restaurar modelo automático"
                           >
                             <RefreshCw className="w-3 h-3" />
@@ -346,7 +346,7 @@ export const WhatsAppRemindersView: React.FC<WhatsAppRemindersViewProps> = ({
                         <button
                           type="button"
                           onClick={() => setEditingAccountId(isEditing ? null : acc.id)}
-                          className="text-[11px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 cursor-pointer"
+                          className="text-xs text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 cursor-pointer"
                         >
                           <Edit3 className="w-3 h-3" />
                           <span>{isEditing ? 'Concluir Edição' : 'Editar Texto da Mensagem'}</span>
@@ -429,7 +429,7 @@ export const WhatsAppRemindersView: React.FC<WhatsAppRemindersViewProps> = ({
               <div key={log.id} className="py-2.5 flex items-center justify-between">
                 <div>
                   <p className="font-semibold text-slate-900">{log.alunoNome} ({log.telefone})</p>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-xs text-slate-600 font-medium">
                     Enviado em {new Date(log.enviadoEm).toLocaleString('pt-BR')}
                   </p>
                 </div>
@@ -437,7 +437,7 @@ export const WhatsAppRemindersView: React.FC<WhatsAppRemindersViewProps> = ({
                   <span className="font-mono font-bold text-slate-900">
                     {formatCurrencyBRL(log.valorCentavos)}
                   </span>
-                  <span className="block text-[10px] text-emerald-700 font-semibold">
+                  <span className="block text-xs text-emerald-700 font-semibold">
                     ✓ {log.status}
                   </span>
                 </div>

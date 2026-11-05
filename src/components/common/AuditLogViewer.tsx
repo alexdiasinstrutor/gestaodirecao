@@ -148,10 +148,10 @@ export const AuditLogViewer: React.FC<AuditLogViewerProps> = ({ orgId, onClose }
                   filteredLogs.map((log) => (
                     <div key={log.id} className="p-3 bg-white border border-slate-200 rounded-xl space-y-1.5 shadow-2xs">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-mono text-[10px] font-semibold border border-blue-200">
+                        <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-mono text-xs font-semibold border border-blue-200">
                           {log.acao}
                         </span>
-                        <span className="font-mono text-[10px] text-slate-400">
+                        <span className="font-mono text-xs text-slate-600 font-medium">
                           {new Date(log.timestamp).toLocaleString('pt-BR')}
                         </span>
                       </div>
@@ -159,7 +159,7 @@ export const AuditLogViewer: React.FC<AuditLogViewerProps> = ({ orgId, onClose }
                         <span className="font-semibold text-slate-900">{log.usuarioNome}</span>
                         <span className="text-slate-500"> · {log.entidade}</span>
                       </div>
-                      <p className="text-[11px] text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-100 break-words leading-relaxed">
+                      <p className="text-xs text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-100 break-words leading-relaxed">
                         {log.detalhes}
                       </p>
                     </div>
@@ -171,7 +171,7 @@ export const AuditLogViewer: React.FC<AuditLogViewerProps> = ({ orgId, onClose }
               <div className="hidden md:block border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase tracking-wider text-[10px]">
+                    <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase tracking-wider text-xs">
                       <tr>
                         <th className="py-2.5 px-3">Data / Hora</th>
                         <th className="py-2.5 px-3">Autor</th>
@@ -190,14 +190,14 @@ export const AuditLogViewer: React.FC<AuditLogViewerProps> = ({ orgId, onClose }
                       ) : (
                         filteredLogs.map((log) => (
                           <tr key={log.id} className="hover:bg-slate-50/80 transition-colors">
-                            <td className="py-2 px-3 font-mono text-[11px] text-slate-500 whitespace-nowrap">
+                            <td className="py-2 px-3 font-mono text-xs text-slate-500 whitespace-nowrap">
                               {new Date(log.timestamp).toLocaleString('pt-BR')}
                             </td>
                             <td className="py-2 px-3 font-medium text-slate-900 whitespace-nowrap">
                               {log.usuarioNome}
                             </td>
                             <td className="py-2 px-3 whitespace-nowrap">
-                              <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-mono text-[10px] font-semibold border border-blue-200">
+                              <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-mono text-xs font-semibold border border-blue-200">
                                 {log.acao}
                               </span>
                             </td>
@@ -244,19 +244,19 @@ export const AuditLogViewer: React.FC<AuditLogViewerProps> = ({ orgId, onClose }
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                   <div className="p-3 bg-white rounded-lg border border-blue-200">
                     <p className="font-semibold text-slate-900">1. Acesso e Portabilidade</p>
-                    <p className="text-slate-600 text-[11px] mt-0.5">Exportação de todo o histórico de aulas, avaliações práticas e pagamentos em formato interoperável.</p>
+                    <p className="text-slate-600 text-xs mt-0.5">Exportação de todo o histórico de aulas, avaliações práticas e pagamentos em formato interoperável.</p>
                   </div>
                   <div className="p-3 bg-white rounded-lg border border-blue-200">
                     <p className="font-semibold text-slate-900">2. Correção de Dados</p>
-                    <p className="text-slate-600 text-[11px] mt-0.5">Atualização imediata de endereço, telefone ou e-mail cadastrado na ficha do aluno.</p>
+                    <p className="text-slate-600 text-xs mt-0.5">Atualização imediata de endereço, telefone ou e-mail cadastrado na ficha do aluno.</p>
                   </div>
                   <div className="p-3 bg-white rounded-lg border border-blue-200">
                     <p className="font-semibold text-slate-900">3. Anonimização / Exclusão</p>
-                    <p className="text-slate-600 text-[11px] mt-0.5">Anonimização de dados após expiração do prazo legal de guarda exigido pelo Detran/Contran.</p>
+                    <p className="text-slate-600 text-xs mt-0.5">Anonimização de dados após expiração do prazo legal de guarda exigido pelo Detran/Contran.</p>
                   </div>
                   <div className="p-3 bg-white rounded-lg border border-blue-200">
                     <p className="font-semibold text-slate-900">4. Trilha Inviolável</p>
-                    <p className="text-slate-600 text-[11px] mt-0.5">Registro auditável de todas as transações financeiras, cancelamentos e aprovações práticas.</p>
+                    <p className="text-slate-600 text-xs mt-0.5">Registro auditável de todas as transações financeiras, cancelamentos e aprovações práticas.</p>
                   </div>
                 </div>
               </div>

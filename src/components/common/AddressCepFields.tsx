@@ -99,11 +99,11 @@ export const AddressCepFields: React.FC<AddressCepFieldsProps> = ({
   return (
     <div className="p-3.5 bg-slate-50/90 border border-slate-200 rounded-2xl space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <span className="font-bold text-slate-900 uppercase text-[10px] tracking-wider flex items-center gap-1.5">
+        <span className="font-bold text-slate-900 uppercase text-xs font-bold text-slate-700 tracking-wider flex items-center gap-1.5">
           <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
           <span>{title}</span>
         </span>
-        <span className="text-[10px] text-slate-500 font-medium">
+        <span className="text-xs text-slate-500 font-medium">
           Selecione a UF e digite o CEP
         </span>
       </div>
@@ -168,7 +168,7 @@ export const AddressCepFields: React.FC<AddressCepFieldsProps> = ({
       {/* Feedback de Validação do CEP */}
       {cepFeedback && (
         <div
-          className={`p-2.5 rounded-xl border text-[11px] flex items-center gap-2 ${
+          className={`p-2.5 rounded-xl border text-xs flex items-center gap-2 ${
             cepFeedback.type === 'success'
               ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
               : cepFeedback.type === 'warning'

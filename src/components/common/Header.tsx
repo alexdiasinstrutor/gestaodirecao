@@ -119,11 +119,11 @@ export const Header: React.FC<HeaderProps> = ({
             <Logo theme="dark" size="sm" showSubtitle={false} className="shrink-0" />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="hidden md:inline-block text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded bg-sky-500/10 text-sky-300 border border-sky-400/20 shrink-0">
+                <span className="hidden md:inline-block text-xs font-semibold tracking-wider uppercase px-2 py-0.5 rounded bg-sky-500/10 text-sky-300 border border-sky-400/20 shrink-0">
                   Auto Direção
                 </span>
                 {currentOrg?.nome && currentOrg.nome !== 'Gestão AD (Auto Direção)' && (
-                  <span className="text-[11px] text-slate-400 truncate max-w-[200px] lg:max-w-xs">
+                  <span className="text-xs text-slate-600 font-medium truncate max-w-[200px] lg:max-w-xs">
                     · {currentOrg.nome}
                   </span>
                 )}
@@ -137,7 +137,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={toggleViewMode}
-              className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all cursor-pointer border shrink-0 ${
+              className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs sm:text-xs font-bold transition-all cursor-pointer border shrink-0 ${
                 isSimplified
                   ? 'bg-sky-600/90 hover:bg-sky-500 border-sky-400/50 text-white shadow-xs'
                   : 'bg-slate-800/90 hover:bg-slate-700 border-slate-700 text-slate-200'
@@ -149,7 +149,7 @@ export const Header: React.FC<HeaderProps> = ({
               }
             >
               <DeviceIcon className="w-3.5 h-3.5 text-sky-300 shrink-0" />
-              <span className="hidden lg:inline text-[10px] text-slate-300 font-normal">
+              <span className="hidden lg:inline text-xs text-slate-300 font-normal">
                 {deviceLabel}:
               </span>
               <span>{isSimplified ? 'Modo Normal' : 'Modo Mobile'}</span>
@@ -164,8 +164,8 @@ export const Header: React.FC<HeaderProps> = ({
                 title="Dossiê Técnico e Agentes de Segurança (Acesso Exclusivo do Administrador)"
               >
                 <Shield className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span className="hidden sm:inline text-[11px] sm:text-xs">Dossiê</span>
-                <span className="hidden xl:inline text-[11px] sm:text-xs">& Validação</span>
+                <span className="hidden sm:inline text-xs sm:text-xs">Dossiê</span>
+                <span className="hidden xl:inline text-xs sm:text-xs">& Validação</span>
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
               </button>
             )}
@@ -173,14 +173,14 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Online / Offline Sync Badge */}
             <div className="flex items-center shrink-0">
               {isOnline ? (
-                <div className="flex items-center gap-1 px-1.5 py-1 rounded-lg bg-emerald-950/60 border border-emerald-600/40 text-emerald-300 text-[10px] sm:text-xs">
+                <div className="flex items-center gap-1 px-1.5 py-1 rounded-lg bg-emerald-950/60 border border-emerald-600/40 text-emerald-300 text-xs sm:text-xs">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
                   <span className="hidden md:inline font-medium">Online</span>
                   {pendingCount > 0 && (
                     <button
                       onClick={triggerSync}
                       disabled={isSyncing}
-                      className="ml-0.5 px-1.5 py-0.5 rounded bg-emerald-700/60 hover:bg-emerald-600 text-[10px] font-mono flex items-center gap-1 cursor-pointer"
+                      className="ml-0.5 px-1.5 py-0.5 rounded bg-emerald-700/60 hover:bg-emerald-600 text-xs font-mono flex items-center gap-1 cursor-pointer"
                       title="Sincronizar dados pendentes com a nuvem"
                     >
                       <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
@@ -189,11 +189,11 @@ export const Header: React.FC<HeaderProps> = ({
                   )}
                 </div>
               ) : (
-                <div className="flex items-center gap-1 px-1.5 py-1 rounded-lg bg-amber-950/70 border border-amber-600/50 text-amber-300 text-[10px] sm:text-xs font-medium">
+                <div className="flex items-center gap-1 px-1.5 py-1 rounded-lg bg-amber-950/70 border border-amber-600/50 text-amber-300 text-xs sm:text-xs font-medium">
                   <WifiOff className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                   <span className="hidden sm:inline">Offline</span>
                   {pendingCount > 0 && (
-                    <span className="px-1 py-0.5 rounded bg-amber-800 text-[10px] font-mono">
+                    <span className="px-1 py-0.5 rounded bg-amber-800 text-xs font-mono">
                       {pendingCount}
                     </span>
                   )}
@@ -247,7 +247,7 @@ export const Header: React.FC<HeaderProps> = ({
                     <p className="text-xs font-semibold text-white leading-tight truncate max-w-[120px]">
                       {currentUser.nome.split(' ')[0]}
                     </p>
-                    <span className="text-[10px] text-slate-400 block leading-tight">
+                    <span className="text-xs text-slate-600 font-medium block leading-tight">
                       {roleInfo.label}
                     </span>
                   </div>
@@ -271,10 +271,10 @@ export const Header: React.FC<HeaderProps> = ({
                       <p className="text-sm font-bold text-slate-900 truncate">{currentUser.nome}</p>
                       <p className="text-xs text-slate-500 font-mono truncate">{currentUser.email}</p>
                       <div className="mt-1 flex items-center gap-1.5 flex-wrap">
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${roleInfo.color}`}>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-md border ${roleInfo.color}`}>
                           {roleInfo.label}
                         </span>
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1">
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1">
                           <DeviceIcon className="w-3 h-3 text-blue-600" />
                           {deviceLabel}
                         </span>
@@ -283,7 +283,7 @@ export const Header: React.FC<HeaderProps> = ({
 
                     {/* Alternador de Modo de Visualização (Simplificado vs Completo) */}
                     <div className="px-2 py-1.5 border-b border-slate-100">
-                      <p className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      <p className="px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-slate-400">
                         Modo de Tela ({deviceLabel})
                       </p>
                       <div className="grid grid-cols-2 gap-1 mt-1">
@@ -293,7 +293,7 @@ export const Header: React.FC<HeaderProps> = ({
                             setViewMode('SIMPLIFIED');
                             setShowSwitchMenu(false);
                           }}
-                          className={`px-2 py-1.5 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 cursor-pointer transition-colors border ${
+                          className={`px-2 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-colors border ${
                             isSimplified
                               ? 'bg-sky-600 text-white border-sky-600 shadow-xs'
                               : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
@@ -308,7 +308,7 @@ export const Header: React.FC<HeaderProps> = ({
                             setViewMode('FULL');
                             setShowSwitchMenu(false);
                           }}
-                          className={`px-2 py-1.5 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 cursor-pointer transition-colors border ${
+                          className={`px-2 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-colors border ${
                             !isSimplified
                               ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
                               : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
@@ -358,7 +358,7 @@ export const Header: React.FC<HeaderProps> = ({
                       if (otherUsers.length === 0) return null;
                       return (
                         <div className="px-2 py-1.5 border-b border-slate-100">
-                          <p className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                          <p className="px-2 py-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
                             Auditar Perfil (Master)
                           </p>
                           <div className="max-h-36 overflow-y-auto space-y-1">
@@ -373,9 +373,9 @@ export const Header: React.FC<HeaderProps> = ({
                               >
                                 <div className="truncate">
                                   <p className="font-semibold text-slate-900 truncate">{u.nome}</p>
-                                  <p className="text-[10px] text-slate-500 font-mono truncate">{u.email}</p>
+                                  <p className="text-xs text-slate-500 font-mono truncate">{u.email}</p>
                                 </div>
-                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 shrink-0">
+                                <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 shrink-0">
                                   {u.papel === 'SUPER_ADMIN' ? 'Master' : u.papel === 'ALUNO' ? 'Aluno' : 'Instrutor'}
                                 </span>
                               </button>

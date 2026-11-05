@@ -131,7 +131,7 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
             </div>
             <div>
               <h2 className="text-base font-bold text-white">Editar Instituição & Assinatura</h2>
-              <p className="text-[11px] text-slate-400">Configure plano, vigência e permissões granulares de menus</p>
+              <p className="text-xs text-slate-600 font-medium">Configure plano, vigência e permissões granulares de menus</p>
             </div>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-white p-1 cursor-pointer">
@@ -143,7 +143,7 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
         <form onSubmit={handleSubmit} className="p-5 sm:p-6 overflow-y-auto space-y-5 text-xs flex-1">
           {/* Dados Gerais */}
           <div className="space-y-3">
-            <span className="font-bold text-slate-900 uppercase text-[10px] tracking-wider block">
+            <span className="font-bold text-slate-900 uppercase text-xs font-bold text-slate-700 tracking-wider block">
               1. Dados Cadastrais da Instituição
             </span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -210,7 +210,7 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
 
           {/* Plano e Vigência SaaS */}
           <div className="pt-3 border-t border-slate-200 space-y-3">
-            <span className="font-bold text-slate-900 uppercase text-[10px] tracking-wider block">
+            <span className="font-bold text-slate-900 uppercase text-xs font-bold text-slate-700 tracking-wider block">
               2. Plano SaaS & Gestão de Assinatura
             </span>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -268,7 +268,7 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
 
           {/* Configurações de Recebimento PIX da Organização */}
           <div className="pt-3 border-t border-slate-200 space-y-3">
-            <span className="font-bold text-slate-900 uppercase text-[10px] tracking-wider block">
+            <span className="font-bold text-slate-900 uppercase text-xs font-bold text-slate-700 tracking-wider block">
               3. Chave PIX Oficial para Recebimento de Alunos
             </span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -327,10 +327,10 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
           <div className="pt-3 border-t border-slate-200 space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
-                <span className="font-bold text-slate-900 uppercase text-[10px] tracking-wider block">
+                <span className="font-bold text-slate-900 uppercase text-xs font-bold text-slate-700 tracking-wider block">
                   4. Permissões de Módulos para esta Instituição ({selectedModules.length} de {ALL_SYSTEM_MODULES.length} ativos)
                 </span>
-                <p className="text-[11px] text-slate-500">
+                <p className="text-xs text-slate-500">
                   Você pode ligar ou desligar qualquer módulo individualmente para este cliente.
                 </p>
               </div>
@@ -339,7 +339,7 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
                 <button
                   type="button"
                   onClick={handleResetToPlanDefault}
-                  className="flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[10px] font-semibold cursor-pointer"
+                  className="flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold cursor-pointer"
                 >
                   <RotateCcw className="w-3 h-3" />
                   <span>Padrão do Plano</span>
@@ -347,7 +347,7 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
                 <button
                   type="button"
                   onClick={handleSelectAll}
-                  className="px-2.5 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg text-[10px] font-semibold cursor-pointer"
+                  className="px-2.5 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg text-xs font-semibold cursor-pointer"
                 >
                   Liberar Todos
                 </button>
@@ -378,7 +378,7 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
                       <span className={`font-semibold block ${isSelected ? 'text-slate-900' : 'text-slate-500'}`}>
                         {mod.nome}
                       </span>
-                      <span className="text-[10px] text-slate-400 line-clamp-1">{mod.descricao}</span>
+                      <span className="text-xs text-slate-600 font-medium line-clamp-1">{mod.descricao}</span>
                     </div>
                   </button>
                 );

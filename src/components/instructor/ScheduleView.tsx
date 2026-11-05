@@ -342,7 +342,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
             <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
               Agenda Prática & Gestão de Horários
             </h1>
-            <span className="px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800 text-[11px] font-bold border border-indigo-200">
+            <span className="px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800 text-xs font-bold border border-indigo-200">
               Faixa: 06h às 00h
             </span>
           </div>
@@ -479,7 +479,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
                     <span className="font-mono text-xs sm:text-sm font-extrabold text-slate-900 bg-white px-2 py-1 rounded-lg border border-slate-200 shadow-xs">
                       {slot.horaInicio} - {slot.horaFim}
                     </span>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border flex items-center gap-1 ${badge.color}`}>
+                    <span className={`px-2 py-0.5 rounded text-xs font-semibold border flex items-center gap-1 ${badge.color}`}>
                       <BadgeIcon className="w-3 h-3 shrink-0" />
                       <span>{badge.label}</span>
                     </span>
@@ -487,7 +487,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
 
                   {activeLesson ? (
                     <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ${
+                      className={`px-2 py-0.5 rounded text-xs font-bold shrink-0 ${
                         activeLesson.status === 'CONCLUIDA'
                           ? 'bg-emerald-100 text-emerald-800'
                           : 'bg-blue-600 text-white'
@@ -496,12 +496,12 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
                       {activeLesson.status === 'CONCLUIDA' ? '✓ Concluída' : 'Agendada'}
                     </span>
                   ) : slot.bloqueado ? (
-                    <span className="px-2 py-0.5 rounded bg-slate-200 text-slate-700 text-[10px] font-bold flex items-center gap-1 shrink-0">
+                    <span className="px-2 py-0.5 rounded bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1 shrink-0">
                       <Lock className="w-3 h-3" />
                       Bloqueado
                     </span>
                   ) : (
-                    <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold shrink-0">
+                    <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-bold shrink-0">
                       Livre p/ Aluno
                     </span>
                   )}
@@ -512,11 +512,11 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
                   <div className="text-xs space-y-1">
                     <p className="font-bold text-slate-900 text-sm">{student?.nome || 'Aluno'}</p>
                     <p className="text-slate-600">{activeLesson.topico}</p>
-                    <p className="text-[11px] text-slate-500 font-mono">
+                    <p className="text-xs text-slate-500 font-mono">
                       🚗 {vehicle?.modelo.split(' ')[0]} ({vehicle?.placa})
                     </p>
                     {activeLesson.status === 'CONCLUIDA' && activeLesson.notaAula && (
-                      <p className="text-[11px] text-emerald-700 font-semibold">
+                      <p className="text-xs text-emerald-700 font-semibold">
                         Nota atribuída: {activeLesson.notaAula}/10
                       </p>
                     )}
@@ -526,7 +526,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
                     {slot.motivoBloqueio || 'Horário bloqueado na agenda do instrutor'}
                   </div>
                 ) : (
-                  <div className="text-xs text-slate-400">
+                  <div className="text-xs text-slate-600 font-medium">
                     Disponível para agendamento dos alunos no portal (06h-00h).
                   </div>
                 )}
@@ -545,7 +545,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
                         Concluir Aula & Avaliar
                       </button>
                     ) : (
-                      <span className="text-emerald-700 font-semibold text-[11px]">
+                      <span className="text-emerald-700 font-semibold text-xs">
                         Aula finalizada com sucesso
                       </span>
                     )
@@ -560,7 +560,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
                       </button>
                       <button
                         onClick={() => handleToggleBlock(slot.id, slot.bloqueado)}
-                        className="text-slate-500 hover:text-slate-800 text-[11px] underline cursor-pointer"
+                        className="text-slate-500 hover:text-slate-800 text-xs underline cursor-pointer"
                       >
                         {slot.bloqueado ? 'Desbloquear' : 'Bloquear'}
                       </button>
@@ -614,28 +614,28 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
                   <button
                     type="button"
                     onClick={() => handleSelectPreset('FULL')}
-                    className="p-2 border border-indigo-200 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-900 font-bold text-[11px] cursor-pointer text-center"
+                    className="p-2 border border-indigo-200 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-900 font-bold text-xs cursor-pointer text-center"
                   >
                     Integral (06h-00h)
                   </button>
                   <button
                     type="button"
                     onClick={() => handleSelectPreset('MORNING')}
-                    className="p-2 border border-amber-200 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-[11px] cursor-pointer text-center"
+                    className="p-2 border border-amber-200 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-xs cursor-pointer text-center"
                   >
                     Manhã (06h-12h)
                   </button>
                   <button
                     type="button"
                     onClick={() => handleSelectPreset('AFTERNOON')}
-                    className="p-2 border border-blue-200 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 font-bold text-[11px] cursor-pointer text-center"
+                    className="p-2 border border-blue-200 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 font-bold text-xs cursor-pointer text-center"
                   >
                     Tarde (13h-18h)
                   </button>
                   <button
                     type="button"
                     onClick={() => handleSelectPreset('NIGHT')}
-                    className="p-2 border border-purple-200 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-900 font-bold text-[11px] cursor-pointer text-center"
+                    className="p-2 border border-purple-200 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-900 font-bold text-xs cursor-pointer text-center"
                   >
                     Noturno (18h-00h)
                   </button>
@@ -648,7 +648,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
                   <label className="font-semibold text-slate-700">
                     Horários que serão liberados ({selectedReleaseHours.length} selecionados):
                   </label>
-                  <span className="text-[11px] text-slate-500">
+                  <span className="text-xs text-slate-500">
                     Clique para alternar
                   </span>
                 </div>
@@ -677,7 +677,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
                 </div>
               </div>
 
-              <div className="p-3 bg-indigo-50 border border-indigo-200 text-indigo-900 rounded-xl text-[11px] space-y-1">
+              <div className="p-3 bg-indigo-50 border border-indigo-200 text-indigo-900 rounded-xl text-xs space-y-1">
                 <p className="font-bold flex items-center gap-1">
                   <Moon className="w-3.5 h-3.5" />
                   Regulamentação de Aulas Noturnas:
@@ -867,7 +867,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
                   {students.find((s) => s.id === lessonToComplete.alunoId)?.nome}
                 </p>
                 <p className="text-slate-500">{lessonToComplete.topico}</p>
-                <p className="text-[11px] font-mono text-indigo-700 mt-0.5">
+                <p className="text-xs font-mono text-indigo-700 mt-0.5">
                   Horário: {lessonToComplete.horaInicio} - {lessonToComplete.horaFim}
                 </p>
               </div>
@@ -901,7 +901,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
                 />
               </div>
 
-              <div className="p-3 bg-emerald-50 text-emerald-800 rounded-xl text-[11px]">
+              <div className="p-3 bg-emerald-50 text-emerald-800 rounded-xl text-xs">
                 ✓ Ao confirmar, +1 aula será somada à carga horária cumprida do aluno no sistema.
               </div>
 

@@ -214,13 +214,13 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
                     <span className="px-2.5 py-0.5 rounded-lg bg-slate-900 text-white font-mono text-xs font-extrabold">
                       CNH {pkg.categoriaCnh}
                     </span>
-                    <span className="px-2 py-0.5 rounded-lg bg-blue-50 text-blue-700 font-bold text-[10px] border border-blue-200">
+                    <span className="px-2 py-0.5 rounded-lg bg-blue-50 text-blue-700 font-bold text-xs border border-blue-200">
                       {pkg.totalAulas} Aulas Práticas
                     </span>
                   </div>
 
                   <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${pkg.ativo
+                    className={`px-2 py-0.5 rounded-full text-xs font-bold ${pkg.ativo
                         ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                         : 'bg-slate-200 text-slate-700'
                       }`}
@@ -232,7 +232,7 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
                 {/* Title and Instructor */}
                 <div>
                   <h3 className="font-extrabold text-slate-900 text-sm leading-snug">{pkg.nome}</h3>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
+                  <p className="text-xs text-slate-500 mt-0.5">
                     Instrutor: <span className="font-semibold text-slate-700">{pkg.instrutorNome || 'Geral CFC'}</span>
                   </p>
                 </div>
@@ -240,13 +240,13 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
                 {/* Price Display */}
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
                   <div className="flex items-baseline justify-between">
-                    <span className="text-[10px] font-bold uppercase text-slate-500">Valor Total</span>
+                    <span className="text-xs font-bold uppercase text-slate-500">Valor Total</span>
                     <span className="text-lg font-black text-slate-900 font-mono">
                       {formatCurrencyBRL(pkg.valorCentavos)}
                     </span>
                   </div>
 
-                  <div className="mt-1 pt-1 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
+                  <div className="mt-1 pt-1 border-t border-slate-200/60 flex items-center justify-between text-xs">
                     <span className="text-slate-500">Valor por aula:</span>
                     <span className="font-mono font-bold text-blue-700">
                       {formatCurrencyBRL(Math.round(pkg.valorCentavos / (pkg.totalAulas || 1)))}
@@ -256,16 +256,16 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
 
                 {/* Payment Condition */}
                 <div>
-                  <span className={`inline-block px-2.5 py-1 rounded-lg text-[10px] font-semibold ${paymentInfo.color}`}>
+                  <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-semibold ${paymentInfo.color}`}>
                     {paymentInfo.label}
                   </span>
                   {pkg.formaPagamento === 'PARCELADO_CARTAO' && pkg.maxParcelas && (
-                    <p className="text-[10px] text-slate-500 mt-1">
+                    <p className="text-xs text-slate-500 mt-1">
                       Em até {pkg.maxParcelas}x de {formatCurrencyBRL(Math.round(pkg.valorCentavos / pkg.maxParcelas))}
                     </p>
                   )}
                   {pkg.descontoAvistaPercentual && pkg.descontoAvistaPercentual > 0 ? (
-                    <p className="text-[10px] text-emerald-600 font-bold mt-0.5">
+                    <p className="text-xs text-emerald-600 font-bold mt-0.5">
                       {pkg.descontoAvistaPercentual}% de desconto no pagamento à vista
                     </p>
                   ) : null}

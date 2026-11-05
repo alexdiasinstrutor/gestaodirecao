@@ -231,7 +231,7 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                 <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
                   Dossiê & Agentes de Segurança
                 </h2>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase ${
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold tracking-wide uppercase ${
                   guardState.travaAtiva 
                     ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' 
                     : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
@@ -239,7 +239,7 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                   {guardState.travaAtiva ? 'Trava de Código Ativa' : 'Modificações Liberadas'}
                 </span>
               </div>
-              <p className="text-xs text-slate-400 hidden sm:block">
+              <p className="text-xs text-slate-600 font-medium hidden sm:block">
                 Controle de governança, integridade de pacotes, 1-aluno-1-instrutor e histórico de auditoria
               </p>
             </div>
@@ -299,9 +299,9 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
             <span className="sm:hidden">3. Trava</span>
             <span className="hidden sm:inline">3. Agente Trava de Código</span>
             {guardState.travaAtiva ? (
-              <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 text-[9px] sm:text-[10px] font-bold rounded">BLINDADO</span>
+              <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 text-xs sm:text-xs font-bold rounded">BLINDADO</span>
             ) : (
-              <span className="px-1.5 py-0.2 bg-amber-100 text-amber-800 text-[9px] sm:text-[10px] font-bold rounded">DESTREVADO</span>
+              <span className="px-1.5 py-0.2 bg-amber-100 text-amber-800 text-xs sm:text-xs font-bold rounded">DESTREVADO</span>
             )}
           </button>
 
@@ -332,7 +332,7 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
             <Database className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 shrink-0" />
             <span className="sm:hidden">5. BD Firebase</span>
             <span className="hidden sm:inline">5. Banco de Dados & Firebase</span>
-            <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 text-[9px] sm:text-[10px] font-bold rounded">FIRESTORE</span>
+            <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 text-xs sm:text-xs font-bold rounded">FIRESTORE</span>
           </button>
         </div>
 
@@ -447,15 +447,15 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pl-7 pt-1">
                     <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5">
                       <strong className="text-xs text-slate-900 block">À Vista (PIX)</strong>
-                      <span className="text-[11px] text-slate-500">Com percentual de desconto automático configurável</span>
+                      <span className="text-xs text-slate-500">Com percentual de desconto automático configurável</span>
                     </div>
                     <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5">
                       <strong className="text-xs text-slate-900 block">Parcelado no Cartão</strong>
-                      <span className="text-[11px] text-slate-500">Até 12x com cálculo automático de parcelas</span>
+                      <span className="text-xs text-slate-500">Até 12x com cálculo automático de parcelas</span>
                     </div>
                     <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5">
                       <strong className="text-xs text-slate-900 block">Negociado Direto</strong>
-                      <span className="text-[11px] text-slate-500">Condições flexíveis acordadas entre instrutor e aluno</span>
+                      <span className="text-xs text-slate-500">Condições flexíveis acordadas entre instrutor e aluno</span>
                     </div>
                   </div>
                 </div>
@@ -575,71 +575,71 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-xs">
                       <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-0.5">
                         <span className="font-bold text-slate-900">1. organizations</span>
-                        <p className="text-[11px] text-slate-500">Tenants (Autoescolas e Instrutores Autônomos)</p>
+                        <p className="text-xs text-slate-500">Tenants (Autoescolas e Instrutores Autônomos)</p>
                       </div>
                       <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-0.5">
                         <span className="font-bold text-slate-900">2. users</span>
-                        <p className="text-[11px] text-slate-500">Contas RBAC, Google OAuth e 2FA</p>
+                        <p className="text-xs text-slate-500">Contas RBAC, Google OAuth e 2FA</p>
                       </div>
                       <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-0.5">
                         <span className="font-bold text-slate-900">3. students</span>
-                        <p className="text-[11px] text-slate-500">Alunos com vínculo estrito 1 CPF = 1 Instrutor</p>
+                        <p className="text-xs text-slate-500">Alunos com vínculo estrito 1 CPF = 1 Instrutor</p>
                       </div>
                       <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-0.5">
                         <span className="font-bold text-slate-900">4. StudentSkills</span>
-                        <p className="text-[11px] text-slate-500">8 notas práticas de direção (0 a 10) CONTRAN</p>
+                        <p className="text-xs text-slate-500">8 notas práticas de direção (0 a 10) CONTRAN</p>
                       </div>
                       <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-0.5">
                         <span className="font-bold text-slate-900">5. vehicles</span>
-                        <p className="text-[11px] text-slate-500">Frota de carros/motos, km e revisões</p>
+                        <p className="text-xs text-slate-500">Frota de carros/motos, km e revisões</p>
                       </div>
                       <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-0.5">
                         <span className="font-bold text-slate-900">6. lessons</span>
-                        <p className="text-[11px] text-slate-500">Aulas práticas diurnas/noturnas (06h às 00h)</p>
+                        <p className="text-xs text-slate-500">Aulas práticas diurnas/noturnas (06h às 00h)</p>
                       </div>
                       <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-0.5">
                         <span className="font-bold text-slate-900">7. availableSlots</span>
-                        <p className="text-[11px] text-slate-500">Grade horária e bloqueios do instrutor</p>
+                        <p className="text-xs text-slate-500">Grade horária e bloqueios do instrutor</p>
                       </div>
                       <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-0.5">
                         <span className="font-bold text-slate-900">8. accountsReceivable</span>
-                        <p className="text-[11px] text-slate-500">Faturas e cobranças em centavos com PIX</p>
+                        <p className="text-xs text-slate-500">Faturas e cobranças em centavos com PIX</p>
                       </div>
                       <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-0.5">
                         <span className="font-bold text-slate-900">9. paymentRecords</span>
-                        <p className="text-[11px] text-slate-500">Comprovantes e amortizações de débitos</p>
+                        <p className="text-xs text-slate-500">Comprovantes e amortizações de débitos</p>
                       </div>
                       <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-0.5">
                         <span className="font-bold text-slate-900">10. expenses</span>
-                        <p className="text-[11px] text-slate-500">Despesas operacionais e custos veiculares</p>
+                        <p className="text-xs text-slate-500">Despesas operacionais e custos veiculares</p>
                       </div>
                       <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-0.5">
                         <span className="font-bold text-slate-900">11. investments</span>
-                        <p className="text-[11px] text-slate-500">Metas financeiras e fundos de reserva</p>
+                        <p className="text-xs text-slate-500">Metas financeiras e fundos de reserva</p>
                       </div>
                       <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-0.5">
                         <span className="font-bold text-slate-900">12. packages</span>
-                        <p className="text-[11px] text-slate-500">Planos comerciais e pacotes de aulas</p>
+                        <p className="text-xs text-slate-500">Planos comerciais e pacotes de aulas</p>
                       </div>
                       <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-0.5">
                         <span className="font-bold text-slate-900">13. studentTransfers</span>
-                        <p className="text-[11px] text-slate-500">Trilha imutável de reatribuição de instrutor</p>
+                        <p className="text-xs text-slate-500">Trilha imutável de reatribuição de instrutor</p>
                       </div>
                       <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-0.5">
                         <span className="font-bold text-slate-900">14. auditLogs</span>
-                        <p className="text-[11px] text-slate-500">Auditoria forense e conformidade LGPD</p>
+                        <p className="text-xs text-slate-500">Auditoria forense e conformidade LGPD</p>
                       </div>
                       <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-0.5">
                         <span className="font-bold text-slate-900">15. whatsappLogs</span>
-                        <p className="text-[11px] text-slate-500">Logs de cobranças e lembretes via WhatsApp</p>
+                        <p className="text-xs text-slate-500">Logs de cobranças e lembretes via WhatsApp</p>
                       </div>
                       <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-0.5">
                         <span className="font-bold text-slate-900">16. syncQueue</span>
-                        <p className="text-[11px] text-slate-500">Fila Offline-First para o Cloud Firestore</p>
+                        <p className="text-xs text-slate-500">Fila Offline-First para o Cloud Firestore</p>
                       </div>
                     </div>
 
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-[11px] text-blue-900 space-y-1">
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900 space-y-1">
                       <p className="font-bold">Regras Primárias de Integridade do Banco:</p>
                       <ul className="list-disc pl-4 space-y-0.5">
                         <li><strong>Precisão em Centavos</strong>: Todos os campos monetários utilizam inteiros (`valorTotalCentavos`, etc.), eliminando falhas de ponto flutuante.</li>
@@ -661,46 +661,46 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
                   <div className="flex items-center justify-between text-slate-500 mb-1">
-                    <span className="text-[11px] font-semibold">Integridade Geral</span>
+                    <span className="text-xs font-semibold">Integridade Geral</span>
                     <ShieldCheck className="w-4 h-4 text-emerald-500" />
                   </div>
                   <div className="text-xl font-extrabold text-emerald-600 font-mono">
                     {metrics.taxaIntegridade}%
                   </div>
-                  <span className="text-[10px] text-slate-400">Status: {metrics.statusGeral}</span>
+                  <span className="text-xs text-slate-600 font-medium">Status: {metrics.statusGeral}</span>
                 </div>
 
                 <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
                   <div className="flex items-center justify-between text-slate-500 mb-1">
-                    <span className="text-[11px] font-semibold">Eventos Hoje</span>
+                    <span className="text-xs font-semibold">Eventos Hoje</span>
                     <Activity className="w-4 h-4 text-blue-500" />
                   </div>
                   <div className="text-xl font-extrabold text-slate-900 font-mono">
                     {metrics.totalEventosHoje}
                   </div>
-                  <span className="text-[10px] text-slate-400">Monitorados ao vivo</span>
+                  <span className="text-xs text-slate-600 font-medium">Monitorados ao vivo</span>
                 </div>
 
                 <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
                   <div className="flex items-center justify-between text-slate-500 mb-1">
-                    <span className="text-[11px] font-semibold">Alertas Críticos</span>
+                    <span className="text-xs font-semibold">Alertas Críticos</span>
                     <ShieldAlert className="w-4 h-4 text-amber-500" />
                   </div>
                   <div className="text-xl font-extrabold text-slate-900 font-mono">
                     {metrics.alertasCriticos}
                   </div>
-                  <span className="text-[10px] text-emerald-600 font-medium">0 Anomalias Graves</span>
+                  <span className="text-xs text-emerald-600 font-medium">0 Anomalias Graves</span>
                 </div>
 
                 <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
                   <div className="flex items-center justify-between text-slate-500 mb-1">
-                    <span className="text-[11px] font-semibold">Base de Dados</span>
+                    <span className="text-xs font-semibold">Base de Dados</span>
                     <Database className="w-4 h-4 text-indigo-500" />
                   </div>
                   <div className="text-xl font-extrabold text-slate-900 font-mono">
                     {metrics.armazenamentoKb} KB
                   </div>
-                  <span className="text-[10px] text-slate-400">Uptime: {metrics.tempoAtivoMinutos} min</span>
+                  <span className="text-xs text-slate-600 font-medium">Uptime: {metrics.tempoAtivoMinutos} min</span>
                 </div>
               </div>
 
@@ -761,7 +761,7 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2 flex-wrap">
                             <span className="font-bold text-slate-900">{ev.titulo}</span>
-                            <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
+                            <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
                               <Clock className="w-3 h-3" />
                               <span>{new Date(ev.timestamp).toLocaleTimeString('pt-BR')}</span>
                               <span className="px-1.5 py-0.2 rounded bg-slate-200 text-slate-700 font-semibold uppercase">
@@ -769,8 +769,8 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                               </span>
                             </div>
                           </div>
-                          <p className="text-slate-600 mt-0.5 text-[11px] leading-relaxed">{ev.detalhe}</p>
-                          <span className="text-[10px] text-slate-400 mt-1 block">Ator: {ev.ator}</span>
+                          <p className="text-slate-600 mt-0.5 text-xs leading-relaxed">{ev.detalhe}</p>
+                          <span className="text-xs text-slate-600 font-medium mt-1 block">Ator: {ev.ator}</span>
                         </div>
                       </div>
                     ))
@@ -850,7 +850,7 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                     <h3 className="text-sm font-bold text-slate-900">Checklist Contínuo de Integridade dos Módulos</h3>
                     <p className="text-xs text-slate-500">Sentinelas que validam as regras de negócio em tempo de execução</p>
                   </div>
-                  <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[11px] font-bold rounded-full">
+                  <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full">
                     {modules.filter(m => m.status === 'PROTEGIDO').length}/{modules.length} Módulos Verificados
                   </span>
                 </div>
@@ -863,14 +863,14 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                           {m.modulo}
                         </strong>
-                        <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                        <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">
                           {m.status}
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-500 leading-tight">{m.descricao}</p>
+                      <p className="text-xs text-slate-500 leading-tight">{m.descricao}</p>
                       <div className="space-y-1 pt-1 border-t border-slate-200/60">
                         {m.regrasAtivas.map((r, rIdx) => (
-                          <div key={rIdx} className="text-[10px] text-slate-600 flex items-center gap-1">
+                          <div key={rIdx} className="text-xs text-slate-600 flex items-center gap-1">
                             <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
                             <span>{r}</span>
                           </div>
@@ -908,7 +908,7 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
 
                 <div className="space-y-2">
                   {snapshots.length === 0 ? (
-                    <p className="text-xs text-slate-400 py-3 text-center">Nenhum ponto gravado ainda.</p>
+                    <p className="text-xs text-slate-600 font-medium py-3 text-center">Nenhum ponto gravado ainda.</p>
                   ) : (
                     snapshots.map((snap) => (
                       <div
@@ -919,11 +919,11 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                           <div className="flex items-center gap-2">
                             <Database className="w-4 h-4 text-blue-600" />
                             <strong className="text-slate-900">{snap.nome}</strong>
-                            <span className="text-[10px] text-slate-400">
+                            <span className="text-xs text-slate-600 font-medium">
                               ({snap.totalEntidades} tabelas)
                             </span>
                           </div>
-                          <span className="text-[11px] text-slate-500 block mt-0.5">
+                          <span className="text-xs text-slate-500 block mt-0.5">
                             Criado em: {new Date(snap.criadoEm).toLocaleString('pt-BR')} por {snap.autor}
                           </span>
                         </div>
@@ -952,7 +952,7 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                     <h3 className="text-sm sm:text-base font-bold text-white">
                       Portal de Autorização Humana Obrigatória
                     </h3>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-slate-600 font-medium">
                       Exigido pelo operador para que a IA ou manutenções externas possam realizar alterações.
                     </p>
                   </div>
@@ -974,7 +974,7 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                   </div>
 
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
-                    <p className="text-[11px] text-slate-400">
+                    <p className="text-xs text-slate-600 font-medium">
                       Ao conceder autorização, a trava temporária libera alterações e gera token de rastreabilidade.
                     </p>
                     <button
@@ -1006,7 +1006,7 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                         <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
                           Painel de Validação Integral Multidisciplinar
                         </h3>
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold uppercase tracking-wider">
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold uppercase tracking-wider">
                           100% Homologado
                         </span>
                       </div>
@@ -1017,8 +1017,8 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-xs text-slate-400 font-mono">Modos auditados:</span>
-                    <span className="px-2 py-0.5 rounded bg-slate-800 text-purple-300 text-[11px] font-mono border border-slate-700">
+                    <span className="text-xs text-slate-600 font-medium font-mono">Modos auditados:</span>
+                    <span className="px-2 py-0.5 rounded bg-slate-800 text-purple-300 text-xs font-mono border border-slate-700">
                       Mobile · Tablet · Desktop · Print
                     </span>
                   </div>
@@ -1035,7 +1035,7 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                         <span className="text-xs font-bold text-slate-200">Analista UX / UI</span>
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                       </div>
-                      <span className="text-[11px] text-slate-300 block">Touch 44px, zero cortes, contraste AA</span>
+                      <span className="text-xs text-slate-300 block">Touch 44px, zero cortes, contraste AA</span>
                     </div>
                   </div>
 
@@ -1048,7 +1048,7 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                         <span className="text-xs font-bold text-slate-200">Engenheiro Software</span>
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                       </div>
-                      <span className="text-[11px] text-slate-300 block">Centavos inteiros, tipagem TS estrita</span>
+                      <span className="text-xs text-slate-300 block">Centavos inteiros, tipagem TS estrita</span>
                     </div>
                   </div>
 
@@ -1061,7 +1061,7 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                         <span className="text-xs font-bold text-slate-200">Arquiteto Sistemas</span>
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                       </div>
-                      <span className="text-[11px] text-slate-300 block">1 Aluno = 1 Instrutor, isolamento tenant</span>
+                      <span className="text-xs text-slate-300 block">1 Aluno = 1 Instrutor, isolamento tenant</span>
                     </div>
                   </div>
                 </div>
@@ -1132,14 +1132,14 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                         <Palette className="w-4 h-4 text-pink-600" />
                         <h4 className="text-xs font-bold text-slate-900">Responsividade e Zero Cortes de Campos</h4>
                       </div>
-                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">
                         APROVADO
                       </span>
                     </div>
                     <p className="text-xs text-slate-600 leading-relaxed">
                       Inputs de formulários com <code className="text-pink-600 font-mono">grid-cols-1 sm:grid-cols-2</code>. Nenhum campo de CPF, telefone, data de nascimento ou moeda quebra em 360px–430px.
                     </p>
-                    <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
+                    <div className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
                       Viewport testado: 360px (Galaxy), 390px (iPhone), 768px (iPad), 1280px (Desktop)
                     </div>
                   </div>
@@ -1153,14 +1153,14 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                         <Palette className="w-4 h-4 text-pink-600" />
                         <h4 className="text-xs font-bold text-slate-900">Modais em Bottom-Sheet no Mobile</h4>
                       </div>
-                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">
                         APROVADO
                       </span>
                     </div>
                     <p className="text-xs text-slate-600 leading-relaxed">
                       Modais ancoram como bottom-sheet no mobile (<code className="text-pink-600 font-mono">items-end sm:items-center p-0 sm:p-4</code>) com botões empilhados <code className="text-pink-600 font-mono">flex-col-reverse sm:flex-row</code> para toque confortável com o polegar.
                     </p>
-                    <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
+                    <div className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
                       Arquivos: FinanceView, PackagesManager, StudentTransferModal, StudentSelfRegister
                     </div>
                   </div>
@@ -1174,14 +1174,14 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                         <Palette className="w-4 h-4 text-pink-600" />
                         <h4 className="text-xs font-bold text-slate-900">Tabelas com Rolagem Horizontal Sem Cortes</h4>
                       </div>
-                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">
                         APROVADO
                       </span>
                     </div>
                     <p className="text-xs text-slate-600 leading-relaxed">
                       Encapsulamento com <code className="text-pink-600 font-mono">overflow-x-auto min-w-[...]</code> previne qualquer corte de dados de notas pedagógicas, parcelas ou trilhas de auditoria.
                     </p>
-                    <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
+                    <div className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
                       Componentes: ReportsView, AuditLogViewer, AdminMasterPanel
                     </div>
                   </div>
@@ -1195,14 +1195,14 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                         <Palette className="w-4 h-4 text-pink-600" />
                         <h4 className="text-xs font-bold text-slate-900">Alinhamento Text-Left em Coluna Mobile</h4>
                       </div>
-                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">
                         APROVADO
                       </span>
                     </div>
                     <p className="text-xs text-slate-600 leading-relaxed">
                       Remoção de desalinhamentos onde caixas continham <code className="text-pink-600 font-mono">text-right</code> mas empilhavam em coluna única. Ajustado para <code className="text-pink-600 font-mono">text-left sm:text-right</code>.
                     </p>
-                    <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
+                    <div className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
                       Componentes: WhatsAppRemindersView, StudentPortal
                     </div>
                   </div>
@@ -1216,14 +1216,14 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                         <Palette className="w-4 h-4 text-pink-600" />
                         <h4 className="text-xs font-bold text-slate-900">Touch Targets e Acessibilidade WCAG AA</h4>
                       </div>
-                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">
                         APROVADO
                       </span>
                     </div>
                     <p className="text-xs text-slate-600 leading-relaxed">
                       Áreas de toque mínimas de 44px para botões primários no mobile, contrastes cromáticos de texto superiores a 4.5:1 e rótulos acessíveis (<code className="text-pink-600 font-mono">aria-label</code>) em botões de fechar.
                     </p>
-                    <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
+                    <div className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
                       Métrica: Contraste &gt; 5.2:1 em fundos escuros e claros
                     </div>
                   </div>
@@ -1237,14 +1237,14 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                         <Palette className="w-4 h-4 text-pink-600" />
                         <h4 className="text-xs font-bold text-slate-900">Modo de Impressão e Dossiê A4</h4>
                       </div>
-                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">
                         APROVADO
                       </span>
                     </div>
                     <p className="text-xs text-slate-600 leading-relaxed">
                       Diretivas <code className="text-pink-600 font-mono">print:overflow-visible print:p-0 no-print</code> aplicadas aos relatórios pedagógicos, ficha de aula e dossiê oficial, permitindo geração limpa em PDF.
                     </p>
-                    <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
+                    <div className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
                       Pronto para: Impressão física e protocolo com assinatura
                     </div>
                   </div>
@@ -1258,14 +1258,14 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                         <Terminal className="w-4 h-4 text-blue-600" />
                         <h4 className="text-xs font-bold text-slate-900">Aritmética Monetária em Centavos Inteiros</h4>
                       </div>
-                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">
                         APROVADO
                       </span>
                     </div>
                     <p className="text-xs text-slate-600 leading-relaxed">
                       Todos os valores de pacotes, recebimentos e despesas operam internamente como <code className="text-blue-600 font-mono">number</code> de centavos inteiros (ex: R$ 1.500,00 = 150000). Elimina erros de ponto flutuante IEEE 754.
                     </p>
-                    <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
+                    <div className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
                       Funções: formatCentavosToReal(), parseRealToCentavos()
                     </div>
                   </div>
@@ -1279,14 +1279,14 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                         <Terminal className="w-4 h-4 text-blue-600" />
                         <h4 className="text-xs font-bold text-slate-900">Compilação e Tipagem TypeScript Estrita</h4>
                       </div>
-                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">
                         APROVADO
                       </span>
                     </div>
                     <p className="text-xs text-slate-600 leading-relaxed">
                       Build validado via Vite com zero warnings e zero erros. Interfaces estritas para <code className="text-blue-600 font-mono">Student</code>, <code className="text-blue-600 font-mono">LessonPackage</code>, <code className="text-blue-600 font-mono">FinancialAccount</code> e modelos auxiliares.
                     </p>
-                    <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
+                    <div className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
                       Status do Build: 0 errors · 0 linter violations
                     </div>
                   </div>
@@ -1300,14 +1300,14 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                         <Terminal className="w-4 h-4 text-blue-600" />
                         <h4 className="text-xs font-bold text-slate-900">Validação Estrita de CPF e Maioridade 18+</h4>
                       </div>
-                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">
                         APROVADO
                       </span>
                     </div>
                     <p className="text-xs text-slate-600 leading-relaxed">
                       Algoritmo oficial de dígitos verificadores (módulo 11) com rejeição de sequências inválidas. Cálculo exato de maioridade baseado na data de nascimento com bloqueio estrito de menores de idade.
                     </p>
-                    <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
+                    <div className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
                       Biblioteca: src/lib/validation.ts (validarCPF, validarMaioridade)
                     </div>
                   </div>
@@ -1321,14 +1321,14 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                         <Terminal className="w-4 h-4 text-blue-600" />
                         <h4 className="text-xs font-bold text-slate-900">Resiliência Offline e Sincronização Local</h4>
                       </div>
-                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">
                         APROVADO
                       </span>
                     </div>
                     <p className="text-xs text-slate-600 leading-relaxed">
                       Persistência com fallback seguro em LocalStorage e fila de sincronização em segundo plano via hook <code className="text-blue-600 font-mono">useOnlineStatus</code>. O instrutor consegue operar mesmo em áreas com sinal oscilante.
                     </p>
-                    <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
+                    <div className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
                       Capacidade: Operação 100% autônoma offline com indicador visual
                     </div>
                   </div>
@@ -1342,14 +1342,14 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                         <Terminal className="w-4 h-4 text-blue-600" />
                         <h4 className="text-xs font-bold text-slate-900">Auditoria Automática de Todas as Mutações</h4>
                       </div>
-                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">
                         APROVADO
                       </span>
                     </div>
                     <p className="text-xs text-slate-600 leading-relaxed">
                       Toda ação de cadastro, transferência de aluno, registro financeiro ou alteração de aula grava evento com autor, timestamp, IP simulado e detalhes na tabela imutável <code className="text-blue-600 font-mono">AuditLog</code>.
                     </p>
-                    <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
+                    <div className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
                       Exportação: JSON em conformidade com o Art. 18 da LGPD
                     </div>
                   </div>
@@ -1363,14 +1363,14 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                         <Terminal className="w-4 h-4 text-blue-600" />
                         <h4 className="text-xs font-bold text-slate-900">Prevenção de Injeção de Código e XSS</h4>
                       </div>
-                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">
                         APROVADO
                       </span>
                     </div>
                     <p className="text-xs text-slate-600 leading-relaxed">
                       Zero uso de <code className="text-blue-600 font-mono">dangerouslySetInnerHTML</code> ou <code className="text-blue-600 font-mono">eval</code>. Strings e dados de alunos são renderizados de forma segura pelo React DOM.
                     </p>
-                    <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
+                    <div className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
                       Segurança de Execução: Sanitização nativa de inputs
                     </div>
                   </div>
@@ -1384,14 +1384,14 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                         <Server className="w-4 h-4 text-emerald-600" />
                         <h4 className="text-xs font-bold text-slate-900">Regra de Acondicionamento: 1 Aluno (CPF) = 1 Instrutor</h4>
                       </div>
-                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">
                         APROVADO
                       </span>
                     </div>
                     <p className="text-xs text-slate-600 leading-relaxed">
                       Vínculo estrito por CPF único que impede duplicidade ou conflito pedagógico entre instrutores. Garante responsabilização jurídica e pedagógica conforme diretrizes do CONTRAN.
                     </p>
-                    <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
+                    <div className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
                       Camada de Aplicação: db.createStudent() valida unicidade de CPF
                     </div>
                   </div>
@@ -1405,14 +1405,14 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                         <Server className="w-4 h-4 text-emerald-600" />
                         <h4 className="text-xs font-bold text-slate-900">Autonomia Descentralizada de Pacotes de Aulas</h4>
                       </div>
-                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">
                         APROVADO
                       </span>
                     </div>
                     <p className="text-xs text-slate-600 leading-relaxed">
                       Cada instrutor atua como entidade autônoma para criar e editar pacotes ilimitados com suporte a pagamento À Vista (com desconto), Parcelado (cartão) e Negociado. Auto-seleção no momento do registro.
                     </p>
-                    <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
+                    <div className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
                       Isolamento: instrutorId associado a cada LessonPackage
                     </div>
                   </div>
@@ -1426,14 +1426,14 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                         <Server className="w-4 h-4 text-emerald-600" />
                         <h4 className="text-xs font-bold text-slate-900">Transferência de Aluno com Histórico Perpétuo</h4>
                       </div>
-                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">
                         APROVADO
                       </span>
                     </div>
                     <p className="text-xs text-slate-600 leading-relaxed">
                       Quando transferido para outro instrutor, o histórico de aulas anteriores, avaliações práticas e competências é 100% preservado. Uma entrada imutável é gravada no array <code className="text-emerald-600 font-mono">historicoTransferencias</code>.
                     </p>
-                    <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
+                    <div className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
                       Integridade Referencial: Nenhuma aula pretérita é órfã
                     </div>
                   </div>
@@ -1447,14 +1447,14 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                         <Server className="w-4 h-4 text-emerald-600" />
                         <h4 className="text-xs font-bold text-slate-900">Grade Estendida com Aulas Noturnas (06h às 00h)</h4>
                       </div>
-                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">
                         APROVADO
                       </span>
                     </div>
                     <p className="text-xs text-slate-600 leading-relaxed">
                       Estrutura de dados desenhada para suportar intervalos de 50 minutos entre as 06:00 e 00:00. Atende rigorosamente a exigência legal de carga horária noturna para primeira habilitação.
                     </p>
-                    <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
+                    <div className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
                       Módulo: ScheduleView com slots gerados programaticamente
                     </div>
                   </div>
@@ -1468,14 +1468,14 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                         <Server className="w-4 h-4 text-emerald-600" />
                         <h4 className="text-xs font-bold text-slate-900">Agentes Sentinelas e Governança de Código</h4>
                       </div>
-                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">
                         APROVADO
                       </span>
                     </div>
                     <p className="text-xs text-slate-600 leading-relaxed">
                       Agente de Monitoramento contínuo em tempo real + Agente de Trava de Código que impede mutações não autorizadas, com rollback instantâneo via checkpoints e autorização explícita do usuário.
                     </p>
-                    <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
+                    <div className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
                       Engenharia de Segurança: codeGuardAgent + monitoringAgent
                     </div>
                   </div>
@@ -1489,14 +1489,14 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                         <Server className="w-4 h-4 text-emerald-600" />
                         <h4 className="text-xs font-bold text-slate-900">Isolamento Multi-Tenant e Governança RBAC</h4>
                       </div>
-                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">
                         APROVADO
                       </span>
                     </div>
                     <p className="text-xs text-slate-600 leading-relaxed">
                       Papéis estritos (<code className="text-emerald-600 font-mono">SUPER_ADMIN</code>, <code className="text-emerald-600 font-mono">ADMIN_ORG</code>, <code className="text-emerald-600 font-mono">INSTRUTOR</code>, <code className="text-emerald-600 font-mono">ALUNO</code>). O aluno só acessa sua própria ficha, o instrutor vê apenas seus alunos e pacotes, e o Master gerencia as autoescolas.
                     </p>
-                    <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
+                    <div className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
                       RBAC: Filtragem garantida por organizacaoId e userId
                     </div>
                   </div>
@@ -1510,14 +1510,14 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                         <Smartphone className="w-4 h-4 text-purple-600" />
                         <h4 className="text-xs font-bold text-slate-900">Modo Mobile Simplificado, Modo Normal & SmartScrollNav</h4>
                       </div>
-                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">
                         APROVADO
                       </span>
                     </div>
                     <p className="text-xs text-slate-600 leading-relaxed">
                       Detecção automática da interface física (<code className="text-purple-600 font-mono">Mobile / Tablet / Desktop</code>). No Desktop em Modo Normal, exibe todos os menus completos sem cortar e desliza suavemente com a posição do mouse nas extremidades (<code className="text-purple-600 font-mono">SmartScrollNav</code>). Menu de perfil fecha automaticamente ao clicar fora.
                     </p>
-                    <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
+                    <div className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
                       Componentes: useInterfaceMode, SmartScrollNav, Header
                     </div>
                   </div>
@@ -1531,14 +1531,14 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                         <KeyRound className="w-4 h-4 text-blue-600" />
                         <h4 className="text-xs font-bold text-slate-900">Login Master Explícito, Multi-Master e PIX Dinâmico</h4>
                       </div>
-                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">
                         APROVADO
                       </span>
                     </div>
                     <p className="text-xs text-slate-600 leading-relaxed">
                       Remoção do auto-login do Master (exige digitar e-mail e senha). Módulo Master com troca direta de senha, recuperação por e-mail + CPF, edição cadastral e inclusão de novos usuários Master. Suporte às 12 categorias de CNH e configuração PIX editável (50 caracteres).
                     </p>
-                    <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
+                    <div className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
                       Sincronização Dual-Write: LocalStorage + Supabase PostgreSQL
                     </div>
                   </div>
@@ -1552,14 +1552,14 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                         <Database className="w-4 h-4 text-emerald-600" />
                         <h4 className="text-xs font-bold text-slate-900">Endereço Completo por CEP (Default MG) no Supabase</h4>
                       </div>
-                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-bold">
                         APROVADO
                       </span>
                     </div>
                     <p className="text-xs text-slate-600 leading-relaxed">
                       Todos os cadastros (Instrutor, Aluno, CFC e Master) iniciam com o estado <strong className="text-emerald-700">MG - Minas Gerais</strong> como padrão e preenchem automaticamente Logradouro, Bairro, Cidade e UF ao digitar o CEP (ViaCEP + BrasilAPI), gravando nas tabelas <code className="text-emerald-600 font-mono">organizations</code>, <code className="text-emerald-600 font-mono">users</code> e <code className="text-emerald-600 font-mono">students</code> do Supabase.
                     </p>
-                    <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
+                    <div className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
                       Módulos: cepService.ts + AddressCepFields.tsx + supabaseAdapter.ts
                     </div>
                   </div>
@@ -1577,7 +1577,7 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                     <h5 className="text-xs sm:text-sm font-bold text-white">
                       Parecer Conclusivo da Tríade de Especialistas
                     </h5>
-                    <p className="text-[11px] text-slate-400">
+                    <p className="text-xs text-slate-600 font-medium">
                       Sistema homologado com excelência nos 3 pilares técnicos em todos os modos operacionais.
                     </p>
                   </div>
@@ -1612,7 +1612,7 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                       <h3 className="text-sm sm:text-base font-bold text-slate-900">
                         Google Cloud Firestore & Firebase Auth
                       </h3>
-                      <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full border border-emerald-200 flex items-center gap-1">
+                      <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full border border-emerald-200 flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                         PROVISIONADO & CONECTADO
                       </span>
@@ -1680,7 +1680,7 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                   <p className="font-mono text-xs font-bold text-slate-800 truncate" title={firebaseStatus.projectId}>
                     {firebaseStatus.projectId}
                   </p>
-                  <p className="text-[11px] text-slate-400 mt-1">Ambiente Oficial AI Studio</p>
+                  <p className="text-xs text-slate-600 font-medium mt-1">Ambiente Oficial AI Studio</p>
                 </div>
 
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
@@ -1691,7 +1691,7 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                   <p className="font-mono text-xs font-bold text-slate-800 truncate" title={firebaseStatus.databaseId}>
                     {firebaseStatus.databaseId}
                   </p>
-                  <p className="text-[11px] text-slate-400 mt-1">Database isolado e dedicado</p>
+                  <p className="text-xs text-slate-600 font-medium mt-1">Database isolado e dedicado</p>
                 </div>
 
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
@@ -1702,7 +1702,7 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                   <p className="font-mono text-xs font-bold text-slate-800 truncate" title={firebaseStatus.authDomain}>
                     {firebaseStatus.authDomain}
                   </p>
-                  <p className="text-[11px] text-slate-400 mt-1">OAuth Google & Tokens JWT</p>
+                  <p className="text-xs text-slate-600 font-medium mt-1">OAuth Google & Tokens JWT</p>
                 </div>
               </div>
 
@@ -1753,71 +1753,71 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                   </h5>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 text-xs">
                     <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-100 text-center">
-                      <p className="text-[11px] text-slate-500 font-medium">Alunos</p>
+                      <p className="text-xs text-slate-500 font-medium">Alunos</p>
                       <p className="text-base font-extrabold text-slate-900">
                         {db.getStudents('org_direcao_certa_01').length}
                       </p>
                     </div>
                     <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-100 text-center">
-                      <p className="text-[11px] text-slate-500 font-medium">Usuários</p>
+                      <p className="text-xs text-slate-500 font-medium">Usuários</p>
                       <p className="text-base font-extrabold text-slate-900">{db.getUsers().length}</p>
                     </div>
                     <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-100 text-center">
-                      <p className="text-[11px] text-slate-500 font-medium">Veículos</p>
+                      <p className="text-xs text-slate-500 font-medium">Veículos</p>
                       <p className="text-base font-extrabold text-slate-900">
                         {db.getVehicles('org_direcao_certa_01').length}
                       </p>
                     </div>
                     <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-100 text-center">
-                      <p className="text-[11px] text-slate-500 font-medium">Aulas</p>
+                      <p className="text-xs text-slate-500 font-medium">Aulas</p>
                       <p className="text-base font-extrabold text-slate-900">
                         {db.getLessons('org_direcao_certa_01').length}
                       </p>
                     </div>
                     <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-100 text-center">
-                      <p className="text-[11px] text-slate-500 font-medium">Horários</p>
+                      <p className="text-xs text-slate-500 font-medium">Horários</p>
                       <p className="text-base font-extrabold text-slate-900">
                         {db.getSlots('org_direcao_certa_01').length}
                       </p>
                     </div>
                     <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-100 text-center">
-                      <p className="text-[11px] text-slate-500 font-medium">Faturas / Contas</p>
+                      <p className="text-xs text-slate-500 font-medium">Faturas / Contas</p>
                       <p className="text-base font-extrabold text-slate-900">
                         {db.getAccountsReceivable('org_direcao_certa_01').length}
                       </p>
                     </div>
                     <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-100 text-center">
-                      <p className="text-[11px] text-slate-500 font-medium">Pagamentos</p>
+                      <p className="text-xs text-slate-500 font-medium">Pagamentos</p>
                       <p className="text-base font-extrabold text-slate-900">
                         {db.getPayments('org_direcao_certa_01').length}
                       </p>
                     </div>
                     <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-100 text-center">
-                      <p className="text-[11px] text-slate-500 font-medium">Despesas</p>
+                      <p className="text-xs text-slate-500 font-medium">Despesas</p>
                       <p className="text-base font-extrabold text-slate-900">
                         {db.getExpenses('org_direcao_certa_01').length}
                       </p>
                     </div>
                     <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-100 text-center">
-                      <p className="text-[11px] text-slate-500 font-medium">Investimentos</p>
+                      <p className="text-xs text-slate-500 font-medium">Investimentos</p>
                       <p className="text-base font-extrabold text-slate-900">
                         {db.getInvestments('org_direcao_certa_01').length}
                       </p>
                     </div>
                     <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-100 text-center">
-                      <p className="text-[11px] text-slate-500 font-medium">Pacotes CNH</p>
+                      <p className="text-xs text-slate-500 font-medium">Pacotes CNH</p>
                       <p className="text-base font-extrabold text-slate-900">
                         {db.getPackages('org_direcao_certa_01').length}
                       </p>
                     </div>
                     <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-100 text-center">
-                      <p className="text-[11px] text-slate-500 font-medium">Logs Auditoria</p>
+                      <p className="text-xs text-slate-500 font-medium">Logs Auditoria</p>
                       <p className="text-base font-extrabold text-slate-900">
                         {db.getAuditLogs('org_direcao_certa_01').length}
                       </p>
                     </div>
                     <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-100 text-center">
-                      <p className="text-[11px] text-slate-500 font-medium">Organizações</p>
+                      <p className="text-xs text-slate-500 font-medium">Organizações</p>
                       <p className="text-base font-extrabold text-slate-900">
                         {db.getOrganizations().length}
                       </p>
@@ -1844,7 +1844,7 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
                       {Object.entries(migrationProgress.collections).map(([key, col]) => (
-                        <div key={key} className="flex items-center justify-between p-2 bg-white rounded-lg border border-slate-100 text-[11px]">
+                        <div key={key} className="flex items-center justify-between p-2 bg-white rounded-lg border border-slate-100 text-xs">
                           <span className="text-slate-600 truncate">{col.collectionName}:</span>
                           <span className={`font-mono font-bold ${
                             col.status === 'SUCESSO' ? 'text-emerald-600' :
@@ -1870,7 +1870,7 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                       <p className="text-emerald-800">
                         Um total de <strong>{migrationResult.totalMigrated} registros</strong> foram sincronizados com o banco de dados Cloud Firestore no projeto <code>{firebaseStatus.projectId}</code>.
                       </p>
-                      <p className="text-[11px] text-emerald-700">
+                      <p className="text-xs text-emerald-700">
                         Carimbo de conclusão: {new Date(migrationResult.migratedAt).toLocaleString('pt-BR')}
                       </p>
                     </div>

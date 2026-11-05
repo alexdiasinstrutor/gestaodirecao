@@ -149,7 +149,7 @@ export const SupabaseMigrationModal: React.FC<SupabaseMigrationModalProps> = ({
                 <h2 className="text-base sm:text-lg font-black text-white">
                   Integração & Migrador Supabase (PostgreSQL)
                 </h2>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-400/30 uppercase">
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-400/30 uppercase">
                   Exclusivo Master
                 </span>
               </div>
@@ -219,7 +219,7 @@ export const SupabaseMigrationModal: React.FC<SupabaseMigrationModalProps> = ({
                   <ShieldCheck className="w-4 h-4 text-emerald-600" />
                   Como obter as credenciais do seu projeto Supabase:
                 </span>
-                <p className="text-[11px] leading-relaxed text-emerald-800">
+                <p className="text-xs leading-relaxed text-emerald-800">
                   Acesse seu painel no <strong>supabase.com</strong>, selecione seu projeto e vá em <strong>Project Settings → API</strong>. Copie a <strong>Project URL</strong> e a chave <strong>anon public</strong> (ou <strong>service_role</strong> para bypass de RLS).
                 </p>
               </div>
@@ -239,7 +239,7 @@ export const SupabaseMigrationModal: React.FC<SupabaseMigrationModalProps> = ({
                       className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-xl text-xs font-mono focus:border-emerald-600 focus:outline-none"
                     />
                   </div>
-                  <span className="text-[10px] text-slate-400 mt-0.5 block">
+                  <span className="text-xs text-slate-600 font-medium mt-0.5 block">
                     O endpoint base da REST API do seu banco de dados PostgreSQL no Supabase.
                   </span>
                 </div>
@@ -258,7 +258,7 @@ export const SupabaseMigrationModal: React.FC<SupabaseMigrationModalProps> = ({
                       className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-xl text-xs font-mono focus:border-emerald-600 focus:outline-none"
                     />
                   </div>
-                  <span className="text-[10px] text-slate-400 mt-0.5 block">
+                  <span className="text-xs text-slate-600 font-medium mt-0.5 block">
                     Utilizada exclusivamente para autenticar as requisições com o PostgREST.
                   </span>
                 </div>
@@ -310,7 +310,7 @@ export const SupabaseMigrationModal: React.FC<SupabaseMigrationModalProps> = ({
                   <h3 className="font-bold text-slate-900 text-xs">
                     Esquema Relacional PostgreSQL / Supabase
                   </h3>
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-xs text-slate-500">
                     Cria automaticamente as 12 tabelas com Chaves Primárias, Chaves Estrangeiras, Índices e Cascata.
                   </p>
                 </div>
@@ -336,8 +336,8 @@ export const SupabaseMigrationModal: React.FC<SupabaseMigrationModalProps> = ({
               </div>
 
               {/* Bloco de Código SQL */}
-              <div className="relative border border-slate-300 rounded-2xl overflow-hidden bg-slate-950 text-slate-200 font-mono text-[11px]">
-                <div className="bg-slate-900 px-4 py-2 border-b border-slate-800 flex items-center justify-between text-slate-400 text-[10px]">
+              <div className="relative border border-slate-300 rounded-2xl overflow-hidden bg-slate-950 text-slate-200 font-mono text-xs">
+                <div className="bg-slate-900 px-4 py-2 border-b border-slate-800 flex items-center justify-between text-slate-400 text-xs">
                   <span>schema_supabase_direcao.sql · 12 Tabelas Relacionais</span>
                   <span>PostgreSQL 15+</span>
                 </div>
@@ -345,11 +345,11 @@ export const SupabaseMigrationModal: React.FC<SupabaseMigrationModalProps> = ({
                   readOnly
                   value={schemaSQL}
                   rows={14}
-                  className="w-full bg-slate-950 text-emerald-400 p-4 font-mono text-[11px] resize-none focus:outline-none"
+                  className="w-full bg-slate-950 text-emerald-400 p-4 font-mono text-xs resize-none focus:outline-none"
                 />
               </div>
 
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-[11px] leading-relaxed">
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs leading-relaxed">
                 <strong>💡 Como aplicar no Supabase:</strong> Abra o <strong>SQL Editor</strong> no painel do Supabase, cole o código acima e clique em <strong>RUN</strong>. As tabelas serão criadas instantaneamente com todos os relacionamentos e regras de integridade.
               </div>
 
@@ -387,7 +387,7 @@ export const SupabaseMigrationModal: React.FC<SupabaseMigrationModalProps> = ({
                     <h3 className="font-bold text-slate-900 text-sm">
                       Opção A: Cópia e Sincronização Direta via API REST
                     </h3>
-                    <p className="text-[11px] text-slate-500">
+                    <p className="text-xs text-slate-500">
                       O sistema transmite todas as organizações, usuários, alunos e finanças diretamente para o seu Supabase.
                     </p>
                   </div>
@@ -443,7 +443,7 @@ export const SupabaseMigrationModal: React.FC<SupabaseMigrationModalProps> = ({
                     <h3 className="font-bold text-slate-900 text-sm">
                       Opção B: Dump SQL de Dados (Carga Rápida via SQL Editor)
                     </h3>
-                    <p className="text-[11px] text-slate-500">
+                    <p className="text-xs text-slate-500">
                       Gera os comandos <code className="font-mono font-bold">INSERT INTO</code> com todos os dados atuais da plataforma para você rodar diretamente no Supabase.
                     </p>
                   </div>
@@ -475,7 +475,7 @@ export const SupabaseMigrationModal: React.FC<SupabaseMigrationModalProps> = ({
 
         {/* Modal Footer */}
         <div className="bg-slate-50 border-t border-slate-200 p-4 flex items-center justify-between shrink-0">
-          <span className="text-[11px] text-slate-500">
+          <span className="text-xs text-slate-500">
             Compatível com Supabase, Neon e qualquer banco PostgreSQL standard.
           </span>
           <button

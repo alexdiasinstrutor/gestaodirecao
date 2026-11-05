@@ -246,11 +246,10 @@ export const ApplyDiscountModal: React.FC<ApplyDiscountModalProps> = ({
               setMode('COUPON');
               setErrorMsg('');
             }}
-            className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-              mode === 'COUPON'
+            className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${mode === 'COUPON'
                 ? 'bg-white text-purple-700 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
-            }`}
+              }`}
           >
             <Ticket className="w-3.5 h-3.5" />
             <span>Usar Cupom de Desconto</span>
@@ -261,11 +260,10 @@ export const ApplyDiscountModal: React.FC<ApplyDiscountModalProps> = ({
               setMode('MANUAL');
               setErrorMsg('');
             }}
-            className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-              mode === 'MANUAL'
+            className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${mode === 'MANUAL'
                 ? 'bg-white text-purple-700 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
-            }`}
+              }`}
           >
             <DollarSign className="w-3.5 h-3.5" />
             <span>Desconto Direto (R$ ou %)</span>
@@ -324,22 +322,20 @@ export const ApplyDiscountModal: React.FC<ApplyDiscountModalProps> = ({
               <button
                 type="button"
                 onClick={() => setManualType('FIXED')}
-                className={`flex-1 py-1.5 rounded-lg border text-xs font-bold transition-colors cursor-pointer ${
-                  manualType === 'FIXED'
+                className={`flex-1 py-1.5 rounded-lg border text-xs font-bold transition-colors cursor-pointer ${manualType === 'FIXED'
                     ? 'bg-purple-50 border-purple-300 text-purple-700'
                     : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                }`}
+                  }`}
               >
                 Valor Fixo (R$)
               </button>
               <button
                 type="button"
                 onClick={() => setManualType('PERCENT')}
-                className={`flex-1 py-1.5 rounded-lg border text-xs font-bold transition-colors cursor-pointer ${
-                  manualType === 'PERCENT'
+                className={`flex-1 py-1.5 rounded-lg border text-xs font-bold transition-colors cursor-pointer ${manualType === 'PERCENT'
                     ? 'bg-purple-50 border-purple-300 text-purple-700'
                     : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                }`}
+                  }`}
               >
                 Porcentagem (%)
               </button>

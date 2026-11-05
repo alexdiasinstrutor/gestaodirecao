@@ -393,7 +393,7 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
         {(!isSimplified || activeSubTab === 'VERIFICADOR') && (
           <button
             onClick={() => setActiveSubTab('VERIFICADOR')}
-            className={`flex items-center justify-center lg:flex-1 gap-1.5 px-2.5 xl:px-3.5 py-2.5 rounded-xl text-[11px] xl:text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+            className={`flex items-center justify-center lg:flex-1 gap-1.5 px-2.5 xl:px-3.5 py-2.5 rounded-xl text-xs xl:text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               activeSubTab === 'VERIFICADOR'
                 ? 'bg-purple-600 text-white shadow-xs'
                 : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
@@ -401,7 +401,7 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
           >
             <FileCheck className="w-3.5 h-3.5 xl:w-4 xl:h-4 shrink-0" />
             <span>Verificador de Cadastros</span>
-            <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-white text-[10px]">
+            <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-white text-xs">
               {integrityReport.score}%
             </span>
           </button>
@@ -409,7 +409,7 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
 
         <button
           onClick={() => setActiveSubTab('ORGS')}
-          className={`flex items-center justify-center lg:flex-1 gap-1.5 px-2.5 xl:px-3.5 py-2.5 rounded-xl text-[11px] xl:text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+          className={`flex items-center justify-center lg:flex-1 gap-1.5 px-2.5 xl:px-3.5 py-2.5 rounded-xl text-xs xl:text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
             activeSubTab === 'ORGS'
               ? 'bg-purple-600 text-white shadow-xs'
               : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
@@ -418,7 +418,7 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
           <Building className="w-3.5 h-3.5 xl:w-4 xl:h-4 shrink-0" />
           <span>Instituições & CFCs ({organizations.length})</span>
           {pendingOrgs.length > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-white text-[10px] animate-pulse">
+            <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-white text-xs animate-pulse">
               {pendingOrgs.length} pendente(s)
             </span>
           )}
@@ -426,7 +426,7 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
 
         <button
           onClick={() => setActiveSubTab('MASTERS')}
-          className={`flex items-center justify-center lg:flex-1 gap-1.5 px-2.5 xl:px-3.5 py-2.5 rounded-xl text-[11px] xl:text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+          className={`flex items-center justify-center lg:flex-1 gap-1.5 px-2.5 xl:px-3.5 py-2.5 rounded-xl text-xs xl:text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
             activeSubTab === 'MASTERS'
               ? 'bg-purple-600 text-white shadow-xs'
               : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
@@ -439,7 +439,7 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
         {(!isSimplified || activeSubTab === 'PLANS') && (
           <button
             onClick={() => setActiveSubTab('PLANS')}
-            className={`flex items-center justify-center lg:flex-1 gap-1.5 px-2.5 xl:px-3.5 py-2.5 rounded-xl text-[11px] xl:text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+            className={`flex items-center justify-center lg:flex-1 gap-1.5 px-2.5 xl:px-3.5 py-2.5 rounded-xl text-xs xl:text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               activeSubTab === 'PLANS'
                 ? 'bg-purple-600 text-white shadow-xs'
                 : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
@@ -453,7 +453,7 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
         {(!isSimplified || activeSubTab === 'COUPONS') && (
           <button
             onClick={() => setActiveSubTab('COUPONS')}
-            className={`flex items-center justify-center lg:flex-1 gap-1.5 px-2.5 xl:px-3.5 py-2.5 rounded-xl text-[11px] xl:text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+            className={`flex items-center justify-center lg:flex-1 gap-1.5 px-2.5 xl:px-3.5 py-2.5 rounded-xl text-xs xl:text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               activeSubTab === 'COUPONS'
                 ? 'bg-purple-600 text-white shadow-xs'
                 : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
@@ -467,7 +467,7 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
         {(!isSimplified || activeSubTab === 'MAINTENANCE') && (
           <button
             onClick={() => setActiveSubTab('MAINTENANCE')}
-            className={`flex items-center justify-center lg:flex-1 gap-1.5 px-2.5 xl:px-3.5 py-2.5 rounded-xl text-[11px] xl:text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+            className={`flex items-center justify-center lg:flex-1 gap-1.5 px-2.5 xl:px-3.5 py-2.5 rounded-xl text-xs xl:text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               activeSubTab === 'MAINTENANCE'
                 ? 'bg-purple-600 text-white shadow-xs'
                 : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
@@ -492,12 +492,12 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
         {!isSimplified && (
           <button
             onClick={() => setShowSupabaseModal(true)}
-            className="flex items-center justify-center gap-1.5 px-3 xl:px-3.5 py-2.5 rounded-xl text-[11px] xl:text-xs font-bold transition-all cursor-pointer whitespace-nowrap bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs shrink-0"
+            className="flex items-center justify-center gap-1.5 px-3 xl:px-3.5 py-2.5 rounded-xl text-xs xl:text-xs font-bold transition-all cursor-pointer whitespace-nowrap bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs shrink-0"
             title="Conectar com Supabase, exportar DDL SQL relacional e sincronizar tabelas"
           >
             <Database className="w-3.5 h-3.5 xl:w-4 xl:h-4 shrink-0" />
             <span>Supabase / PostgreSQL</span>
-            <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-white text-[10px]">
+            <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-white text-xs">
               SQL
             </span>
           </button>
@@ -568,7 +568,7 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-slate-900 text-sm">{instructor.nome}</span>
-                            <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-[10px] font-bold">
+                            <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-xs font-bold">
                               {instructor.papel}
                             </span>
                           </div>
@@ -580,7 +580,7 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
 
                       <div className="flex items-center justify-between md:justify-end gap-3 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100">
                         <div className="bg-purple-50 px-3 py-1 rounded-lg border border-purple-200 text-right">
-                          <span className="text-[10px] text-purple-700 font-semibold block">Alunos Vinculados</span>
+                          <span className="text-xs text-purple-700 font-semibold block">Alunos Vinculados</span>
                           <span className="font-mono font-black text-sm text-purple-900">{students.length}</span>
                         </div>
                         <button className="text-slate-400 p-1 rounded-lg">
@@ -641,7 +641,7 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
                   <div key={org.id} className="bg-white p-3.5 rounded-xl border border-amber-200 flex items-center justify-between gap-3 shadow-2xs">
                     <div>
                       <span className="font-bold text-slate-900 text-xs block">{org.nome}</span>
-                      <span className="text-[11px] text-slate-500 font-mono block">
+                      <span className="text-xs text-slate-500 font-mono block">
                         {org.tipo.replace('_', ' ')} · {org.cidade}/{org.estado} · Tel: {org.telefone}
                       </span>
                     </div>
@@ -726,7 +726,7 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
             {/* Tabela de Instituições */}
             <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs overflow-x-auto">
               <table className="w-full text-left text-xs min-w-[850px]">
-                <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase text-[10px]">
+                <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase text-xs font-bold text-slate-700">
                   <tr>
                     <th className="py-2.5 px-3">Organização / Documento</th>
                     <th className="py-2.5 px-3">Modalidade</th>
@@ -748,41 +748,41 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
                         {/* Nome e CNPJ */}
                         <td className="py-3 px-3">
                           <span className="font-bold text-slate-900 block">{org.nome}</span>
-                          <span className="text-[10px] text-slate-400 font-mono">{org.cnpjCpf}</span>
+                          <span className="text-xs text-slate-600 font-medium font-mono">{org.cnpjCpf}</span>
                         </td>
 
                         {/* Modalidade */}
                         <td className="py-3 px-3">
-                          <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-semibold">
+                          <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-xs font-semibold">
                             {org.tipo === 'AUTOESCOLA_CFC' ? 'CFC / Autoescola' : 'Instrutor Autônomo'}
                           </span>
                         </td>
 
                         {/* Contato */}
-                        <td className="py-3 px-3 text-[11px]">
+                        <td className="py-3 px-3 text-xs">
                           <span className="text-slate-800 block">{org.cidade} / {org.estado}</span>
                           <span className="text-slate-400 font-mono block">{org.telefone || org.email || 'S/N'}</span>
                         </td>
 
                         {/* Plano */}
                         <td className="py-3 px-3">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${planInfo.corBadge}`}>
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${planInfo.corBadge}`}>
                             {org.plano}
                           </span>
                           {org.modulosCustomizados && org.modulosCustomizados.length > 0 && (
-                            <span className="block text-[9px] text-purple-700 font-medium mt-0.5">
+                            <span className="block text-xs text-purple-700 font-medium mt-0.5">
                               {org.modulosCustomizados.length} módulos ativos
                             </span>
                           )}
                         </td>
 
                         {/* Vigência / Chave */}
-                        <td className="py-3 px-3 text-[11px]">
+                        <td className="py-3 px-3 text-xs">
                           <span className="block font-semibold text-slate-800">
                             {org.dataVencimentoPlano ? `Vence: ${formatDateBR(org.dataVencimentoPlano)}` : 'Indeterminado'}
                           </span>
                           <div className="flex items-center gap-1 mt-0.5">
-                            <span className="font-mono text-[10px] text-purple-800 font-bold bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200">
+                            <span className="font-mono text-xs text-purple-800 font-bold bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200">
                               {org.chaveAcesso || 'Sem chave'}
                             </span>
                           </div>
@@ -790,7 +790,7 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
 
                         {/* Status */}
                         <td className="py-3 px-3">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
                             org.status === 'ATIVO'
                               ? 'bg-emerald-100 text-emerald-800'
                               : isPending
@@ -810,7 +810,7 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
                             {isPending && (
                               <button
                                 onClick={() => handleQuickApprove(org)}
-                                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold cursor-pointer shadow-xs flex items-center gap-1 transition-all mr-1"
+                                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold cursor-pointer shadow-xs flex items-center gap-1 transition-all mr-1"
                                 title="Aprovar cadastro e gerar chave de acesso imediatamente"
                               >
                                 <CheckCircle2 className="w-3.5 h-3.5" />
@@ -861,7 +861,7 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
                             {/* Acessar Painel */}
                             <button
                               onClick={() => handleAccessAsOrg(org)}
-                              className="px-2 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-[11px] font-semibold cursor-pointer"
+                              className="px-2 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold cursor-pointer"
                               title="Acessar o painel como usuário desta organização"
                             >
                               Acessar
@@ -897,7 +897,7 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
                 <span className="p-1 rounded-md bg-purple-500/20 text-purple-300">
                   <ShieldCheck className="w-4 h-4 text-purple-300" />
                 </span>
-                <span className="text-[11px] font-bold text-purple-300 uppercase tracking-wider">
+                <span className="text-xs font-bold text-purple-300 uppercase tracking-wider">
                   Controle de Acessos & Governança Master
                 </span>
               </div>
@@ -929,9 +929,9 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
                 <Key className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-[11px] text-slate-500 font-medium">Troca de Senha Direta</p>
+                <p className="text-xs text-slate-500 font-medium">Troca de Senha Direta</p>
                 <p className="text-xs font-bold text-slate-900">Definição no Módulo Master</p>
-                <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">● Sincronização Imediata</p>
+                <p className="text-xs text-emerald-600 font-semibold mt-0.5">● Sincronização Imediata</p>
               </div>
             </div>
 
@@ -940,9 +940,9 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
                 <Mail className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-[11px] text-slate-500 font-medium">Recuperação por E-mail</p>
+                <p className="text-xs text-slate-500 font-medium">Recuperação por E-mail</p>
                 <p className="text-xs font-bold text-slate-900">Validação com CPF & Código</p>
-                <p className="text-[10px] text-blue-600 font-semibold mt-0.5">● Proteção Anti-Fraude LGPD</p>
+                <p className="text-xs text-blue-600 font-semibold mt-0.5">● Proteção Anti-Fraude LGPD</p>
               </div>
             </div>
 
@@ -951,9 +951,9 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
                 <Database className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-[11px] text-slate-500 font-medium">PostgreSQL / Supabase</p>
+                <p className="text-xs text-slate-500 font-medium">PostgreSQL / Supabase</p>
                 <p className="text-xs font-bold text-slate-900">Persistência Dual-Write</p>
-                <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">● Tabela users Sincronizada</p>
+                <p className="text-xs text-emerald-600 font-semibold mt-0.5">● Tabela users Sincronizada</p>
               </div>
             </div>
           </div>
@@ -989,12 +989,12 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
                               {master.nome}
                             </h4>
                             {isSelf && (
-                              <span className="px-2 py-0.2 rounded-full bg-purple-100 text-purple-800 text-[10px] font-bold border border-purple-200">
+                              <span className="px-2 py-0.2 rounded-full bg-purple-100 text-purple-800 text-xs font-bold border border-purple-200">
                                 Você
                               </span>
                             )}
                           </div>
-                          <span className="inline-block mt-0.5 px-2 py-0.5 rounded bg-slate-900 text-white text-[10px] font-bold">
+                          <span className="inline-block mt-0.5 px-2 py-0.5 rounded bg-slate-900 text-white text-xs font-bold">
                             SUPER_ADMIN
                           </span>
                         </div>
@@ -1061,7 +1061,7 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
                           <Lock className="w-3.5 h-3.5 text-slate-400" />
                           Status da Senha:
                         </span>
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
                           <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                           Ativa & Sincronizada
                         </span>
@@ -1274,7 +1274,7 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
             <div className="p-3 bg-purple-50/70 border border-purple-200 rounded-xl text-xs space-y-1">
               <p className="font-bold text-purple-900">Aluno Selecionado:</p>
               <p className="text-slate-800 font-semibold">{studentToReassign.nome}</p>
-              <p className="text-[11px] text-slate-600 font-mono">
+              <p className="text-xs text-slate-600 font-mono">
                 CPF: {studentToReassign.cpfMascarado} · CNH {studentToReassign.categoriaCnh}
               </p>
             </div>
@@ -1297,7 +1297,7 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
                     </option>
                   ))}
                 </select>
-                <p className="text-[10px] text-slate-400 mt-1">
+                <p className="text-xs text-slate-600 font-medium mt-1">
                   A reatribuição atualizará o vínculo do CPF, as agendas e gravará log de auditoria permanente.
                 </p>
               </div>

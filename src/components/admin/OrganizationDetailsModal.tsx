@@ -54,10 +54,10 @@ export const OrganizationDetailsModal: React.FC<OrganizationDetailsModalProps> =
               <span className="p-1.5 rounded-lg bg-white/10 text-purple-300">
                 <Building className="w-5 h-5" />
               </span>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${planInfo.corBadge}`}>
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${planInfo.corBadge}`}>
                 PLANO {organization.plano}
               </span>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${organization.status === 'ATIVO' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${organization.status === 'ATIVO' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'
                 }`}>
                 {organization.status}
               </span>
@@ -79,30 +79,30 @@ export const OrganizationDetailsModal: React.FC<OrganizationDetailsModalProps> =
           {/* Card Resumo da Assinatura SaaS */}
           <div className="bg-purple-50/60 p-4 rounded-2xl border border-purple-200 grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <span className="text-slate-500 block text-[10px] uppercase font-bold">Plano Ativo</span>
+              <span className="text-slate-500 block text-xs uppercase font-bold font-bold">Plano Ativo</span>
               <span className="text-sm font-bold text-purple-900">{planInfo.nome}</span>
-              <span className="text-[11px] text-purple-700 block">
+              <span className="text-xs text-purple-700 block">
                 {organization.valorMensalidadeCentavos
                   ? formatCurrencyBRL(organization.valorMensalidadeCentavos) + ' / mês'
                   : 'R$ 0,00'}
               </span>
             </div>
             <div>
-              <span className="text-slate-500 block text-[10px] uppercase font-bold">Vigência da Assinatura</span>
+              <span className="text-slate-500 block text-xs uppercase font-bold font-bold">Vigência da Assinatura</span>
               <span className="text-sm font-bold text-slate-900">
                 {organization.dataVencimentoPlano ? formatDateBR(organization.dataVencimentoPlano) : 'Indeterminada'}
               </span>
-              <span className="text-[11px] text-slate-500 block">Status: {organization.status}</span>
+              <span className="text-xs text-slate-500 block">Status: {organization.status}</span>
             </div>
             <div>
-              <span className="text-slate-500 block text-[10px] uppercase font-bold">Chave de Acesso</span>
+              <span className="text-slate-500 block text-xs uppercase font-bold font-bold">Chave de Acesso</span>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="font-mono font-bold text-xs bg-white px-2 py-0.5 rounded border border-purple-200 text-purple-900">
                   {organization.chaveAcesso || 'Não gerada'}
                 </span>
                 <button
                   onClick={() => onOpenKeyModal(organization)}
-                  className="text-purple-700 hover:text-purple-900 text-[10px] font-bold underline cursor-pointer"
+                  className="text-purple-700 hover:text-purple-900 text-xs font-bold underline cursor-pointer"
                 >
                   Enviar
                 </button>
@@ -134,15 +134,15 @@ export const OrganizationDetailsModal: React.FC<OrganizationDetailsModalProps> =
               <span className="font-bold text-slate-900 block text-xs">Métricas na Plataforma</span>
               <div className="grid grid-cols-3 gap-2 text-center pt-1">
                 <div className="bg-white p-2 rounded-xl border border-slate-200">
-                  <span className="text-[10px] text-slate-500 block">Instrutores</span>
+                  <span className="text-xs text-slate-500 block">Instrutores</span>
                   <span className="text-sm font-bold text-slate-900">{users.filter(u => u.papel === 'INSTRUTOR' || u.papel === 'ADMIN_ORG').length}</span>
                 </div>
                 <div className="bg-white p-2 rounded-xl border border-slate-200">
-                  <span className="text-[10px] text-slate-500 block">Alunos</span>
+                  <span className="text-xs text-slate-500 block">Alunos</span>
                   <span className="text-sm font-bold text-slate-900">{students.length}</span>
                 </div>
                 <div className="bg-white p-2 rounded-xl border border-slate-200">
-                  <span className="text-[10px] text-slate-500 block">Veículos</span>
+                  <span className="text-xs text-slate-500 block">Veículos</span>
                   <span className="text-sm font-bold text-slate-900">{vehicles.length}</span>
                 </div>
               </div>
@@ -164,20 +164,20 @@ export const OrganizationDetailsModal: React.FC<OrganizationDetailsModalProps> =
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-slate-900">{u.nome}</span>
-                      <span className="px-1.5 py-0.2 rounded bg-purple-100 text-purple-800 text-[10px] font-bold">
+                      <span className="px-1.5 py-0.2 rounded bg-purple-100 text-purple-800 text-xs font-bold">
                         {u.papel}
                       </span>
                       {u.senhaTemporaria && (
-                        <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 text-[9px] font-mono">
+                        <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 text-xs font-mono">
                           Senha Temp: {u.senhaTemporaria}
                         </span>
                       )}
                     </div>
-                    <span className="text-slate-500 text-[11px] font-mono block">
+                    <span className="text-slate-500 text-xs font-mono block">
                       {u.email} · Tel: {u.telefone || 'S/N'} · CPF: {u.cpfMascarado || '***'}
                     </span>
                     {(u.cep || u.logradouro || u.cidade) && (
-                      <span className="text-slate-500 text-[10px] block mt-0.5">
+                      <span className="text-slate-500 text-xs block mt-0.5">
                         📍 {formatFullAddress(u)}
                       </span>
                     )}
@@ -185,7 +185,7 @@ export const OrganizationDetailsModal: React.FC<OrganizationDetailsModalProps> =
 
                   <button
                     onClick={() => onOpenResetPass(u)}
-                    className="flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-[11px] font-semibold cursor-pointer shrink-0"
+                    className="flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-semibold cursor-pointer shrink-0"
                     title="Resetar senha deste usuário e gerar nova senha temporária"
                   >
                     <Lock className="w-3 h-3 text-amber-700" />
@@ -208,12 +208,12 @@ export const OrganizationDetailsModal: React.FC<OrganizationDetailsModalProps> =
             ) : (
               <div className="max-h-48 overflow-y-auto border border-slate-200 rounded-xl divide-y divide-slate-100">
                 {students.map((s) => (
-                  <div key={s.id} className="p-2.5 flex items-center justify-between text-[11px] hover:bg-slate-50">
+                  <div key={s.id} className="p-2.5 flex items-center justify-between text-xs hover:bg-slate-50">
                     <div>
                       <span className="font-semibold text-slate-900">{s.nome}</span>
                       <span className="text-slate-500 font-mono ml-2">CNH {s.categoriaCnh} · {s.cpfMascarado}</span>
                       {(s.cep || s.logradouro || s.cidade) && (
-                        <span className="text-slate-500 text-[10px] block mt-0.5">
+                        <span className="text-slate-500 text-xs block mt-0.5">
                           📍 {formatFullAddress(s)}
                         </span>
                       )}
@@ -230,7 +230,7 @@ export const OrganizationDetailsModal: React.FC<OrganizationDetailsModalProps> =
 
         {/* Rodapé com Botões de Ação */}
         <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-2 shrink-0">
-          <span className="text-[11px] text-slate-500">
+          <span className="text-xs text-slate-500">
             Criada em: {formatDateBR(organization.criadoEm)}
           </span>
 

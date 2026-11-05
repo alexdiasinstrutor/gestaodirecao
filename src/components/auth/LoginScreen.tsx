@@ -114,7 +114,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         </div>
 
         <div>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/15 text-blue-300 text-[11px] font-semibold border border-blue-400/20 backdrop-blur-xs">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/15 text-blue-300 text-xs font-semibold border border-blue-400/20 backdrop-blur-xs">
             <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
             <span>Plataforma Inteligente para Autoescolas & CFCs</span>
           </span>
@@ -167,7 +167,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 <div className="w-full border-t border-slate-200" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2.5 text-slate-400 font-bold tracking-wider text-[10px]">
+                <span className="bg-white px-2.5 text-slate-400 font-bold tracking-wider text-xs">
                   ou com credenciais
                 </span>
               </div>
@@ -201,7 +201,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowPasswordRecovery(true)}
-                  className="text-[11px] text-blue-600 hover:text-blue-800 cursor-pointer font-medium hover:underline"
+                  className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer font-medium hover:underline"
                 >
                   Esqueceu a senha?
                 </button>
@@ -259,10 +259,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
         {/* Footer info & Security Badges */}
         <div className="mt-6 text-center space-y-2">
-          <p className="text-[11px] text-slate-400 font-medium">
+          <p className="text-xs text-slate-600 font-medium font-medium">
             Gestão AD (Auto Direção) · Sistema Oficial em Conformidade com CONTRAN e LGPD
           </p>
-          <div className="flex items-center justify-center gap-3 text-[10px] text-slate-500 font-mono">
+          <div className="flex items-center justify-center gap-3 text-xs text-slate-500 font-mono">
             <span>✓ Criptografia 256-bit</span>
             <span>·</span>
             <span>✓ Cloud Backup</span>

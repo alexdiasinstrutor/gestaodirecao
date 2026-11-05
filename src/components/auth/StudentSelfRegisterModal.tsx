@@ -415,7 +415,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
               <ShieldAlert className="w-4 h-4 text-amber-600" />
               <span>Regra de Maioridade Rigorosa (Art. 140 CTB)</span>
             </div>
-            <p className="text-[11px] text-amber-800">
+            <p className="text-xs text-amber-800">
               Não é permitido o cadastro de alunos menores que 18 anos. A data de nascimento será validada matematicamente.
             </p>
           </div>
@@ -428,7 +428,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
                 <span>Código de Indicação do Instrutor *</span>
               </label>
               {selectedInstructor && (
-                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1">
                   <Check className="w-3 h-3" /> Reconhecido
                 </span>
               )}
@@ -456,7 +456,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
             </div>
 
             {codeFeedback && (
-              <p className={`text-[11px] font-medium ${codeFeedback.isError ? 'text-red-600' : 'text-emerald-700'}`}>
+              <p className={`text-xs font-medium ${codeFeedback.isError ? 'text-red-600' : 'text-emerald-700'}`}>
                 {codeFeedback.message}
               </p>
             )}
@@ -464,11 +464,11 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
             {selectedInstructor ? (
               <div className="p-2.5 bg-white border border-blue-200 rounded-xl flex items-center justify-between">
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-blue-600 block">Instrutor Responsável</span>
+                  <span className="text-xs uppercase font-bold font-bold text-blue-600 block">Instrutor Responsável</span>
                   <span className="font-bold text-slate-900 text-xs">{selectedInstructor.nome}</span>
-                  <span className="text-[10px] text-slate-500 block">{selectedInstructor.email}</span>
+                  <span className="text-xs text-slate-500 block">{selectedInstructor.email}</span>
                 </div>
-                <span className="px-2 py-1 rounded bg-blue-100 font-mono text-blue-800 font-bold text-[10px]">
+                <span className="px-2 py-1 rounded bg-blue-100 font-mono text-blue-800 font-bold text-xs">
                   {selectedInstructor.id.replace('usr_', '').toUpperCase()}
                 </span>
               </div>
@@ -491,7 +491,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
                     </option>
                   ))}
                 </select>
-                <p className="text-[10px] text-slate-500">
+                <p className="text-xs text-slate-500">
                   Ou selecione manualmente na lista acima caso não tenha o código em mãos.
                 </p>
               </div>
@@ -525,7 +525,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
                 }`}
               />
               {ageCheck && (
-                <p className={`mt-1 text-[11px] font-semibold ${ageCheck.valid ? 'text-emerald-600' : 'text-red-600'}`}>
+                <p className={`mt-1 text-xs font-semibold ${ageCheck.valid ? 'text-emerald-600' : 'text-red-600'}`}>
                   {ageCheck.valid ? `✓ Idade confirmada: ${ageCheck.age} anos (Maior de idade)` : `✗ Idade calculada: ${ageCheck.age} anos (Menor de 18 anos)`}
                 </p>
               )}
@@ -604,14 +604,14 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
                         <div className="space-y-1 min-w-0 flex-1">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="font-bold text-slate-900 text-xs">{pkg.nome}</span>
-                            <span className="px-1.5 py-0.2 rounded bg-slate-900 text-white font-mono text-[10px] shrink-0">
+                            <span className="px-1.5 py-0.2 rounded bg-slate-900 text-white font-mono text-xs shrink-0">
                               CNH {pkg.categoriaCnh}
                             </span>
                           </div>
-                          <p className="text-[11px] text-slate-600 leading-snug">
+                          <p className="text-xs text-slate-600 leading-snug">
                             {pkg.totalAulas} aulas práticas · {pkg.descricao || 'Curso prático'}
                           </p>
-                          <span className="inline-block text-[10px] text-blue-700 font-semibold leading-tight">
+                          <span className="inline-block text-xs text-blue-700 font-semibold leading-tight">
                             {pkg.formaPagamento === 'A_VISTA'
                               ? 'Pagamento à vista (PIX / Dinheiro)'
                               : pkg.formaPagamento === 'PARCELADO_CARTAO'
@@ -626,7 +626,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
                           <span className="font-mono font-extrabold text-sm text-slate-900 block whitespace-nowrap">
                             {formatCurrencyBRL(pkg.valorCentavos)}
                           </span>
-                          <span className={`text-[10px] font-bold ${isSelected ? 'text-blue-600' : 'text-slate-400'}`}>
+                          <span className={`text-xs font-bold ${isSelected ? 'text-blue-600' : 'text-slate-400'}`}>
                             {isSelected ? '✓ Selecionado' : 'Selecionar'}
                           </span>
                         </div>
@@ -635,7 +635,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
                   })}
                 </div>
               ) : (
-                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-600 text-[11px]">
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-600 text-xs">
                   Pacote Padrão de 20 Aulas Práticas (R$ 1.800,00) com flexibilidade total de pagamento.
                 </div>
               )}
@@ -651,7 +651,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
                     <button
                       type="button"
                       onClick={handleRemoveCoupon}
-                      className="text-[10px] text-red-600 hover:underline cursor-pointer"
+                      className="text-xs text-red-600 hover:underline cursor-pointer"
                     >
                       Remover
                     </button>
@@ -681,7 +681,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
                       <span className="font-mono font-bold text-emerald-900 text-xs block">
                         CUPOM ATIVO: {appliedCoupon.codigo}
                       </span>
-                      <span className="text-[11px] text-emerald-700 font-medium">
+                      <span className="text-xs text-emerald-700 font-medium">
                         {couponResult?.resumo} (Valor a pagar: {formatCurrencyBRL(couponResult?.valorFinalCentavos || 0)})
                       </span>
                     </div>
@@ -689,8 +689,8 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
                   </div>
                 )}
 
-                {couponError && <p className="text-[11px] text-red-600 font-medium">{couponError}</p>}
-                {couponSuccess && !couponError && <p className="text-[11px] text-emerald-700 font-medium">{couponSuccess}</p>}
+                {couponError && <p className="text-xs text-red-600 font-medium">{couponError}</p>}
+                {couponSuccess && !couponError && <p className="text-xs text-emerald-700 font-medium">{couponSuccess}</p>}
               </div>
             </div>
 

@@ -79,7 +79,7 @@ export const OrganizationAccessKeyModal: React.FC<OrganizationAccessKeyModalProp
             </div>
             <div>
               <h2 className="text-base font-bold text-white">Chave de Acesso & Envio</h2>
-              <p className="text-[11px] text-slate-300">{organization.nome}</p>
+              <p className="text-xs text-slate-300">{organization.nome}</p>
             </div>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-white p-1 cursor-pointer">
@@ -91,7 +91,7 @@ export const OrganizationAccessKeyModal: React.FC<OrganizationAccessKeyModalProp
         <div className="p-5 sm:p-6 space-y-5 text-xs flex-1 overflow-y-auto">
           {/* Card da Chave em Destaque */}
           <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-white p-5 rounded-2xl border border-indigo-200 text-center space-y-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700">
+            <span className="text-xs font-bold uppercase tracking-wider text-indigo-700">
               Chave de Acesso Oficial do Tenant
             </span>
             <div className="flex items-center justify-center gap-2">
@@ -106,13 +106,13 @@ export const OrganizationAccessKeyModal: React.FC<OrganizationAccessKeyModalProp
                 {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
               </button>
             </div>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-xs text-slate-500">
               {copied ? '✅ Chave copiada com sucesso!' : 'Clique no ícone para copiar para a área de transferência.'}
             </p>
           </div>
 
           {/* Botão de Regeneração */}
-          <div className="flex justify-between items-center text-[11px] text-slate-500 px-1">
+          <div className="flex justify-between items-center text-xs text-slate-500 px-1">
             <span>
               Gerada em: {organization.chaveAcessoGeradaEm ? formatDateBR(organization.chaveAcessoGeradaEm) : 'Hoje'}
             </span>
@@ -128,7 +128,7 @@ export const OrganizationAccessKeyModal: React.FC<OrganizationAccessKeyModalProp
 
           {/* Envio por WhatsApp / E-mail */}
           <div className="space-y-3 pt-2 border-t border-slate-100">
-            <span className="font-bold text-slate-900 uppercase text-[10px] tracking-wider block">
+            <span className="font-bold text-slate-900 uppercase text-xs font-bold text-slate-700 tracking-wider block">
               Encaminhar Credenciais de Acesso ao Usuário
             </span>
 
@@ -152,7 +152,7 @@ export const OrganizationAccessKeyModal: React.FC<OrganizationAccessKeyModalProp
           </div>
 
           {/* Pré-visualização da Mensagem */}
-          <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-1.5 text-[11px]">
+          <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-1.5 text-xs">
             <span className="font-bold text-slate-700 block">Prévia da Mensagem Formatada:</span>
             <pre className="whitespace-pre-wrap font-sans text-slate-600 bg-white p-2.5 rounded-xl border border-slate-200">
               {mensagemWhatsApp}

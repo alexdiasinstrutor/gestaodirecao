@@ -136,7 +136,7 @@ export const StudentTransferModal: React.FC<StudentTransferModalProps> = ({
               <ShieldAlert className="w-4 h-4 text-blue-600" />
               <span>Regra de Vínculo: 1 Aluno (CPF) acondicionado a 1 Instrutor</span>
             </div>
-            <p className="text-[11px] text-blue-800 leading-relaxed">
+            <p className="text-xs text-blue-800 leading-relaxed">
               O aluno é condicionado exclusivamente a apenas um instrutor ativo por vez. Ao transferir, o novo instrutor assumirá a gestão da agenda e o progresso prático. <strong>Todo o histórico anterior de aulas, notas, pagamentos e pareceres será 100% preservado</strong> para auditoria.
             </p>
           </div>
@@ -145,15 +145,15 @@ export const StudentTransferModal: React.FC<StudentTransferModalProps> = ({
           <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-[10px] uppercase font-bold text-slate-500">Aluno Selecionado</span>
+                <span className="text-xs uppercase font-bold font-bold text-slate-500">Aluno Selecionado</span>
                 <p className="text-sm font-extrabold text-slate-900">{student.nome}</p>
               </div>
-              <span className="px-2.5 py-1 rounded-lg bg-slate-200 font-mono text-[11px] font-bold text-slate-700">
+              <span className="px-2.5 py-1 rounded-lg bg-slate-200 font-mono text-xs font-bold text-slate-700">
                 {student.cpfMascarado}
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-slate-200 text-[11px]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-slate-200 text-xs">
               <div>
                 <span className="text-slate-500 block">Instrutor Atual:</span>
                 <span className="font-bold text-slate-800">{currentInstructor?.nome || 'Instrutor Atual'}</span>
@@ -191,7 +191,7 @@ export const StudentTransferModal: React.FC<StudentTransferModalProps> = ({
                 </select>
 
                 {targetInstructor && (
-                  <p className="text-[11px] text-emerald-700 flex items-center gap-1 font-medium">
+                  <p className="text-xs text-emerald-700 flex items-center gap-1 font-medium">
                     <UserCheck className="w-3.5 h-3.5" />
                     Destinatário homologado: {targetInstructor.nome}
                   </p>
@@ -211,7 +211,7 @@ export const StudentTransferModal: React.FC<StudentTransferModalProps> = ({
                   key={reason}
                   type="button"
                   onClick={() => setTransferReason(reason)}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                     transferReason === reason
                       ? 'bg-blue-600 text-white'
                       : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300'
@@ -234,16 +234,16 @@ export const StudentTransferModal: React.FC<StudentTransferModalProps> = ({
           {/* Previous transfer history if any */}
           {student.historicoTransferencias && student.historicoTransferencias.length > 0 && (
             <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
-              <span className="font-bold text-slate-700 text-[10px] uppercase block">
+              <span className="font-bold text-slate-700 text-xs uppercase font-bold block">
                 Histórico de Transferências Anteriores ({student.historicoTransferencias.length})
               </span>
-              <div className="space-y-1 text-[11px] text-slate-600 max-h-24 overflow-y-auto">
+              <div className="space-y-1 text-xs text-slate-600 max-h-24 overflow-y-auto">
                 {student.historicoTransferencias.map((trf) => (
                   <div key={trf.id} className="p-1.5 bg-white rounded border border-slate-200">
                     <span className="font-semibold text-slate-800">
                       De {trf.instrutorAnteriorNome} para {trf.instrutorNovoNome}
                     </span>
-                    <p className="text-[10px] text-slate-500">
+                    <p className="text-xs text-slate-500">
                       {formatDateBR(trf.dataTransferencia.slice(0, 10))} · Motivo: {trf.motivo} (Autor: {trf.autorNome})
                     </p>
                   </div>

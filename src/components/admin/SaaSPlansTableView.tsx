@@ -77,7 +77,7 @@ export const SaaSPlansTableView: React.FC = () => {
       <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white p-6 rounded-2xl shadow-md border border-purple-800/40">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded-full">
+            <span className="text-xs font-bold uppercase tracking-wider text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded-full">
               Gestão de Planos & Assinaturas SaaS
             </span>
             <h2 className="text-xl sm:text-2xl font-black text-white">
@@ -131,7 +131,7 @@ export const SaaSPlansTableView: React.FC = () => {
               <div className="absolute top-4 right-4">
                 <button
                   onClick={() => handleOpenEdit(p)}
-                  className="flex items-center gap-1 px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-[10px] font-bold cursor-pointer shadow-xs transition-colors"
+                  className="flex items-center gap-1 px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold cursor-pointer shadow-xs transition-colors"
                 >
                   <Pencil className="w-3 h-3" />
                   <span>Editar Plano</span>
@@ -139,12 +139,12 @@ export const SaaSPlansTableView: React.FC = () => {
               </div>
 
               <div className="space-y-2 pr-16">
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${p.corBadge}`}>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${p.corBadge}`}>
                   {p.id}
                 </span>
 
                 <h3 className="text-base font-bold text-slate-900">{p.nome}</h3>
-                <p className="text-[11px] text-slate-500 min-h-[32px]">{p.tagline}</p>
+                <p className="text-xs text-slate-500 min-h-[32px]">{p.tagline}</p>
 
                 <div className="pt-2 border-t border-slate-100">
                   <span className="text-2xl font-black font-mono text-slate-900">
@@ -157,7 +157,7 @@ export const SaaSPlansTableView: React.FC = () => {
                   )}
                 </div>
 
-                <div className="text-[11px] space-y-1 pt-1 font-medium text-slate-600">
+                <div className="text-xs space-y-1 pt-1 font-medium text-slate-600">
                   <div className="flex justify-between">
                     <span>Limite de Alunos:</span>
                     <strong className="text-slate-900">
@@ -177,14 +177,14 @@ export const SaaSPlansTableView: React.FC = () => {
                 </div>
 
                 <div className="pt-2 border-t border-slate-100 space-y-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
                     Módulos Liberados: {p.modulosPermitidos.length} módulos
                   </span>
                 </div>
               </div>
 
               <div className="pt-2">
-                <span className="text-[10px] text-slate-400 italic block">
+                <span className="text-xs text-slate-600 font-medium italic block">
                   Recomendado para: {p.recomendadoPara}
                 </span>
               </div>
@@ -206,7 +206,7 @@ export const SaaSPlansTableView: React.FC = () => {
 
         <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs overflow-x-auto">
           <table className="w-full text-left text-xs min-w-[700px]">
-            <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200 uppercase text-[10px]">
+            <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200 uppercase text-xs font-bold text-slate-700">
               <tr>
                 <th className="py-3 px-4 w-1/3">Módulo / Funcionalidade</th>
                 <th className="py-3 px-3 text-center">Demo</th>
@@ -228,12 +228,12 @@ export const SaaSPlansTableView: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-slate-900">{mod.nome}</span>
                         {mod.badge && (
-                          <span className="px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-800 text-[9px] font-bold">
+                          <span className="px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-800 text-xs font-bold">
                             {mod.badge}
                           </span>
                         )}
                       </div>
-                      <span className="text-[11px] text-slate-400 block mt-0.5">
+                      <span className="text-xs text-slate-600 font-medium block mt-0.5">
                         {mod.descricao}
                       </span>
                     </td>
@@ -292,7 +292,7 @@ export const SaaSPlansTableView: React.FC = () => {
                 </div>
                 <div>
                   <h2 className="text-base font-bold text-white">Editar Plano: {editingPlan.id}</h2>
-                  <p className="text-[11px] text-slate-400">Configure valor, limites e módulos liberados por este plano</p>
+                  <p className="text-xs text-slate-600 font-medium">Configure valor, limites e módulos liberados por este plano</p>
                 </div>
               </div>
               <button onClick={() => setEditingPlan(null)} className="text-slate-400 hover:text-white p-1 cursor-pointer">
@@ -402,7 +402,7 @@ export const SaaSPlansTableView: React.FC = () => {
 
               {/* Módulos Liberados */}
               <div className="pt-3 border-t border-slate-200 space-y-2">
-                <span className="font-bold text-slate-900 uppercase text-[10px] tracking-wider block">
+                <span className="font-bold text-slate-900 uppercase text-xs font-bold text-slate-700 tracking-wider block">
                   Módulos Liberados por este Plano ({editingPlan.modulosPermitidos.length} de {ALL_SYSTEM_MODULES.length})
                 </span>
 
@@ -431,7 +431,7 @@ export const SaaSPlansTableView: React.FC = () => {
                           <span className={`font-semibold block ${isSelected ? 'text-slate-900' : 'text-slate-500'}`}>
                             {mod.nome}
                           </span>
-                          <span className="text-[10px] text-slate-400 line-clamp-1">{mod.descricao}</span>
+                          <span className="text-xs text-slate-600 font-medium line-clamp-1">{mod.descricao}</span>
                         </div>
                       </button>
                     );

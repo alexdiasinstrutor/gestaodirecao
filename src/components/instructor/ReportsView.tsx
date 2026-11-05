@@ -139,7 +139,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ currentOrg, currentUse
           <p className="font-bold text-blue-950">
             Dica para salvar em PDF no computador ou celular:
           </p>
-          <p className="text-slate-600 text-[11px] leading-relaxed">
+          <p className="text-slate-600 text-xs leading-relaxed">
             Ao clicar no botão <strong>"Exportar / Salvar como PDF"</strong>, a janela de impressão abrirá. No campo <em>"Destino"</em> ou <em>"Impressora"</em>, selecione <strong>"Salvar como PDF"</strong> (ou <em>"Save as PDF"</em>). O documento já está configurado com folha A4, margens ideais, remoção de menus desnecessários e bloco de autenticação.
           </p>
         </div>
@@ -186,7 +186,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ currentOrg, currentUse
         {/* Student picker if individual report selected */}
         {reportType === 'STUDENT_CARD' && (
           <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-xl border border-slate-300 w-full sm:w-auto">
-            <span className="text-[11px] font-semibold text-slate-500 whitespace-nowrap">Aluno:</span>
+            <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">Aluno:</span>
             <select
               value={selectedStudentId}
               onChange={(e) => setSelectedStudentId(e.target.value)}
@@ -220,18 +220,18 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ currentOrg, currentUse
                 <p className="text-xs text-slate-600 font-medium">
                   {currentOrg.tipo === 'AUTOESCOLA_CFC' ? 'Centro de Formação de Condutores Credenciado' : 'Instrutoria Autônoma Credenciada Detran'} · CNPJ/CPF: {currentOrg.cnpjCpf}
                 </p>
-                <p className="text-[11px] text-slate-500">
+                <p className="text-xs text-slate-500">
                   {currentOrg.cidade} - {currentOrg.estado} · Tel: {currentOrg.telefone} · E-mail: {currentOrg.email}
                 </p>
               </div>
             </div>
 
             <div className="text-left sm:text-right text-xs text-slate-600 space-y-0.5 border-t sm:border-t-0 pt-2 sm:pt-0 w-full sm:w-auto">
-              <span className="inline-block px-2 py-0.5 rounded bg-slate-100 font-mono text-[10px] font-bold border border-slate-300">
+              <span className="inline-block px-2 py-0.5 rounded bg-slate-100 font-mono text-xs font-bold border border-slate-300">
                 VIA OFICIAL · PDF
               </span>
               <p className="font-semibold text-slate-900 mt-1">Data: {new Date().toLocaleDateString('pt-BR')}</p>
-              <p className="text-[10px] text-slate-500 font-mono">Autenticação: AGD-DOC-{orgId.slice(-6).toUpperCase()}</p>
+              <p className="text-xs text-slate-500 font-mono">Autenticação: AGD-DOC-{orgId.slice(-6).toUpperCase()}</p>
             </div>
           </div>
         </div>
@@ -255,19 +255,19 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ currentOrg, currentUse
             {/* KPI Summary Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 print:gap-2">
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 print-card">
-                <span className="text-[11px] text-slate-600 font-semibold block">Total de Alunos</span>
+                <span className="text-xs text-slate-600 font-semibold block">Total de Alunos</span>
                 <p className="text-xl font-black text-slate-900 font-mono mt-0.5">{students.length}</p>
               </div>
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 print-card">
-                <span className="text-[11px] text-slate-600 font-semibold block">Aulas Cumpridas</span>
+                <span className="text-xs text-slate-600 font-semibold block">Aulas Cumpridas</span>
                 <p className="text-xl font-black text-slate-900 font-mono mt-0.5">{totalAulasCumpridas}</p>
               </div>
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 print-card">
-                <span className="text-[11px] text-slate-600 font-semibold block">Aptos p/ Prova Prática</span>
+                <span className="text-xs text-slate-600 font-semibold block">Aptos p/ Prova Prática</span>
                 <p className="text-xl font-black text-emerald-800 font-mono mt-0.5">{alunosAptosExame.length}</p>
               </div>
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 print-card">
-                <span className="text-[11px] text-slate-600 font-semibold block">Taxa de Prontidão</span>
+                <span className="text-xs text-slate-600 font-semibold block">Taxa de Prontidão</span>
                 <p className="text-xl font-black text-blue-900 font-mono mt-0.5">
                   {students.length > 0 ? Math.round((alunosAptosExame.length / students.length) * 100) : 0}%
                 </p>
@@ -277,7 +277,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ currentOrg, currentUse
             {/* Table of Students */}
             <div className="border border-slate-300 rounded-xl overflow-x-auto print:overflow-visible print-break-inside shadow-2xs">
               <table className="w-full text-left text-xs min-w-[700px]">
-                <thead className="bg-slate-100 text-slate-900 font-bold border-b border-slate-300 uppercase text-[10px]">
+                <thead className="bg-slate-100 text-slate-900 font-bold border-b border-slate-300 uppercase text-xs font-bold text-slate-700">
                   <tr>
                     <th className="py-2.5 px-3">Nome do Aluno</th>
                     <th className="py-2.5 px-3">CPF</th>
@@ -295,7 +295,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ currentOrg, currentUse
                   {students.map((s) => (
                     <tr key={s.id}>
                       <td className="py-2.5 px-3 font-bold text-slate-900">{s.nome}</td>
-                      <td className="py-2.5 px-3 font-mono text-[11px] text-slate-600">{s.cpfMascarado}</td>
+                      <td className="py-2.5 px-3 font-mono text-xs text-slate-600">{s.cpfMascarado}</td>
                       <td className="py-2.5 px-3">{s.idade} anos</td>
                       <td className="py-2.5 px-3 font-bold text-blue-900">Cat. {s.categoriaCnh}</td>
                       <td className="py-2.5 px-3 font-mono font-semibold">
@@ -395,7 +395,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ currentOrg, currentUse
               <h4 className="font-bold text-slate-900 text-xs uppercase">Recebimentos no Período</h4>
               <div className="border border-slate-300 rounded-xl overflow-x-auto print:overflow-visible shadow-2xs">
                 <table className="w-full text-left text-xs min-w-[550px]">
-                  <thead className="bg-slate-100 text-slate-900 font-bold border-b border-slate-300 uppercase text-[10px]">
+                  <thead className="bg-slate-100 text-slate-900 font-bold border-b border-slate-300 uppercase text-xs font-bold text-slate-700">
                     <tr>
                       <th className="py-2 px-3">Data</th>
                       <th className="py-2 px-3">Aluno</th>
@@ -409,10 +409,10 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ currentOrg, currentUse
                       const student = students.find((s) => s.id === p.alunoId);
                       return (
                         <tr key={p.id}>
-                          <td className="py-2 px-3 font-mono text-[11px]">{formatDateBR(p.dataPagamento)}</td>
+                          <td className="py-2 px-3 font-mono text-xs">{formatDateBR(p.dataPagamento)}</td>
                           <td className="py-2 px-3 font-bold text-slate-900">{student?.nome}</td>
                           <td className="py-2 px-3">{p.metodo} {p.parcelas ? `(${p.parcelas}x)` : ''}</td>
-                          <td className="py-2 px-3 font-mono text-slate-600 text-[11px]">{p.comprovanteNumero || 'AUT-PIX'}</td>
+                          <td className="py-2 px-3 font-mono text-slate-600 text-xs">{p.comprovanteNumero || 'AUT-PIX'}</td>
                           <td className="py-2 px-3 text-right font-mono font-bold text-slate-900">{formatCurrencyBRL(p.valorCentavos)}</td>
                         </tr>
                       );
@@ -495,7 +495,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ currentOrg, currentUse
               </h4>
               <div className="border border-slate-300 rounded-xl overflow-x-auto print:overflow-visible shadow-2xs">
                 <table className="w-full text-left text-xs min-w-[500px]">
-                  <thead className="bg-slate-100 text-slate-900 font-bold border-b border-slate-300 uppercase text-[10px]">
+                  <thead className="bg-slate-100 text-slate-900 font-bold border-b border-slate-300 uppercase text-xs font-bold text-slate-700">
                     <tr>
                       <th className="py-2.5 px-3">Competência Avaliada</th>
                       <th className="py-2.5 px-3 text-center">Nota (0 a 10)</th>
@@ -535,7 +535,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ currentOrg, currentUse
             {/* Instructor Notes */}
             {selectedStudent.observacoesInstrutor && (
               <div className="p-3.5 border border-slate-300 rounded-xl bg-slate-50 print-card space-y-1 text-xs">
-                <span className="font-bold text-slate-900 block uppercase tracking-wider text-[10px]">
+                <span className="font-bold text-slate-900 block uppercase tracking-wider text-xs">
                   Parecer Técnico e Observações do Instrutor de Trânsito:
                 </span>
                 <p className="text-slate-800 italic leading-relaxed">
@@ -553,7 +553,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ currentOrg, currentUse
               {selectedStudent.historicoTransferencias && selectedStudent.historicoTransferencias.length > 0 ? (
                 <div className="border border-slate-300 rounded-xl overflow-x-auto print:overflow-visible shadow-2xs">
                   <table className="w-full text-left text-xs min-w-[550px]">
-                    <thead className="bg-slate-100 text-slate-900 font-bold border-b border-slate-300 uppercase text-[10px]">
+                    <thead className="bg-slate-100 text-slate-900 font-bold border-b border-slate-300 uppercase text-xs font-bold text-slate-700">
                       <tr>
                         <th className="py-2 px-3">Data</th>
                         <th className="py-2 px-3">Instrutor Anterior</th>
@@ -566,7 +566,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ currentOrg, currentUse
                     <tbody className="divide-y divide-slate-200">
                       {selectedStudent.historicoTransferencias.map((trf) => (
                         <tr key={trf.id}>
-                          <td className="py-2 px-3 font-mono font-bold text-[11px]">{formatDateBR(trf.dataTransferencia.slice(0, 10))}</td>
+                          <td className="py-2 px-3 font-mono font-bold text-xs">{formatDateBR(trf.dataTransferencia.slice(0, 10))}</td>
                           <td className="py-2 px-3">{trf.instrutorAnteriorNome}</td>
                           <td className="py-2 px-3 font-bold text-blue-900">{trf.instrutorNovoNome}</td>
                           <td className="py-2 px-3 font-mono">{trf.aulasCumpridasAteTransferencia} aulas</td>
@@ -578,7 +578,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ currentOrg, currentUse
                   </table>
                 </div>
               ) : (
-                <div className="p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-[11px] text-slate-600 flex items-center gap-2">
+                <div className="p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-xs text-slate-600 flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                   <span>Vínculo original direto com o instrutor atual. Sem transferências anteriores registradas.</span>
                 </div>
@@ -595,20 +595,20 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ currentOrg, currentUse
             <div className="space-y-1.5">
               <div className="border-b border-slate-900 w-3/4 mx-auto pb-1" />
               <p className="font-bold text-slate-900">{currentUser.nome}</p>
-              <p className="text-[11px] text-slate-600">Instrutor de Trânsito Credenciado · Detran</p>
+              <p className="text-xs text-slate-600">Instrutor de Trânsito Credenciado · Detran</p>
             </div>
             <div className="space-y-1.5">
               <div className="border-b border-slate-900 w-3/4 mx-auto pb-1" />
               <p className="font-bold text-slate-900">
                 {reportType === 'STUDENT_CARD' && selectedStudent ? selectedStudent.nome : 'Diretoria de Ensino / CFC'}
               </p>
-              <p className="text-[11px] text-slate-600">
+              <p className="text-xs text-slate-600">
                 {reportType === 'STUDENT_CARD' ? 'Assinatura do Aluno Condutor' : 'Visto e Homologação da Instituição'}
               </p>
             </div>
           </div>
 
-          <div className="text-center text-[10px] text-slate-500 space-y-0.5 pt-2">
+          <div className="text-center text-xs text-slate-500 space-y-0.5 pt-2">
             <p>
               Documento emitido eletronicamente pela plataforma <strong>Sistema de Administração de Gestão de Direção</strong> sob as diretrizes do CTB e Resoluções CONTRAN.
             </p>

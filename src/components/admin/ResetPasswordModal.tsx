@@ -72,7 +72,7 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
             </div>
             <div>
               <h2 className="text-base font-bold text-white">Reset de Senha de Usuário</h2>
-              <p className="text-[11px] text-slate-300">{targetUser.nome} ({targetUser.email})</p>
+              <p className="text-xs text-slate-300">{targetUser.nome} ({targetUser.email})</p>
             </div>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-white p-1 cursor-pointer">
@@ -99,7 +99,7 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
           ) : (
             <div className="space-y-4">
               <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl text-center space-y-2">
-                <span className="text-[10px] uppercase font-bold text-amber-800 tracking-wider">
+                <span className="text-xs uppercase font-bold font-bold text-amber-800 tracking-wider">
                   Nova Senha Temporária Gerada
                 </span>
                 <div className="flex items-center justify-center gap-2">
@@ -114,7 +114,7 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
                     {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
                   </button>
                 </div>
-                <p className="text-[11px] text-amber-900">
+                <p className="text-xs text-amber-900">
                   {copied ? '✅ Senha copiada!' : 'Copie ou envie abaixo pelos canais de contato.'}
                 </p>
               </div>
@@ -140,7 +140,7 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
               <div className="text-center pt-2">
                 <button
                   onClick={handleGenerateReset}
-                  className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                  className="text-xs text-slate-500 hover:text-slate-800 underline cursor-pointer"
                 >
                   Gerar outra senha diferente
                 </button>
