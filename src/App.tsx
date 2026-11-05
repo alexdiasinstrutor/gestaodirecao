@@ -75,6 +75,34 @@ export default function App() {
   const [showSecurityAgentsModal, setShowSecurityAgentsModal] = useState<boolean>(false);
   const [showPixConfigModal, setShowPixConfigModal] = useState<boolean>(false);
 
+  // Parâmetros de link de convite (Deep link / URL Query)
+  const [inviteParams, setInviteParams] = useState<{
+    instrutorId?: string;
+    cupom?: string;
+    convite?: string;
+  } | null>(null);
+
+  // Detecção de Link de Convite na URL ao iniciar
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const convite = params.get('convite');
+      const instrutorId = params.get('instrutorId');
+      const cupom = params.get('cupom');
+
+      if (convite || instrutorId || cupom) {
+        setInviteParams({
+          convite: convite || undefined,
+          instrutorId: instrutorId || undefined,
+          cupom: cupom || undefined
+        });
+        setShowStudentSelfRegisterModal(true);
+      }
+    } catch (e) {
+      console.warn('Erro ao ler query params da URL:', e);
+    }
+  }, []);
+
   const { isOnline, isSyncing, pendingCount, triggerSync } = useOnlineStatus();
   const {
     deviceType,
@@ -151,9 +179,15 @@ export default function App() {
 
         {showStudentSelfRegisterModal && (
           <StudentSelfRegisterModal
-            onClose={() => setShowStudentSelfRegisterModal(false)}
+            defaultInstructorId={inviteParams?.instrutorId}
+            defaultCouponCode={inviteParams?.cupom}
+            onClose={() => {
+              setShowStudentSelfRegisterModal(false);
+              setInviteParams(null);
+            }}
             onRegistered={(student, user) => {
               setShowStudentSelfRegisterModal(false);
+              setInviteParams(null);
               finalizeLogin(user);
             }}
           />

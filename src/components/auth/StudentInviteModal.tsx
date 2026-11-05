@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { X, Send, Copy, Check, MessageSquare, Link, Share2, Sparkles, Mail } from 'lucide-react';
+import { X, Send, Copy, Check, MessageSquare, Link, Share2, Sparkles, Mail, Ticket } from 'lucide-react';
 import { buildWhatsAppLink } from '../../lib/whatsapp';
+import { db } from '../../lib/storage';
+import { describeCoupon } from '../../lib/coupons';
 import { User, Organization } from '../../types';
 
 interface StudentInviteModalProps {
@@ -22,11 +24,24 @@ export const StudentInviteModal: React.FC<StudentInviteModalProps> = ({
   const [studentName, setStudentName] = useState<string>('');
   const [emailSentNotice, setEmailSentNotice] = useState<boolean>(false);
 
+  // Cupons do instrutor para vincular opcionalmente ao convite
+  const instructorCoupons = db
+    .getCoupons({ escopo: 'ALUNO', instrutorId: instructor.id })
+    .filter((c) => c.ativo);
+
+  const [selectedCouponCode, setSelectedCouponCode] = useState<string>('');
+
   const token = `inv_${instructor.id.slice(-6)}_${Date.now().toString(36)}`;
   const referralCode = instructor.id.replace('usr_', '').toUpperCase();
-  const inviteUrl = `${window.location.origin}/?convite=${token}&instrutorId=${instructor.id}&instrutor=${encodeURIComponent(instructor.nome)}`;
 
-  const inviteMessage = `Olá${studentName ? `, ${studentName}` : ''}! 🚗💨\n\nAqui é o instrutor *${instructor.nome}* da *${org.nome}*.\n\nPara agilizar a sua matrícula e liberar o seu agendamento de aulas práticas de direção, clique no link abaixo para realizar seu auto-cadastro:\n\n👉 ${inviteUrl}\n\nCódigo de Indicação do Instrutor: ${referralCode}\n\n*(Lembrete: obrigatório ter mais de 18 anos completos e portar documento de identidade / CPF)*. Te aguardo nas aulas!`;
+  const couponParam = selectedCouponCode ? `&cupom=${encodeURIComponent(selectedCouponCode)}` : '';
+  const inviteUrl = `${window.location.origin}/?convite=${token}&instrutorId=${instructor.id}&instrutor=${encodeURIComponent(instructor.nome)}${couponParam}`;
+
+  const couponBonusText = selectedCouponCode
+    ? `\n🎁 *Cupom de Desconto Especial Incluso:* Use o código *${selectedCouponCode}* para garantir seu desconto!`
+    : '';
+
+  const inviteMessage = `Olá${studentName ? `, ${studentName}` : ''}! 🚗💨\n\nAqui é o instrutor *${instructor.nome}* da *${org.nome}*.\n\nPara agilizar a sua matrícula e liberar o seu agendamento de aulas práticas de direção, clique no link abaixo para realizar seu auto-cadastro:\n\n👉 ${inviteUrl}\n\nCódigo de Indicação do Instrutor: *${referralCode}*${couponBonusText}\n\n*(Lembrete: obrigatório ter mais de 18 anos completos e portar documento de identidade / CPF)*. Te aguardo nas aulas!`;
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(inviteUrl);
@@ -62,10 +77,10 @@ export const StudentInviteModal: React.FC<StudentInviteModalProps> = ({
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-bold text-white">Link de Convite do Aluno</h2>
-              <p className="text-xs text-slate-300">Vinculação direta e obrigatória ao instrutor</p>
+              <p className="text-xs text-slate-300">Vinculação direta por link ou código de indicação</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white p-1 rounded-lg">
+          <button onClick={onClose} className="text-slate-400 hover:text-white p-1 rounded-lg cursor-pointer">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -79,12 +94,39 @@ export const StudentInviteModal: React.FC<StudentInviteModalProps> = ({
               <p className="text-xs font-semibold text-slate-800">{instructor.nome}</p>
             </div>
             <div className="text-right">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">Código</span>
-              <span className="font-mono font-extrabold text-blue-700 text-xs px-2 py-0.5 rounded bg-blue-100">
+              <span className="text-[10px] uppercase font-bold text-slate-400 block">Código para o Aluno</span>
+              <span className="font-mono font-extrabold text-blue-700 text-xs px-2.5 py-1 rounded bg-blue-100 border border-blue-200 inline-block">
                 {referralCode}
               </span>
             </div>
           </div>
+
+          {/* Opção de incluir cupom de desconto junto ao convite */}
+          {instructorCoupons.length > 0 && (
+            <div className="p-3 bg-purple-50/70 border border-purple-200 rounded-xl space-y-2">
+              <div className="flex items-center gap-1.5 font-bold text-purple-900 text-xs">
+                <Ticket className="w-3.5 h-3.5 text-purple-600" />
+                <span>Incluir Cupom de Desconto no Convite? (Opcional)</span>
+              </div>
+              <select
+                value={selectedCouponCode}
+                onChange={(e) => setSelectedCouponCode(e.target.value)}
+                className="w-full px-3 py-2 bg-white border border-purple-200 rounded-xl text-xs font-medium focus:outline-none focus:border-purple-600"
+              >
+                <option value="">Nenhum cupom (Valor padrão do pacote)</option>
+                {instructorCoupons.map((c) => (
+                  <option key={c.id} value={c.codigo}>
+                    {c.codigo} — {describeCoupon(c)}
+                  </option>
+                ))}
+              </select>
+              {selectedCouponCode && (
+                <p className="text-[10px] text-purple-700 font-semibold">
+                  ✓ O código do cupom será injetado no link e na mensagem para aplicação automática.
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="space-y-3">
             <div>
@@ -164,27 +206,24 @@ export const StudentInviteModal: React.FC<StudentInviteModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2">
             <button
               onClick={handleSendWhatsApp}
-              className="flex items-center justify-center gap-2 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold shadow-xs transition-colors cursor-pointer"
+              className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold cursor-pointer transition-colors shadow-sm"
             >
               <Send className="w-4 h-4" />
               <span>WhatsApp</span>
             </button>
             <button
               onClick={handleSendEmail}
-              className="flex items-center justify-center gap-2 py-2.5 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold shadow-xs transition-colors cursor-pointer"
+              className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold cursor-pointer transition-colors shadow-sm"
             >
               <Mail className="w-4 h-4" />
-              <span>Por E-mail</span>
+              <span>E-mail</span>
             </button>
             <button
-              onClick={() => {
-                onClose();
-                onSimulateOpenInvite();
-              }}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded-xl font-semibold transition-colors cursor-pointer"
+              onClick={handleCopyLink}
+              className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold cursor-pointer transition-colors shadow-sm"
             >
-              <Sparkles className="w-4 h-4 text-amber-500" />
-              <span>Simular Tela</span>
+              <Copy className="w-4 h-4" />
+              <span>Copiar Texto</span>
             </button>
           </div>
         </div>

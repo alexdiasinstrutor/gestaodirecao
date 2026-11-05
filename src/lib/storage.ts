@@ -1139,6 +1139,32 @@ export const db = {
     return readList<User>(STORAGE_KEYS.USERS).find((u) => u.email.toLowerCase() === clean);
   },
 
+  /**
+   * Localiza um instrutor credenciado a partir do ID completo ou código de indicação (ex: 'INSTRUTOR_CARLOS' ou 'usr_instrutor_carlos')
+   */
+  findInstructorByCode(code: string): User | undefined {
+    if (!code) return undefined;
+    const clean = code.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+    const users = readList<User>(STORAGE_KEYS.USERS).filter(
+      (u) => u.papel === 'ADMIN_ORG' || u.papel === 'INSTRUTOR' || u.papel === 'SUPER_ADMIN'
+    );
+
+    // 1. Match exato pelo ID completo (ex: usr_instrutor_carlos)
+    const exactId = users.find((u) => u.id.toLowerCase() === clean);
+    if (exactId) return exactId;
+
+    // 2. Match pelo código sem o prefixo usr_ (ex: instrutor_carlos)
+    const strippedId = users.find((u) => u.id.toLowerCase().replace('usr_', '') === clean);
+    if (strippedId) return strippedId;
+
+    // 3. Match por sufixo ou parte do ID
+    const partialId = users.find((u) => u.id.toLowerCase().includes(clean) || clean.includes(u.id.toLowerCase().replace('usr_', '')));
+    if (partialId) return partialId;
+
+    // 4. Match por e-mail ou nome aproximado
+    return users.find((u) => u.email.toLowerCase().includes(clean) || u.nome.toLowerCase().includes(clean));
+  },
+
   createUser(user: User): void {
     const users = readList<User>(STORAGE_KEYS.USERS);
     users.push(user);
