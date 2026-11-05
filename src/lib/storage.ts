@@ -1447,6 +1447,17 @@ export const db = {
     this.addAuditLog(account.organizacaoId, actorId, 'CRIAR_CONTA_RECEBER', 'ContaReceber', account.id, `${account.descricao} - Valor: R$ ${(account.valorTotalCentavos / 100).toFixed(2)}`);
   },
 
+  updateAccountReceivable(account: AccountReceivable, actorId: string): void {
+    const list = readList<AccountReceivable>(STORAGE_KEYS.ACCOUNTS);
+    const index = list.findIndex((a) => a.id === account.id);
+    if (index >= 0) {
+      list[index] = account;
+      writeList(STORAGE_KEYS.ACCOUNTS, list);
+      supabaseAdapter.saveAccountReceivable(account).catch(console.error);
+      this.addAuditLog(account.organizacaoId, actorId, 'ATUALIZAR_CONTA_RECEBER', 'ContaReceber', account.id, `${account.descricao} - Saldo: R$ ${(account.saldoDevedorCentavos / 100).toFixed(2)} (${account.status})`);
+    }
+  },
+
   // Payments & Amortization
   getPayments(orgId: string): PaymentRecord[] {
     return readList<PaymentRecord>(STORAGE_KEYS.PAYMENTS).filter((p) => p.organizacaoId === orgId);

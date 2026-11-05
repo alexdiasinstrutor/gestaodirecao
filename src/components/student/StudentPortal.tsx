@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Car,
   Calendar,
@@ -15,7 +15,10 @@ import {
   Phone,
   ShieldCheck,
   X,
-  LayoutGrid
+  LayoutGrid,
+  Ticket,
+  Tag,
+  Sparkles
 } from 'lucide-react';
 import { db } from '../../lib/storage';
 import { formatCurrencyBRL, formatDateBR } from '../../lib/validation';
@@ -28,6 +31,7 @@ import {
   AvailableSlot,
   AccountReceivable
 } from '../../types';
+import type { CouponValidationContext } from '../../lib/coupons';
 
 interface StudentPortalProps {
   currentUser: UserType;
@@ -53,7 +57,16 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
   const pixConfig = db.getEffectivePixConfig(currentOrg, instructor);
   const vehicles = db.getVehicles(orgId);
   const lessons = db.getLessonsByStudent(student?.id || '');
-  const accounts = db.getAccountsReceivable(orgId).filter((a) => a.alunoId === student?.id);
+  const [portalVersion, setPortalVersion] = useState<number>(0);
+  const accounts = useMemo(() => {
+    return db.getAccountsReceivable(orgId).filter((a) => a.alunoId === student?.id);
+  }, [orgId, student?.id, portalVersion]);
+
+  // Coupon states for Student
+  const [couponCodeInput, setCouponCodeInput] = useState<string>('');
+  const [couponTargetAccId, setCouponTargetAccId] = useState<string | null>(null);
+  const [couponFeedback, setCouponFeedback] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState<boolean>(false);
 
   // Scheduling states
   const [scheduleDate, setScheduleDate] = useState<string>(
@@ -135,6 +148,78 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
     setShowPixModal(true);
     setPixCopied(false);
     setChaveCopied(false);
+    setCouponFeedback(null);
+    setCouponCodeInput('');
+  };
+
+  const handleApplyStudentCoupon = (targetAccount: AccountReceivable, codeToUse: string) => {
+    setCouponFeedback(null);
+    const cleanCode = codeToUse.trim().toUpperCase();
+    if (!cleanCode) {
+      setCouponFeedback({ text: 'Por favor, digite o código do cupom fornecido pelo seu instrutor.', type: 'error' });
+      return;
+    }
+
+    const ctx: CouponValidationContext = {
+      escopo: 'ALUNO',
+      referenciaId: targetAccount.pacoteId,
+      instrutorId: student?.instrutorId,
+      organizacaoId: orgId
+    };
+
+    const preview = db.previewCoupon(cleanCode, ctx, targetAccount.saldoDevedorCentavos);
+
+    if (!preview.valid || !preview.result || !preview.coupon) {
+      setCouponFeedback({ text: preview.error || 'Cupom inválido ou não aplicável a esta fatura.', type: 'error' });
+      return;
+    }
+
+    setIsApplyingCoupon(true);
+    try {
+      const redeemRes = db.redeemCoupon(
+        preview.coupon.codigo,
+        ctx,
+        targetAccount.saldoDevedorCentavos,
+        {
+          organizacaoId: orgId,
+          alunoId: student?.id
+        },
+        currentUser.id
+      );
+
+      if (!redeemRes.valid || !redeemRes.result) {
+        setCouponFeedback({ text: redeemRes.error || 'Não foi possível resgatar este cupom.', type: 'error' });
+        setIsApplyingCoupon(false);
+        return;
+      }
+
+      const novoSaldo = redeemRes.result.valorFinalCentavos;
+      const descText = ` · Cupom [${preview.coupon.codigo}]: -${formatCurrencyBRL(redeemRes.result.valorDescontoCentavos)}`;
+      const updatedAcc: AccountReceivable = {
+        ...targetAccount,
+        saldoDevedorCentavos: novoSaldo,
+        descricao: `${targetAccount.descricao}${descText}`,
+        status: novoSaldo <= 0 ? 'PAGO' : targetAccount.status
+      };
+
+      db.updateAccountReceivable(updatedAcc, currentUser.id);
+
+      setPortalVersion((v) => v + 1);
+      if (selectedAccountForPix && selectedAccountForPix.id === targetAccount.id) {
+        setSelectedAccountForPix(updatedAcc);
+      }
+
+      setCouponFeedback({
+        text: `🎉 Parabéns! Cupom ${preview.coupon.codigo} aplicado com sucesso! Economia de ${formatCurrencyBRL(redeemRes.result.valorDescontoCentavos)}.`,
+        type: 'success'
+      });
+      setCouponCodeInput('');
+      setCouponTargetAccId(null);
+    } catch (err: any) {
+      setCouponFeedback({ text: err.message || 'Erro ao processar cupom.', type: 'error' });
+    } finally {
+      setIsApplyingCoupon(false);
+    }
   };
 
   const getStudentPixPayload = (acc: AccountReceivable) => {
@@ -495,31 +580,92 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
               {accounts.map((acc) => (
                 <div
                   key={acc.id}
-                  className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                  className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2.5 text-xs shadow-xs"
                 >
-                  <div className="min-w-0">
-                    <p className="font-bold text-slate-900 break-words">{acc.descricao}</p>
-                    <p className="text-[11px] text-slate-500">
-                      Vencimento: {formatDateBR(acc.dataVencimento)} · Saldo: <strong className="text-slate-900 font-mono">{formatCurrencyBRL(acc.saldoDevedorCentavos)}</strong>
-                    </p>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-bold text-slate-900 break-words">{acc.descricao}</p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Vencimento: {formatDateBR(acc.dataVencimento)} · Saldo:{' '}
+                        <strong className="text-slate-900 font-mono">{formatCurrencyBRL(acc.saldoDevedorCentavos)}</strong>
+                      </p>
+                    </div>
+
+                    <div className="w-full sm:w-auto shrink-0 flex items-center gap-2">
+                      {acc.saldoDevedorCentavos > 0 ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCouponTargetAccId(couponTargetAccId === acc.id ? null : acc.id);
+                              setCouponFeedback(null);
+                            }}
+                            className="flex-1 sm:flex-initial flex items-center justify-center gap-1 px-3 py-2 sm:py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl font-bold shadow-xs transition-colors cursor-pointer"
+                            title="Usar cupom de desconto fornecido pelo instrutor"
+                          >
+                            <Ticket className="w-3.5 h-3.5 text-purple-600" />
+                            <span>Usar Cupom</span>
+                          </button>
+                          <button
+                            onClick={() => handleOpenPixModal(acc)}
+                            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 sm:py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold shadow-xs transition-colors cursor-pointer touch-target"
+                          >
+                            <QrCode className="w-3.5 h-3.5" />
+                            <span>Pagar c/ PIX</span>
+                          </button>
+                        </>
+                      ) : (
+                        <span className="text-emerald-700 font-semibold flex items-center justify-center sm:justify-end gap-1 py-1">
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>Quitado</span>
+                        </span>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="w-full sm:w-auto shrink-0">
-                    {acc.saldoDevedorCentavos > 0 ? (
-                      <button
-                        onClick={() => handleOpenPixModal(acc)}
-                        className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3.5 py-2 sm:py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold shadow-xs transition-colors cursor-pointer touch-target"
-                      >
-                        <QrCode className="w-3.5 h-3.5" />
-                        <span>Pagar c/ PIX</span>
-                      </button>
-                    ) : (
-                      <span className="text-emerald-700 font-semibold flex items-center justify-center sm:justify-end gap-1 py-1">
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span>Quitado</span>
-                      </span>
-                    )}
-                  </div>
+                  {/* Formulário Retrátil de Cupom para esta fatura */}
+                  {couponTargetAccId === acc.id && acc.saldoDevedorCentavos > 0 && (
+                    <div className="pt-2 border-t border-purple-100 bg-purple-50/70 p-3 rounded-xl space-y-2">
+                      <div className="flex items-center gap-1.5 text-purple-900 font-bold text-[11px]">
+                        <Tag className="w-3.5 h-3.5 text-purple-600" />
+                        <span>Informe o código do cupom de desconto recebido:</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={couponCodeInput}
+                          onChange={(e) => setCouponCodeInput(e.target.value.toUpperCase())}
+                          placeholder="Ex: PROMO50, ALUNO10"
+                          className="flex-1 px-3 py-1.5 bg-white border border-purple-200 rounded-xl text-xs font-mono font-bold uppercase focus:ring-2 focus:ring-purple-500 focus:outline-hidden"
+                        />
+                        <button
+                          type="button"
+                          disabled={!couponCodeInput.trim() || isApplyingCoupon}
+                          onClick={() => handleApplyStudentCoupon(acc, couponCodeInput)}
+                          className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-xl font-bold text-xs shadow-xs transition-colors cursor-pointer shrink-0"
+                        >
+                          {isApplyingCoupon ? 'Aplicando...' : 'Aplicar'}
+                        </button>
+                      </div>
+
+                      {couponFeedback && (
+                        <div
+                          className={`p-2 rounded-lg text-[11px] flex items-center gap-1.5 ${
+                            couponFeedback.type === 'success'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}
+                        >
+                          {couponFeedback.type === 'success' ? (
+                            <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span>{couponFeedback.text}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -551,11 +697,55 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
             </div>
 
             <div>
-              <p className="text-xs text-slate-500">{selectedAccountForPix.descricao}</p>
+              <p className="text-xs text-slate-500 break-words">{selectedAccountForPix.descricao}</p>
               <p className="text-xl font-extrabold font-mono text-emerald-700 mt-0.5">
                 {formatCurrencyBRL(selectedAccountForPix.saldoDevedorCentavos)}
               </p>
             </div>
+
+            {/* Inserir Cupom de Desconto dentro do Modal PIX */}
+            {selectedAccountForPix.saldoDevedorCentavos > 0 && (
+              <div className="p-3 bg-purple-50/70 border border-purple-200 rounded-2xl text-left space-y-2">
+                <span className="text-[11px] font-bold text-purple-900 flex items-center gap-1">
+                  <Ticket className="w-3.5 h-3.5 text-purple-600" />
+                  <span>Tem cupom de desconto do seu instrutor?</span>
+                </span>
+                <div className="flex gap-1.5">
+                  <input
+                    type="text"
+                    value={couponCodeInput}
+                    onChange={(e) => setCouponCodeInput(e.target.value.toUpperCase())}
+                    placeholder="Código do cupom"
+                    className="flex-1 px-2.5 py-1.5 bg-white border border-purple-200 rounded-xl text-xs font-mono font-bold uppercase focus:ring-2 focus:ring-purple-500 focus:outline-hidden"
+                  />
+                  <button
+                    type="button"
+                    disabled={!couponCodeInput.trim() || isApplyingCoupon}
+                    onClick={() => handleApplyStudentCoupon(selectedAccountForPix, couponCodeInput)}
+                    className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-xl font-bold text-xs shadow-xs transition-colors cursor-pointer shrink-0"
+                  >
+                    {isApplyingCoupon ? '...' : 'Aplicar'}
+                  </button>
+                </div>
+
+                {couponFeedback && (
+                  <div
+                    className={`p-2 rounded-lg text-[11px] flex items-center gap-1.5 ${
+                      couponFeedback.type === 'success'
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-red-100 text-red-800'
+                    }`}
+                  >
+                    {couponFeedback.type === 'success' ? (
+                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                    ) : (
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    )}
+                    <span>{couponFeedback.text}</span>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Chave e Beneficiário Info */}
             <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-left text-xs space-y-1">

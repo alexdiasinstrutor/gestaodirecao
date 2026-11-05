@@ -23,15 +23,17 @@ import {
   FileSpreadsheet,
   Download,
   Receipt,
-  MessageCircle
+  MessageCircle,
+  Ticket
 } from 'lucide-react';
 import { db } from '../../lib/storage';
 import { formatDateBR, formatCurrencyBRL } from '../../lib/validation';
-import type { Student, User, Organization, StudentSkills, PaymentRecord, CnhCategory, AddressFields } from '../../types';
+import type { Student, User, Organization, StudentSkills, PaymentRecord, CnhCategory, AddressFields, AccountReceivable } from '../../types';
 import { CNH_CATEGORIES } from '../../types';
 import { StudentTransferModal } from './StudentTransferModal';
 import { PaymentReceiptModal } from '../common/PaymentReceiptModal';
 import { AddressCepFields } from '../common/AddressCepFields';
+import { ApplyDiscountModal } from '../common/ApplyDiscountModal';
 import type { PaymentReceiptData } from '../../lib/receiptPdfGenerator';
 
 interface StudentsViewProps {
@@ -82,6 +84,11 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   // General Payments Report Modal State
   const [showGeneralPaymentModal, setShowGeneralPaymentModal] = useState<boolean>(false);
   const [generalPeriodFilter, setGeneralPeriodFilter] = useState<'ALL' | 'THIS_MONTH' | 'LAST_MONTH' | 'THIS_YEAR'>('ALL');
+
+  // Discount / Coupon Modal State
+  const [discountAccount, setDiscountAccount] = useState<AccountReceivable | null>(null);
+  const [showDiscountModal, setShowDiscountModal] = useState<boolean>(false);
+  const [studentsVersion, setStudentsVersion] = useState<number>(0);
 
   const filteredStudents = students.filter((s) => {
     const term = searchTerm.toLowerCase();
@@ -606,6 +613,56 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                       </div>
                     </div>
 
+                    {/* Faturas em Aberto & Saldo do Aluno */}
+                    <div className="space-y-2 pt-1">
+                      <span className="font-bold text-slate-900 text-xs block">
+                        Faturas & Cobranças do Plano ({studentAccounts.length}):
+                      </span>
+
+                      {studentAccounts.length > 0 ? (
+                        <div className="space-y-2">
+                          {studentAccounts.map((acc) => (
+                            <div
+                              key={acc.id}
+                              className="p-3 bg-white rounded-xl border border-slate-200 flex flex-col sm:flex-row justify-between sm:items-center gap-2 text-xs shadow-xs"
+                            >
+                              <div className="min-w-0">
+                                <p className="font-bold text-slate-900 break-words">{acc.descricao}</p>
+                                <p className="text-[11px] text-slate-500 mt-0.5">
+                                  Vencimento: {formatDateBR(acc.dataVencimento)} · Total: {formatCurrencyBRL(acc.valorTotalCentavos)} · Saldo:{' '}
+                                  <strong className={`font-mono font-bold ${acc.saldoDevedorCentavos > 0 ? 'text-amber-700' : 'text-emerald-700'}`}>
+                                    {formatCurrencyBRL(acc.saldoDevedorCentavos)}
+                                  </strong>
+                                </p>
+                              </div>
+                              <div className="shrink-0 flex items-center gap-2">
+                                {acc.saldoDevedorCentavos > 0 ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setDiscountAccount(acc);
+                                      setShowDiscountModal(true);
+                                    }}
+                                    className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                                    title="Conceder desconto manual ou aplicar cupom do catálogo no plano deste aluno"
+                                  >
+                                    <Ticket className="w-3.5 h-3.5 text-purple-600" />
+                                    <span>Aplicar Cupom / Desconto</span>
+                                  </button>
+                                ) : (
+                                  <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                    Quitado
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-slate-500 text-xs italic">Nenhuma fatura encontrada para este aluno.</p>
+                      )}
+                    </div>
+
                     {/* Tabela de Pagamentos Efetuados pelo Aluno */}
                     <div className="space-y-2 pt-1">
                       <span className="font-bold text-slate-900 text-xs block">
@@ -1017,6 +1074,24 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
             }
             setTransferToast(`Transferência de ${updatedStudent.nome} homologada com sucesso! Histórico gerado.`);
             setTimeout(() => setTransferToast(''), 4500);
+          }}
+        />
+      )}
+
+      {/* Modal Aplicar Cupom / Desconto no Plano do Aluno */}
+      {showDiscountModal && discountAccount && (
+        <ApplyDiscountModal
+          isOpen={showDiscountModal}
+          onClose={() => {
+            setShowDiscountModal(false);
+            setDiscountAccount(null);
+          }}
+          account={discountAccount}
+          student={activeStudent}
+          orgId={orgId}
+          actorId={currentUser.id}
+          onDiscountApplied={() => {
+            setStudentsVersion((v) => v + 1);
           }}
         />
       )}

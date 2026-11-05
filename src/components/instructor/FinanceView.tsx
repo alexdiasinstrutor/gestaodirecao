@@ -42,6 +42,7 @@ import {
 import { PaymentReceiptModal } from '../common/PaymentReceiptModal';
 import { PixConfigModal } from '../common/PixConfigModal';
 import { PixQrCodeModal } from '../common/PixQrCodeModal';
+import { ApplyDiscountModal } from '../common/ApplyDiscountModal';
 import type { PaymentReceiptData } from '../../lib/receiptPdfGenerator';
 import type {
   Organization,
@@ -87,6 +88,9 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
   const [showNewAccountModal, setShowNewAccountModal] = useState<boolean>(false);
   const [showPixConfigModal, setShowPixConfigModal] = useState<boolean>(false);
   const [selectedAccountForQrModal, setSelectedAccountForQrModal] = useState<AccountReceivable | null>(null);
+  const [selectedAccountForDiscount, setSelectedAccountForDiscount] = useState<AccountReceivable | null>(null);
+  const [showDiscountModal, setShowDiscountModal] = useState<boolean>(false);
+  const [financeVersion, setFinanceVersion] = useState<number>(0);
 
   const [pixConfig, setPixConfig] = useState(() => db.getEffectivePixConfig(currentOrg, currentUser));
   const refreshPixConfig = () => {
@@ -571,9 +575,21 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                     </div>
                   </div>
 
-                  <div className="pt-2 border-t border-slate-100 flex items-center justify-end gap-2">
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-end gap-2 flex-wrap">
                     {acc.saldoDevedorCentavos > 0 ? (
                       <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedAccountForDiscount(acc);
+                            setShowDiscountModal(true);
+                          }}
+                          className="px-2.5 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 font-bold rounded-xl text-xs transition-colors cursor-pointer flex items-center gap-1"
+                          title="Aplicar cupom ou desconto no saldo deste aluno"
+                        >
+                          <Ticket className="w-3.5 h-3.5 text-purple-600" />
+                          <span>Cupom / Desconto</span>
+                        </button>
                         <button
                           type="button"
                           onClick={() => setSelectedAccountForQrModal(acc)}
@@ -655,6 +671,18 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                         <td className="py-3 px-4 text-right whitespace-nowrap">
                           {acc.saldoDevedorCentavos > 0 ? (
                             <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedAccountForDiscount(acc);
+                                  setShowDiscountModal(true);
+                                }}
+                                className="px-2 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 font-bold rounded-lg text-[11px] transition-colors cursor-pointer flex items-center gap-1"
+                                title="Aplicar cupom ou desconto no saldo deste aluno"
+                              >
+                                <Ticket className="w-3 h-3 text-purple-600" />
+                                <span>Cupom</span>
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => setSelectedAccountForQrModal(acc)}
@@ -2055,6 +2083,24 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
           beneficiario={pixConfig.beneficiarioPix}
           cidade={pixConfig.cidadePix}
           txid={selectedAccountForQrModal.id}
+        />
+      )}
+
+      {/* MODAL APLICAR CUPOM OU DESCONTO NO PLANO DO ALUNO */}
+      {showDiscountModal && selectedAccountForDiscount && (
+        <ApplyDiscountModal
+          isOpen={showDiscountModal}
+          onClose={() => {
+            setShowDiscountModal(false);
+            setSelectedAccountForDiscount(null);
+          }}
+          account={selectedAccountForDiscount}
+          student={students.find((s) => s.id === selectedAccountForDiscount.alunoId)}
+          orgId={orgId}
+          actorId={currentUser.id}
+          onDiscountApplied={() => {
+            setFinanceVersion((v) => v + 1);
+          }}
         />
       )}
     </div>

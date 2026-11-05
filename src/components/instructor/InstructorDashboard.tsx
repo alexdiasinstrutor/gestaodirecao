@@ -15,10 +15,14 @@ import {
   CheckCircle2,
   Package,
   QrCode,
-  LayoutGrid
+  LayoutGrid,
+  Ticket,
+  ShieldCheck,
+  Sparkles
 } from 'lucide-react';
 import { db } from '../../lib/storage';
 import { formatCurrencyBRL, formatDateBR } from '../../lib/validation';
+import { getPlanDetails } from '../../lib/saasPlans';
 import { User, Organization } from '../../types';
 
 interface InstructorDashboardProps {
@@ -51,6 +55,12 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
   const expenses = db.getExpenses(orgId);
   const investments = db.getInvestments(orgId);
   const vehicles = db.getVehicles(orgId);
+
+  // SaaS Plan & Coupons Information
+  const planDetails = getPlanDetails(currentOrg.plano);
+  const instructorCoupons = db.getCoupons({ escopo: 'ALUNO', instrutorId: currentUser.id });
+  const activeCouponsCount = instructorCoupons.filter((c) => c.ativo).length;
+  const totalCouponsUsed = instructorCoupons.reduce((sum, c) => sum + (c.usosRealizados || 0), 0);
 
   // Financial calculations
   const totalRecebidoCentavos = payments.reduce((acc, p) => acc + p.valorCentavos, 0);
@@ -106,6 +116,14 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
               <PlusCircle className="w-4 h-4 shrink-0" />
               <span>Novo Aluno</span>
             </button>
+            <button
+              onClick={() => onNavigate('FINANCE')}
+              className="flex items-center gap-1.5 px-3 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer touch-target shadow-sm"
+              title="Gerar cupons de desconto para os alunos"
+            >
+              <Ticket className="w-4 h-4 shrink-0" />
+              <span>Gerar Cupom</span>
+            </button>
             {onOpenPixConfig && (
               <button
                 onClick={onOpenPixConfig}
@@ -135,9 +153,61 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
         </div>
       </div>
 
+      {/* SaaS Plan & Coupons Quick Status Card */}
+      <div className="bg-gradient-to-r from-purple-900/10 via-indigo-900/5 to-blue-900/10 border border-purple-200/80 rounded-2xl p-4 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-purple-100 text-purple-700 border border-purple-200 shrink-0">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-bold text-slate-900">Seu Plano:</span>
+                <span className={`px-2 py-0.5 rounded-full border text-[11px] font-extrabold ${planDetails.corBadge}`}>
+                  {planDetails.nome}
+                </span>
+                {currentOrg.status === 'TESTE' && (
+                  <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 text-[10px] font-bold">
+                    Período de Teste
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-600 mt-0.5">
+                {currentOrg.dataVencimentoPlano ? (
+                  <>
+                    Próxima Cobrança / Validade: <strong className="text-slate-900 font-mono">{formatDateBR(currentOrg.dataVencimentoPlano)}</strong>
+                    {currentOrg.valorMensalidadeCentavos !== undefined && currentOrg.valorMensalidadeCentavos > 0 && (
+                      <span> · Mensalidade: <strong className="text-slate-900 font-mono">{formatCurrencyBRL(currentOrg.valorMensalidadeCentavos)}</strong></span>
+                    )}
+                  </>
+                ) : (
+                  'Validade da Assinatura: Contínua / Indeterminada'
+                )}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-purple-100 shrink-0">
+            <div className="text-left sm:text-right">
+              <span className="text-[10px] uppercase font-bold text-purple-700 block">Cupons de Alunos</span>
+              <span className="text-sm font-extrabold text-slate-900">
+                {instructorCoupons.length} gerado(s) <span className="text-[11px] font-normal text-slate-500">({activeCouponsCount} ativos · {totalCouponsUsed} resgates)</span>
+              </span>
+            </div>
+            <button
+              onClick={() => onNavigate('FINANCE')}
+              className="flex items-center gap-1 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shrink-0 shadow-xs"
+            >
+              <Ticket className="w-3.5 h-3.5" />
+              <span>Gerenciar</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Essential Mobile Quick-Action Grid (Shown in Simplified Mode) */}
       {isSimplified && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
           <button
             type="button"
             onClick={() => onNavigate('SCHEDULE')}
@@ -182,8 +252,22 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
 
           <button
             type="button"
+            onClick={() => onNavigate('FINANCE')}
+            className="p-3.5 bg-white hover:bg-purple-50/60 rounded-2xl border border-purple-200 shadow-xs flex items-center gap-3 text-left transition-all cursor-pointer"
+          >
+            <div className="p-2.5 rounded-xl bg-purple-600 text-white shrink-0">
+              <Ticket className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-extrabold text-slate-900 truncate">Gerar Cupom</p>
+              <p className="text-[11px] text-purple-700 font-semibold">{instructorCoupons.length} gerado(s)</p>
+            </div>
+          </button>
+
+          <button
+            type="button"
             onClick={onSwitchToFullMode}
-            className="p-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl border border-slate-800 shadow-xs flex items-center gap-3 text-left transition-all cursor-pointer"
+            className="p-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl border border-slate-800 shadow-xs flex items-center gap-3 text-left transition-all cursor-pointer col-span-2 sm:col-span-1"
           >
             <div className="p-2.5 rounded-xl bg-white/15 text-sky-300 shrink-0">
               <LayoutGrid className="w-5 h-5" />
