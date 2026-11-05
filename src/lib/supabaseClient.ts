@@ -5,8 +5,8 @@ import { createClient } from '@supabase/supabase-js';
 // No Vercel: defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY
 // ============================================================
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+const supabaseUrl = ((typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_URL) || '') as string;
+const supabaseAnonKey = ((typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_ANON_KEY) || '') as string;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn(

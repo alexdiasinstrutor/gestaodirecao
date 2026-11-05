@@ -991,6 +991,17 @@ export const db = {
     this.addAuditLog(org.id, 'SISTEMA', 'CRIACAO_ORGANIZACAO', 'Organizacao', org.id, `Criada organização ${org.nome}`);
   },
 
+  saveOrganization(org: Organization): void {
+    const list = this.getOrganizations();
+    const index = list.findIndex((o) => o.id === org.id);
+    if (index >= 0) {
+      list[index] = org;
+    } else {
+      list.push(org);
+    }
+    writeList(STORAGE_KEYS.ORGANIZATIONS, list);
+  },
+
   updateOrganization(org: Organization, actorId: string): void {
     const list = this.getOrganizations();
     const index = list.findIndex((o) => o.id === org.id);
@@ -1165,12 +1176,48 @@ export const db = {
     return users.find((u) => u.email.toLowerCase().includes(clean) || u.nome.toLowerCase().includes(clean));
   },
 
+  getAllInstructors(): User[] {
+    return readList<User>(STORAGE_KEYS.USERS).filter(
+      (u) => u.papel === 'ADMIN_ORG' || u.papel === 'INSTRUTOR' || u.papel === 'SUPER_ADMIN'
+    );
+  },
+
+  async syncRemoteInstructors(): Promise<User[]> {
+    try {
+      const [remoteUsers, remoteOrgs] = await Promise.all([
+        supabaseAdapter.getUsers(),
+        supabaseAdapter.getOrganizations()
+      ]);
+      if (remoteOrgs && remoteOrgs.length > 0) {
+        remoteOrgs.forEach((o) => this.saveOrganization(o));
+      }
+      if (remoteUsers && remoteUsers.length > 0) {
+        remoteUsers.forEach((u) => this.saveUser(u));
+      }
+      return this.getAllInstructors();
+    } catch (err) {
+      console.warn('[Sync] Falha ao sincronizar instrutores do Supabase:', err);
+      return this.getAllInstructors();
+    }
+  },
+
   createUser(user: User): void {
     const users = readList<User>(STORAGE_KEYS.USERS);
     users.push(user);
     writeList(STORAGE_KEYS.USERS, users);
     supabaseAdapter.saveUser(user).catch(console.error);
     this.addAuditLog(user.organizacaoId, user.id, 'CRIACAO_USUARIO', 'Usuario', user.id, `Criado usuário ${user.nome} (${user.papel})`);
+  },
+
+  saveUser(user: User): void {
+    const users = readList<User>(STORAGE_KEYS.USERS);
+    const index = users.findIndex((u) => u.id === user.id);
+    if (index >= 0) {
+      users[index] = user;
+    } else {
+      users.push(user);
+    }
+    writeList(STORAGE_KEYS.USERS, users);
   },
 
   updateUser(user: User): void {
@@ -1570,6 +1617,17 @@ export const db = {
     writeList(STORAGE_KEYS.PACKAGES, list);
     supabaseAdapter.savePackage(pkg).catch(console.error);
     this.addAuditLog(pkg.organizacaoId, actorId, 'CRIAR_PACOTE', 'Pacote', pkg.id, `${pkg.nome} - R$ ${(pkg.valorCentavos / 100).toFixed(2)} (${pkg.formaPagamento})`);
+  },
+
+  savePackage(pkg: PackageOffer): void {
+    const list = readList<PackageOffer>(STORAGE_KEYS.PACKAGES);
+    const index = list.findIndex((p) => p.id === pkg.id);
+    if (index >= 0) {
+      list[index] = pkg;
+    } else {
+      list.push(pkg);
+    }
+    writeList(STORAGE_KEYS.PACKAGES, list);
   },
 
   togglePackageStatus(packageId: string, actorId: string): void {

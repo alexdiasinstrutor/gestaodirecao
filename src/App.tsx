@@ -87,8 +87,14 @@ export default function App() {
     try {
       const params = new URLSearchParams(window.location.search);
       const convite = params.get('convite');
-      const instrutorId = params.get('instrutorId');
-      const cupom = params.get('cupom');
+      const instrutorId =
+        params.get('instrutorId') ||
+        params.get('inst') ||
+        params.get('ref') ||
+        params.get('codigo') ||
+        params.get('instrutor') ||
+        convite;
+      const cupom = params.get('cupom') || params.get('desconto') || params.get('cupomDesconto');
 
       if (convite || instrutorId || cupom) {
         setInviteParams({

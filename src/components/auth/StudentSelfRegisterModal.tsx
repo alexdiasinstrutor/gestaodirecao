@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   GraduationCap,
@@ -9,13 +9,16 @@ import {
   Package,
   Ticket,
   Search,
-  Check
+  Check,
+  Loader2,
+  RotateCcw
 } from 'lucide-react';
 import { db } from '../../lib/storage';
+import { supabaseAdapter } from '../../lib/supabaseAdapter';
 import { isValidCPF, generateCPFFingerprint, maskCPF, validateMinimumAge, formatCurrencyBRL } from '../../lib/validation';
 import { isValidCEPFormat } from '../../lib/cepService';
 import { normalizeCouponCode, CouponDiscountResult } from '../../lib/coupons';
-import { Student, User, CnhCategory, CNH_CATEGORIES, AddressFields, DiscountCoupon } from '../../types';
+import { Student, User, CnhCategory, CNH_CATEGORIES, AddressFields, DiscountCoupon, PackageOffer } from '../../types';
 import { AddressCepFields } from '../common/AddressCepFields';
 
 interface StudentSelfRegisterModalProps {
@@ -34,19 +37,22 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
   defaultOrgId
 }) => {
   const orgs = db.getOrganizations();
-  const selectedOrgId = defaultOrgId || orgs[0]?.id || 'org_direcao_certa_01';
-  const orgInstructors = db.getUsers(selectedOrgId).filter((u) => u.papel === 'ADMIN_ORG' || u.papel === 'INSTRUTOR');
+  const [instructorsList, setInstructorsList] = useState<User[]>(() => db.getAllInstructors());
+  const [loadingInstructors, setLoadingInstructors] = useState<boolean>(true);
 
-  // Campo de busca/identificação por código do instrutor
+  // Instrutor inicial identificado
   const initialInstructor = defaultInstructorId
-    ? db.findInstructorByCode(defaultInstructorId) || orgInstructors.find((i) => i.id === defaultInstructorId)
-    : orgInstructors[0];
+    ? db.findInstructorByCode(defaultInstructorId) || instructorsList.find((i) => i.id === defaultInstructorId)
+    : instructorsList[0];
 
   const [instructorCodeInput, setInstructorCodeInput] = useState<string>(
-    initialInstructor ? initialInstructor.id.replace('usr_', '').toUpperCase() : ''
+    initialInstructor ? initialInstructor.id.replace('usr_', '').toUpperCase() : (defaultInstructorId || '')
   );
   const [selectedInstructor, setSelectedInstructor] = useState<User | undefined>(initialInstructor);
   const [codeFeedback, setCodeFeedback] = useState<{ message: string; isError: boolean } | null>(null);
+
+  // Organização vinculada ao instrutor selecionado (ou fallback para a padrão)
+  const targetOrgId = selectedInstructor?.organizacaoId || defaultOrgId || orgs[0]?.id || 'org_direcao_certa_01';
 
   const [formData, setFormData] = useState({
     nome: '',
@@ -55,7 +61,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
     telefone: '',
     dataNascimento: '',
     categoriaCnh: 'B' as CnhCategory,
-    instrutorId: initialInstructor?.id || 'usr_instrutor_carlos',
+    instrutorId: initialInstructor?.id || '',
     senha: '',
     confirmarSenha: ''
   });
@@ -82,34 +88,127 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
   const [couponError, setCouponError] = useState<string>('');
   const [couponSuccess, setCouponSuccess] = useState<string>('');
 
-  // Packages released by selected instructor
-  const availablePackages = db
-    .getPackages(selectedOrgId, formData.instrutorId)
+  // Sincronização e carregamento dinâmico de todos os instrutores cadastrados no Banco de Dados (Supabase)
+  useEffect(() => {
+    let isMounted = true;
+    async function loadRemoteInstructors() {
+      setLoadingInstructors(true);
+      try {
+        const fresh = await db.syncRemoteInstructors();
+        if (isMounted) {
+          setInstructorsList(fresh);
+
+          // Se veio com defaultInstructorId ou código da URL
+          if (defaultInstructorId) {
+            const found = db.findInstructorByCode(defaultInstructorId) || fresh.find((i) => i.id === defaultInstructorId);
+            if (found) {
+              setSelectedInstructor(found);
+              setFormData((prev) => ({ ...prev, instrutorId: found.id }));
+              setInstructorCodeInput(found.id.replace('usr_', '').toUpperCase());
+              setCodeFeedback({ message: `Instrutor reconhecido: ${found.nome}`, isError: false });
+            }
+          } else if (!selectedInstructor && fresh.length > 0) {
+            setSelectedInstructor(fresh[0]);
+            setFormData((prev) => ({ ...prev, instrutorId: fresh[0].id }));
+            setInstructorCodeInput(fresh[0].id.replace('usr_', '').toUpperCase());
+          }
+
+          // Carrega pacotes remotos se disponíveis
+          const activeOrg = (selectedInstructor || fresh[0])?.organizacaoId;
+          if (activeOrg) {
+            try {
+              const remotePkgs = await supabaseAdapter.getPackages(activeOrg);
+              if (remotePkgs && remotePkgs.length > 0) {
+                remotePkgs.forEach((pkg) => db.savePackage(pkg));
+              }
+            } catch {
+              // Silencioso se não houver pacotes remotos
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Falha na sincronização de instrutores do banco:', err);
+      } finally {
+        if (isMounted) setLoadingInstructors(false);
+      }
+    }
+
+    loadRemoteInstructors();
+    return () => {
+      isMounted = false;
+    };
+  }, [defaultInstructorId]);
+
+  // Packages released by selected instructor / organization
+  let availablePackages = db
+    .getPackages(targetOrgId, selectedInstructor?.id)
     .filter((p) => p.ativo);
+
+  // Fallback 1: Pacotes gerais da organização do instrutor
+  if (availablePackages.length === 0) {
+    availablePackages = db.getPackages(targetOrgId).filter((p) => p.ativo);
+  }
+  // Fallback 2: Pacotes gerais cadastrados no sistema
+  if (availablePackages.length === 0) {
+    const allPkgs = orgs.flatMap((o) => db.getPackages(o.id));
+    availablePackages = allPkgs.filter((p) => p.ativo);
+  }
+  // Fallback 3: Pacote padrão automático para novos instrutores / ambiente limpo
+  if (availablePackages.length === 0) {
+    availablePackages = [
+      {
+        id: `pkg_padrao_${targetOrgId}`,
+        organizacaoId: targetOrgId,
+        instrutorId: selectedInstructor?.id,
+        nome: 'Pacote CNH B (20 Aulas Práticas)',
+        categoriaCnh: 'B',
+        totalAulas: 20,
+        valorCentavos: 180000,
+        formaPagamento: 'TODAS',
+        maxParcelas: 12,
+        descontoAvistaPercentual: 5,
+        descricao: 'Treinamento prático veicular completo com suporte e simulados de exame.',
+        ativo: true,
+        criadoEm: new Date().toISOString()
+      }
+    ];
+  }
 
   // Auto select first package when instructor packages change
   React.useEffect(() => {
     if (availablePackages.length > 0 && (!selectedPackageId || !availablePackages.some((p) => p.id === selectedPackageId))) {
       setSelectedPackageId(availablePackages[0].id);
     }
-  }, [formData.instrutorId, availablePackages.length]);
+  }, [selectedInstructor?.id, availablePackages.length]);
 
-  const chosenPackage = availablePackages.find((p) => p.id === selectedPackageId) || availablePackages[0] || db.getPackages(selectedOrgId)[0];
+  const chosenPackage = availablePackages.find((p) => p.id === selectedPackageId) || availablePackages[0];
 
   // Aplicação de código de instrutor digitado manualmente
   const handleLookupInstructor = (codeToSearch?: string) => {
-    const raw = codeToSearch !== undefined ? codeToSearch : instructorCodeInput;
-    if (!raw.trim()) {
+    const raw = (codeToSearch !== undefined ? codeToSearch : instructorCodeInput).trim();
+    if (!raw) {
       setCodeFeedback({ message: 'Digite o código fornecido pelo seu instrutor.', isError: true });
       return;
     }
-    const found = db.findInstructorByCode(raw);
+    const cleanRaw = raw.toLowerCase().replace(/[^a-z0-9_]/g, '');
+    const found =
+      db.findInstructorByCode(raw) ||
+      instructorsList.find(
+        (i) =>
+          i.id.toLowerCase() === cleanRaw ||
+          i.id.toLowerCase() === `usr_${cleanRaw}` ||
+          i.id.toLowerCase().replace('usr_', '') === cleanRaw ||
+          i.nome.toLowerCase().includes(cleanRaw) ||
+          i.email.toLowerCase().includes(cleanRaw)
+      );
+
     if (!found) {
       setCodeFeedback({ message: 'Instrutor não localizado para este código. Verifique com seu instrutor.', isError: true });
       return;
     }
     setSelectedInstructor(found);
     setFormData((prev) => ({ ...prev, instrutorId: found.id }));
+    setInstructorCodeInput(found.id.replace('usr_', '').toUpperCase());
     setCodeFeedback({ message: `Instrutor identificado: ${found.nome}`, isError: false });
 
     // Se tiver cupom aplicado, revalida para o novo instrutor
@@ -130,7 +229,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
           escopo: 'ALUNO',
           referenciaId: chosenPackage.id,
           instrutorId: formData.instrutorId,
-          organizacaoId: selectedOrgId
+          organizacaoId: targetOrgId
         },
         chosenPackage.valorCentavos
       );
@@ -140,7 +239,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
         setCouponSuccess(`Cupom "${preview.coupon.codigo}" aplicado automaticamente pelo link do instrutor!`);
       }
     }
-  }, [defaultCouponCode, chosenPackage?.id]);
+  }, [defaultCouponCode, chosenPackage?.id, targetOrgId]);
 
   const handleApplyCoupon = () => {
     setCouponError('');
@@ -157,7 +256,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
         escopo: 'ALUNO',
         referenciaId: chosenPackage?.id,
         instrutorId: formData.instrutorId,
-        organizacaoId: selectedOrgId
+        organizacaoId: targetOrgId
       },
       valCentavos
     );
@@ -201,6 +300,11 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
     e.preventDefault();
     setError('');
 
+    if (!selectedInstructor) {
+      setError('Por favor, selecione seu instrutor credenciado antes de prosseguir com a matrícula.');
+      return;
+    }
+
     // 1. Rigorous age check (CTB and Prompt requirement)
     const check = validateMinimumAge(formData.dataNascimento);
     if (!check.valid) {
@@ -219,7 +323,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
     }
 
     // Strict Rule: Cada aluno (CPF) fica acondicionado a apenas 1 instrutor por vez
-    const enrollmentCheck = db.checkStudentCPFEnrollment(selectedOrgId, formData.cpf);
+    const enrollmentCheck = db.checkStudentCPFEnrollment(targetOrgId, formData.cpf);
     if (enrollmentCheck.alreadyRegistered) {
       setError(enrollmentCheck.message || 'Este CPF já está condicionado a outro instrutor.');
       return;
@@ -260,14 +364,15 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
     try {
       const studentId = `stu_${Date.now()}`;
       const userId = `usr_${Date.now()}`;
+      const activeInstructorId = selectedInstructor.id;
 
       // Selected package
       const contractedLessons = chosenPackage ? chosenPackage.totalAulas : 20;
 
       const newStudent: Student = {
         id: studentId,
-        organizacaoId: selectedOrgId,
-        instrutorId: formData.instrutorId,
+        organizacaoId: targetOrgId,
+        instrutorId: activeInstructorId,
         nome: formData.nome.trim(),
         email: formData.email.trim().toLowerCase(),
         telefone: formData.telefone,
@@ -298,13 +403,13 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
           posturaDefensiva: 0,
           simuladoExame: 0
         },
-        observacoesInstrutor: `Aluno matriculado no plano "${chosenPackage?.nome || 'Plano Padrão'}". Pronto para iniciar as aulas práticas de direção.`,
+        observacoesInstrutor: `Aluno matriculado com instrutor ${selectedInstructor.nome} no plano "${chosenPackage?.nome || 'Plano Padrão'}". Pronto para iniciar as aulas práticas de direção.`,
         dataCadastro: new Date().toISOString().slice(0, 10)
       };
 
       const newUser: User = {
         id: userId,
-        organizacaoId: selectedOrgId,
+        organizacaoId: targetOrgId,
         nome: formData.nome.trim(),
         email: formData.email.trim().toLowerCase(),
         papel: 'ALUNO',
@@ -336,7 +441,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
         db.createAccountReceivable(
           {
             id: accId,
-            organizacaoId: selectedOrgId,
+            organizacaoId: targetOrgId,
             alunoId: studentId,
             pacoteId: chosenPackage.id,
             descricao: descTexto,
@@ -357,12 +462,12 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
             {
               escopo: 'ALUNO',
               referenciaId: chosenPackage.id,
-              instrutorId: formData.instrutorId,
-              organizacaoId: selectedOrgId
+              instrutorId: activeInstructorId,
+              organizacaoId: targetOrgId
             },
             chosenPackage.valorCentavos,
             {
-              organizacaoId: selectedOrgId,
+              organizacaoId: targetOrgId,
               usuarioId: userId,
               alunoId: studentId
             },
@@ -373,6 +478,10 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
 
       db.saveStudent(newStudent, userId);
       db.createUser(newUser);
+
+      // Dual-write Supabase direto
+      supabaseAdapter.saveStudent(newStudent).catch(console.error);
+      supabaseAdapter.saveUser(newUser).catch(console.error);
 
       onRegistered(newStudent, newUser);
     } catch (err: any) {
@@ -421,19 +530,28 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
           </div>
 
           {/* Localização do Instrutor por Código ou Link */}
-          <div className="p-3.5 bg-blue-50/80 border border-blue-200 rounded-2xl space-y-2">
+          <div className="p-3.5 bg-blue-50/80 border border-blue-200 rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
               <label className="block font-bold text-slate-900 text-xs flex items-center gap-1.5">
                 <UserCheck className="w-4 h-4 text-blue-600" />
-                <span>Código de Indicação do Instrutor *</span>
+                <span>Instrutor Credenciado Responsável *</span>
               </label>
-              {selectedInstructor && (
+              {loadingInstructors ? (
+                <span className="text-xs font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <Loader2 className="w-3 h-3 animate-spin" /> Sincronizando banco...
+                </span>
+              ) : selectedInstructor ? (
                 <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1">
                   <Check className="w-3 h-3" /> Reconhecido
+                </span>
+              ) : (
+                <span className="text-xs font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+                  Pendente Seleção
                 </span>
               )}
             </div>
 
+            {/* Busca por Código */}
             <div className="flex gap-2">
               <input
                 type="text"
@@ -441,6 +559,12 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
                 onChange={(e) => {
                   setInstructorCodeInput(e.target.value.toUpperCase());
                   setCodeFeedback(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleLookupInstructor();
+                  }
                 }}
                 placeholder="Ex: INSTRUTOR_CARLOS ou código do link"
                 className="flex-1 px-3 py-2 border border-slate-300 rounded-xl font-mono text-xs uppercase focus:outline-none focus:border-blue-600 bg-white"
@@ -461,39 +585,83 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
               </p>
             )}
 
-            {selectedInstructor ? (
-              <div className="p-2.5 bg-white border border-blue-200 rounded-xl flex items-center justify-between">
-                <div>
-                  <span className="text-xs uppercase font-bold font-bold text-blue-600 block">Instrutor Responsável</span>
-                  <span className="font-bold text-slate-900 text-xs">{selectedInstructor.nome}</span>
-                  <span className="text-xs text-slate-500 block">{selectedInstructor.email}</span>
-                </div>
-                <span className="px-2 py-1 rounded bg-blue-100 font-mono text-blue-800 font-bold text-xs">
-                  {selectedInstructor.id.replace('usr_', '').toUpperCase()}
-                </span>
-              </div>
-            ) : (
-              <div className="space-y-1">
-                <select
-                  value={formData.instrutorId}
-                  onChange={(e) => {
-                    const instId = e.target.value;
-                    const found = orgInstructors.find((i) => i.id === instId);
+            {/* Seleção em Dropdown de todos os instrutores cadastrados no Banco */}
+            <div className="space-y-1">
+              <label className="block text-xs font-bold text-slate-700">
+                Ou selecione seu instrutor na listagem do sistema:
+              </label>
+              <select
+                value={selectedInstructor?.id || formData.instrutorId || ''}
+                onChange={(e) => {
+                  const instId = e.target.value;
+                  const found = instructorsList.find((i) => i.id === instId);
+                  if (found) {
                     setSelectedInstructor(found);
-                    setFormData({ ...formData, instrutorId: instId });
-                    setInstructorCodeInput(instId.replace('usr_', '').toUpperCase());
-                  }}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none bg-white font-medium text-xs"
-                >
-                  {orgInstructors.map((ins) => (
+                    setFormData((prev) => ({ ...prev, instrutorId: found.id }));
+                    setInstructorCodeInput(found.id.replace('usr_', '').toUpperCase());
+                    setCodeFeedback({ message: `Instrutor selecionado: ${found.nome}`, isError: false });
+                  } else {
+                    setSelectedInstructor(undefined);
+                    setFormData((prev) => ({ ...prev, instrutorId: '' }));
+                    setCodeFeedback(null);
+                  }
+                }}
+                className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none bg-white font-medium text-xs cursor-pointer"
+              >
+                <option value="">
+                  {loadingInstructors
+                    ? 'Carregando instrutores do banco de dados...'
+                    : instructorsList.length === 0
+                    ? '-- Nenhum instrutor localizado no banco --'
+                    : `-- Selecione o seu Instrutor (${instructorsList.length} cadastrados no banco) --`}
+                </option>
+                {instructorsList.map((ins) => {
+                  const org = db.getOrganization(ins.organizacaoId);
+                  const orgName = org?.nome ? ` (${org.nome})` : '';
+                  const roleLabel = ins.papel === 'SUPER_ADMIN' ? 'Diretor' : 'Instrutor';
+                  const code = ins.id.replace('usr_', '').toUpperCase();
+                  return (
                     <option key={ins.id} value={ins.id}>
-                      {ins.nome} ({ins.email})
+                      {ins.nome} · {roleLabel}{orgName} — Cód: {code}
                     </option>
-                  ))}
-                </select>
-                <p className="text-xs text-slate-500">
-                  Ou selecione manualmente na lista acima caso não tenha o código em mãos.
-                </p>
+                  );
+                })}
+              </select>
+              <p className="text-xs text-slate-500">
+                O aluno ficará vinculado exclusivamente à grade e pacotes do instrutor selecionado.
+              </p>
+            </div>
+
+            {/* Card com Detalhes do Instrutor Selecionado */}
+            {selectedInstructor && (
+              <div className="p-3 bg-white border border-blue-200 rounded-xl flex items-center justify-between shadow-xs">
+                <div>
+                  <span className="text-xs uppercase font-bold text-blue-600 block">Instrutor Selecionado</span>
+                  <span className="font-bold text-slate-900 text-xs block">{selectedInstructor.nome}</span>
+                  <span className="text-xs text-slate-600 block">
+                    {selectedInstructor.email}
+                    {db.getOrganization(selectedInstructor.organizacaoId)?.nome
+                      ? ` · ${db.getOrganization(selectedInstructor.organizacaoId)?.nome}`
+                      : ''}
+                  </span>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <span className="px-2 py-0.5 rounded bg-blue-100 font-mono text-blue-800 font-bold text-xs">
+                    {selectedInstructor.id.replace('usr_', '').toUpperCase()}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedInstructor(undefined);
+                      setFormData((prev) => ({ ...prev, instrutorId: '' }));
+                      setInstructorCodeInput('');
+                      setCodeFeedback(null);
+                    }}
+                    className="text-xs text-slate-600 hover:text-red-600 underline font-medium cursor-pointer"
+                  >
+                    Trocar instrutor
+                  </button>
+                </div>
               </div>
             )}
           </div>
