@@ -349,6 +349,54 @@ export interface WhatsAppReminderLog {
   status: 'ENVIADO' | 'FALHA';
 }
 
+// ─── Cupons de Desconto ──────────────────────────────────────────────────────
+// PLATAFORMA: criado pelo Master, aplicado na assinatura SaaS do instrutor/autoescola.
+// ALUNO: criado pelo instrutor, aplicado no valor do pacote de aulas do aluno.
+export type CouponScope = 'PLATAFORMA' | 'ALUNO';
+
+// PERIODO_GRATIS: meses de uso sem cobrança (ex.: 3, 6 ou 12 meses de teste) — apenas PLATAFORMA.
+// PERCENTUAL: desconto % sobre a mensalidade (PLATAFORMA) ou sobre o pacote (ALUNO).
+// VALOR_FIXO: desconto em centavos sobre a mensalidade (PLATAFORMA) ou sobre o pacote (ALUNO).
+export type CouponDiscountType = 'PERIODO_GRATIS' | 'PERCENTUAL' | 'VALOR_FIXO';
+
+export interface DiscountCoupon {
+  id: string;
+  codigo: string; // Sempre em MAIÚSCULAS, sem espaços
+  escopo: CouponScope;
+  tipoDesconto: CouponDiscountType;
+  mesesGratis?: number; // PERIODO_GRATIS
+  percentual?: number; // PERCENTUAL (1 a 100)
+  valorCentavos?: number; // VALOR_FIXO
+  duracaoMeses?: number; // PLATAFORMA: por quantos meses o desconto na mensalidade vale (0/undefined = permanente)
+  planosPermitidos?: string[]; // IDs de planos SaaS (PLATAFORMA) ou de pacotes (ALUNO). Vazio = todos
+  organizacaoId?: string; // ALUNO: organização dona do cupom
+  instrutorId?: string; // ALUNO: instrutor dono do cupom
+  criadoPorId: string;
+  criadoPorNome: string;
+  validoAte?: string; // YYYY-MM-DD (inclusive). Vazio = sem data limite
+  limiteUsos?: number; // 0/undefined = ilimitado
+  usosRealizados: number;
+  ativo: boolean;
+  descricao?: string;
+  criadoEm: string;
+}
+
+export interface CouponRedemption {
+  id: string;
+  cupomId: string;
+  codigo: string;
+  escopo: CouponScope;
+  organizacaoId: string;
+  usuarioId?: string;
+  alunoId?: string;
+  referenciaId: string; // ID do plano SaaS ou do pacote
+  valorOriginalCentavos: number;
+  valorDescontoCentavos: number;
+  valorFinalCentavos: number;
+  mesesGratis?: number;
+  resgatadoEm: string;
+}
+
 export interface SyncQueueItem {
   id: string;
   timestamp: number;

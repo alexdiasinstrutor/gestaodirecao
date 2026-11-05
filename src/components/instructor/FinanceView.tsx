@@ -25,12 +25,14 @@ import {
   Users,
   Pencil,
   Trash2,
-  HeartPulse
+  HeartPulse,
+  Ticket
 } from 'lucide-react';
 import { db } from '../../lib/storage';
 import { formatCurrencyBRL, formatDateBR } from '../../lib/validation';
 import { generatePixCopiaECola } from '../../lib/whatsapp';
 import { PackagesManager } from './PackagesManager';
+import { CouponsManager } from '../common/CouponsManager';
 import {
   buildIrpfReportData,
   downloadIrpfPdf,
@@ -66,7 +68,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
 }) => {
   const orgId = currentOrg.id;
 
-  const [activeSubTab, setActiveSubTab] = useState<'RECEIVABLES' | 'EXPENSES' | 'INVESTMENTS' | 'PACKAGES' | 'DRE' | 'IRPF'>('RECEIVABLES');
+  const [activeSubTab, setActiveSubTab] = useState<'RECEIVABLES' | 'EXPENSES' | 'INVESTMENTS' | 'PACKAGES' | 'COUPONS' | 'DRE' | 'IRPF'>('RECEIVABLES');
 
   // IRPF & Receipt states
   const [irpfYear, setIrpfYear] = useState<number>(new Date().getFullYear());
@@ -456,6 +458,17 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             >
               <Package className="w-3.5 h-3.5" />
               <span>Pacotes</span>
+            </button>
+            <button
+              onClick={() => setActiveSubTab('COUPONS')}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer shrink-0 ${
+                activeSubTab === 'COUPONS'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Ticket className="w-3.5 h-3.5 text-blue-500" />
+              <span>Cupons dos Alunos</span>
             </button>
             <button
               onClick={() => setActiveSubTab('DRE')}
@@ -1117,6 +1130,11 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
       {/* SUB-TAB: PACKAGES */}
       {activeSubTab === 'PACKAGES' && (
         <PackagesManager currentOrg={currentOrg} currentUser={currentUser} />
+      )}
+
+      {/* SUB-TAB: COUPONS */}
+      {activeSubTab === 'COUPONS' && (
+        <CouponsManager scope="ALUNO" currentUser={currentUser} currentOrg={currentOrg} />
       )}
 
       {/* SUB-TAB: IRPF / CARNÊ-LEÃO */}

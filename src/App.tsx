@@ -491,10 +491,11 @@ export default function App() {
         />
       )}
 
-      {showPixConfigModal && (
+      {showPixConfigModal && currentOrg && (
         <PixConfigModal
-          org={currentOrg}
-          user={currentUser}
+          currentOrg={currentOrg}
+          currentUser={currentUser}
+          isOpen={showPixConfigModal}
           onClose={() => setShowPixConfigModal(false)}
           onSaved={() => {
             setShowPixConfigModal(false);

@@ -14,7 +14,9 @@ import {
   AuditLog,
   WhatsAppReminderLog,
   SyncQueueItem,
-  SaaSPlanType
+  SaaSPlanType,
+  DiscountCoupon,
+  CouponRedemption
 } from '../types';
 import { generateCPFFingerprint, maskCPF } from './validation';
 import {
@@ -26,6 +28,8 @@ import {
   firebaseConfig,
 } from './firebase';
 import { supabaseAdapter } from './supabaseAdapter';
+import { couponStore, setCouponSyncHooks, CouponListFilter, CouponPreview } from './couponStore';
+import type { CouponValidationContext } from './coupons';
 import {
   collection,
   doc,
@@ -827,6 +831,19 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
       writeList(STORAGE_KEYS.PACKAGES, packages || []);
     }
 
+    // Cupons de desconto: só sobrescreve a base local se a tabela remota existir e tiver dados
+    try {
+      const [remoteCoupons, remoteRedemptions] = await Promise.all([
+        supabaseAdapter.getCoupons(),
+        supabaseAdapter.getCouponRedemptions()
+      ]);
+      if (remoteCoupons.length > 0) {
+        couponStore.replaceAll(remoteCoupons, remoteRedemptions.length > 0 ? remoteRedemptions : undefined);
+      }
+    } catch (couponErr) {
+      console.warn('[Cupons] Hidratação a partir do Supabase ignorada:', couponErr);
+    }
+
     return { synced: true, source: 'supabase' };
   } catch (err) {
     console.error('Erro na sincronização com Supabase:', err);
@@ -930,6 +947,13 @@ function writeList<T>(key: string, items: T[]): void {
     console.error(`Erro ao gravar no storage [${key}]:`, err);
   }
 }
+
+// Dual-write dos cupons para o Supabase (tabelas discount_coupons e coupon_redemptions)
+setCouponSyncHooks({
+  saveCoupon: (c) => supabaseAdapter.saveCoupon(c),
+  deleteCoupon: (id) => supabaseAdapter.deleteCoupon(id),
+  saveRedemption: (r) => supabaseAdapter.saveCouponRedemption(r)
+});
 
 export const db = {
   // Current Session User
@@ -1542,6 +1566,79 @@ export const db = {
       supabaseAdapter.deletePackage(packageId).catch(console.error);
       this.addAuditLog(pkg.organizacaoId, actorId, 'EXCLUIR_PACOTE', 'Pacote', pkg.id, `Excluído pacote ${pkg.nome}`);
     }
+  },
+
+  // Discount Coupons (PLATAFORMA = Master → instrutores | ALUNO = instrutor → alunos)
+  getCoupons(filter?: CouponListFilter): DiscountCoupon[] {
+    return couponStore.list(filter);
+  },
+
+  getCouponByCode(code: string): DiscountCoupon | undefined {
+    return couponStore.getByCode(code);
+  },
+
+  saveCoupon(coupon: DiscountCoupon, actorId: string): { success: boolean; error?: string; coupon?: DiscountCoupon } {
+    const isNew = !couponStore.getAll().some((c) => c.id === coupon.id);
+    const res = couponStore.save(coupon);
+    if (res.success && res.coupon) {
+      const orgId = res.coupon.organizacaoId || this.getOrganizations()[0]?.id || 'SISTEMA';
+      this.addAuditLog(
+        orgId,
+        actorId,
+        isNew ? 'CRIAR_CUPOM' : 'ATUALIZAR_CUPOM',
+        'Cupom',
+        res.coupon.id,
+        `${isNew ? 'Criado' : 'Atualizado'} cupom ${res.coupon.codigo} (${res.coupon.escopo} · ${res.coupon.tipoDesconto})`
+      );
+    }
+    return res;
+  },
+
+  toggleCoupon(couponId: string, actorId: string): void {
+    const c = couponStore.toggle(couponId);
+    if (c) {
+      const orgId = c.organizacaoId || this.getOrganizations()[0]?.id || 'SISTEMA';
+      this.addAuditLog(orgId, actorId, 'ALTERAR_STATUS_CUPOM', 'Cupom', c.id, `Cupom ${c.codigo} ${c.ativo ? 'ativado' : 'desativado'}`);
+    }
+  },
+
+  deleteCoupon(couponId: string, actorId: string): { success: boolean; error?: string } {
+    const c = couponStore.getAll().find((x) => x.id === couponId);
+    const res = couponStore.remove(couponId);
+    if (res.success && c) {
+      const orgId = c.organizacaoId || this.getOrganizations()[0]?.id || 'SISTEMA';
+      this.addAuditLog(orgId, actorId, 'EXCLUIR_CUPOM', 'Cupom', c.id, `Excluído cupom ${c.codigo}`);
+    }
+    return res;
+  },
+
+  previewCoupon(code: string, ctx: CouponValidationContext, valorOriginalCentavos: number): CouponPreview {
+    return couponStore.preview(code, ctx, valorOriginalCentavos);
+  },
+
+  redeemCoupon(
+    code: string,
+    ctx: CouponValidationContext,
+    valorOriginalCentavos: number,
+    meta: { organizacaoId: string; usuarioId?: string; alunoId?: string },
+    actorId: string
+  ): CouponPreview & { redemption?: CouponRedemption } {
+    const res = couponStore.redeem(code, ctx, valorOriginalCentavos, meta);
+    if (res.valid && res.redemption) {
+      this.addAuditLog(
+        meta.organizacaoId,
+        actorId,
+        'RESGATE_CUPOM',
+        'Cupom',
+        res.redemption.cupomId,
+        `Cupom ${res.redemption.codigo} aplicado em ${res.redemption.referenciaId}: ${res.result?.resumo || ''}`
+      );
+    }
+    return res;
+  },
+
+  getCouponRedemptions(filter?: { cupomId?: string; organizacaoId?: string }): CouponRedemption[] {
+    return couponStore.getRedemptions(filter);
   },
 
   /**

@@ -263,7 +263,47 @@ CREATE TABLE IF NOT EXISTS public.whatsapp_logs (
     status VARCHAR(20) NOT NULL DEFAULT 'ENVIADO'
 );
 
--- 16. ÍNDICES DE PERFORMANCE E INTEGRIDADE
+-- 16. Tabela: DISCOUNT_COUPONS (Cupons de Desconto - SaaS e Alunos)
+CREATE TABLE IF NOT EXISTS public.discount_coupons (
+    id VARCHAR(100) PRIMARY KEY,
+    codigo VARCHAR(50) NOT NULL UNIQUE,
+    escopo VARCHAR(30) NOT NULL,
+    tipo_desconto VARCHAR(30) NOT NULL,
+    meses_gratis INTEGER DEFAULT 0,
+    percentual NUMERIC(5,2),
+    valor_centavos INTEGER,
+    duracao_meses INTEGER DEFAULT 0,
+    planos_permitidos JSONB DEFAULT '[]'::jsonb,
+    organizacao_id VARCHAR(100) REFERENCES public.organizations(id) ON DELETE CASCADE,
+    instrutor_id VARCHAR(100) REFERENCES public.users(id) ON DELETE CASCADE,
+    criado_por_id VARCHAR(100),
+    criado_por_nome VARCHAR(255),
+    valido_ate DATE,
+    limite_usos INTEGER DEFAULT 0,
+    usos_realizados INTEGER DEFAULT 0,
+    ativo BOOLEAN DEFAULT TRUE,
+    descricao TEXT,
+    criado_em TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 17. Tabela: COUPON_REDEMPTIONS (Histórico de Resgates de Cupons)
+CREATE TABLE IF NOT EXISTS public.coupon_redemptions (
+    id VARCHAR(100) PRIMARY KEY,
+    cupom_id VARCHAR(100) NOT NULL REFERENCES public.discount_coupons(id) ON DELETE CASCADE,
+    codigo VARCHAR(50) NOT NULL,
+    escopo VARCHAR(30) NOT NULL,
+    organizacao_id VARCHAR(100) NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+    usuario_id VARCHAR(100) REFERENCES public.users(id) ON DELETE SET NULL,
+    aluno_id VARCHAR(100) REFERENCES public.students(id) ON DELETE SET NULL,
+    referencia_id VARCHAR(100) NOT NULL,
+    valor_original_centavos INTEGER NOT NULL,
+    valor_desconto_centavos INTEGER NOT NULL,
+    valor_final_centavos INTEGER NOT NULL,
+    meses_gratis INTEGER,
+    resgatado_em TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 18. ÍNDICES DE PERFORMANCE E INTEGRIDADE
 CREATE INDEX IF NOT EXISTS idx_users_org ON public.users(organizacao_id);
 CREATE INDEX IF NOT EXISTS idx_students_org ON public.students(organizacao_id);
 CREATE INDEX IF NOT EXISTS idx_students_instrutor ON public.students(instrutor_id);
@@ -276,9 +316,11 @@ CREATE INDEX IF NOT EXISTS idx_slots_instrutor ON public.available_slots(instrut
 CREATE INDEX IF NOT EXISTS idx_slots_data ON public.available_slots(data);
 CREATE INDEX IF NOT EXISTS idx_transfers_aluno ON public.student_transfers(aluno_id);
 CREATE INDEX IF NOT EXISTS idx_whatsapp_logs_aluno ON public.whatsapp_logs(aluno_id);
+CREATE INDEX IF NOT EXISTS idx_discount_coupons_codigo ON public.discount_coupons(codigo);
+CREATE INDEX IF NOT EXISTS idx_coupon_redemptions_cupom ON public.coupon_redemptions(cupom_id);
 
 -- ==============================================================================
--- 17. POLÍTICAS DE ACESSO (ROW LEVEL SECURITY - RLS)
+-- 19. POLÍTICAS DE ACESSO (ROW LEVEL SECURITY - RLS)
 -- Permite leitura e escrita completa via chave pública anon (Dual-Write & Offline First)
 -- ==============================================================================
 ALTER TABLE public.organizations DISABLE ROW LEVEL SECURITY;
@@ -295,6 +337,8 @@ ALTER TABLE public.audit_logs DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.available_slots DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.student_transfers DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.whatsapp_logs DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.discount_coupons DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.coupon_redemptions DISABLE ROW LEVEL SECURITY;
 
 -- ==============================================================================
 -- FIM DO SCRIPT DDL

@@ -15,6 +15,7 @@ import {
   Organization, User, Student, Vehicle, Lesson, AvailableSlot,
   AccountReceivable, PaymentRecord, Expense, Investment, PackageOffer,
   AuditLog, WhatsAppReminderLog, StudentTransferHistory,
+  DiscountCoupon, CouponRedemption,
 } from '../types';
 
 // ─── Helpers de mapeamento: TypeScript camelCase → SQL snake_case ───────────
@@ -512,6 +513,90 @@ function whatsappToRow(w: WhatsAppReminderLog): Record<string, any> {
   };
 }
 
+function couponToRow(c: DiscountCoupon): Record<string, any> {
+  return {
+    id: c.id,
+    codigo: c.codigo,
+    escopo: c.escopo,
+    tipo_desconto: c.tipoDesconto,
+    meses_gratis: c.mesesGratis ?? null,
+    percentual: c.percentual ?? null,
+    valor_centavos: c.valorCentavos ?? null,
+    duracao_meses: c.duracaoMeses ?? null,
+    planos_permitidos: c.planosPermitidos || [],
+    organizacao_id: c.organizacaoId || null,
+    instrutor_id: c.instrutorId || null,
+    criado_por_id: c.criadoPorId || null,
+    criado_por_nome: c.criadoPorNome || null,
+    valido_ate: c.validoAte || null,
+    limite_usos: c.limiteUsos || 0,
+    usos_realizados: c.usosRealizados || 0,
+    ativo: c.ativo,
+    descricao: c.descricao || null,
+    criado_em: c.criadoEm || new Date().toISOString(),
+  };
+}
+
+function rowToCoupon(r: any): DiscountCoupon {
+  return {
+    id: r.id,
+    codigo: r.codigo,
+    escopo: r.escopo,
+    tipoDesconto: r.tipo_desconto,
+    mesesGratis: r.meses_gratis ?? undefined,
+    percentual: r.percentual !== null && r.percentual !== undefined ? Number(r.percentual) : undefined,
+    valorCentavos: r.valor_centavos ?? undefined,
+    duracaoMeses: r.duracao_meses ?? undefined,
+    planosPermitidos: r.planos_permitidos || [],
+    organizacaoId: r.organizacao_id || undefined,
+    instrutorId: r.instrutor_id || undefined,
+    criadoPorId: r.criado_por_id,
+    criadoPorNome: r.criado_por_nome,
+    validoAte: r.valido_ate || undefined,
+    limiteUsos: r.limite_usos || 0,
+    usosRealizados: r.usos_realizados || 0,
+    ativo: r.ativo,
+    descricao: r.descricao || undefined,
+    criadoEm: r.criado_em,
+  };
+}
+
+function redemptionToRow(x: CouponRedemption): Record<string, any> {
+  return {
+    id: x.id,
+    cupom_id: x.cupomId,
+    codigo: x.codigo,
+    escopo: x.escopo,
+    organizacao_id: x.organizacaoId,
+    usuario_id: x.usuarioId || null,
+    aluno_id: x.alunoId || null,
+    referencia_id: x.referenciaId,
+    valor_original_centavos: x.valorOriginalCentavos,
+    valor_desconto_centavos: x.valorDescontoCentavos,
+    valor_final_centavos: x.valorFinalCentavos,
+    meses_gratis: x.mesesGratis ?? null,
+    resgatado_em: x.resgatadoEm,
+  };
+}
+
+function rowToRedemption(r: any): CouponRedemption {
+  return {
+    id: r.id,
+    cupomId: r.cupom_id,
+    codigo: r.codigo,
+    escopo: r.escopo,
+    organizacaoId: r.organizacao_id,
+    usuarioId: r.usuario_id || undefined,
+    alunoId: r.aluno_id || undefined,
+    referenciaId: r.referencia_id,
+    valorOriginalCentavos: r.valor_original_centavos,
+    valorDescontoCentavos: r.valor_desconto_centavos,
+    valorFinalCentavos: r.valor_final_centavos,
+    mesesGratis: r.meses_gratis ?? undefined,
+    resgatadoEm: r.resgatado_em,
+  };
+}
+
 // ─── Helper genérico de upsert no Supabase ──────────────────────────────────
 
 async function supabaseUpsert(table: string, row: Record<string, any>): Promise<void> {
@@ -759,11 +844,30 @@ export const supabaseAdapter = {
     });
   },
 
+  // Cupons de Desconto (PLATAFORMA e ALUNO)
+  async getCoupons(): Promise<DiscountCoupon[]> {
+    return supabaseSelect('discount_coupons', rowToCoupon);
+  },
+  async saveCoupon(coupon: DiscountCoupon): Promise<void> {
+    await supabaseUpsert('discount_coupons', couponToRow(coupon));
+  },
+  async deleteCoupon(id: string): Promise<void> {
+    await supabaseDelete('discount_coupons', id);
+  },
+  async getCouponRedemptions(): Promise<CouponRedemption[]> {
+    return supabaseSelect('coupon_redemptions', rowToRedemption);
+  },
+  async saveCouponRedemption(redemption: CouponRedemption): Promise<void> {
+    await supabaseUpsert('coupon_redemptions', redemptionToRow(redemption));
+  },
+
   // Limpeza total de dados para ambiente de produção
   async wipeAllData(options?: { keepMasterAdmin?: boolean }): Promise<void> {
     if (!supabase) return;
     try {
       // Ordem reversa de integridade referencial:
+      await supabase.from('coupon_redemptions').delete().neq('id', '___none___');
+      await supabase.from('discount_coupons').delete().neq('id', '___none___');
       await supabase.from('whatsapp_logs').delete().neq('id', '___none___');
       await supabase.from('student_transfers').delete().neq('id', '___none___');
       await supabase.from('audit_logs').delete().neq('id', '___none___');

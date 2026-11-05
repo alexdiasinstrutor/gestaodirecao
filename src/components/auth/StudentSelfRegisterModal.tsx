@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { X, GraduationCap, ShieldAlert, AlertCircle, CheckCircle2, UserCheck, Package } from 'lucide-react';
+import { X, GraduationCap, ShieldAlert, AlertCircle, CheckCircle2, UserCheck, Package, Ticket } from 'lucide-react';
 import { db } from '../../lib/storage';
 import { isValidCPF, generateCPFFingerprint, maskCPF, validateMinimumAge, formatCurrencyBRL } from '../../lib/validation';
 import { isValidCEPFormat } from '../../lib/cepService';
-import { Student, User, CnhCategory, CNH_CATEGORIES, AddressFields } from '../../types';
+import { normalizeCouponCode, CouponDiscountResult } from '../../lib/coupons';
+import { Student, User, CnhCategory, CNH_CATEGORIES, AddressFields, DiscountCoupon } from '../../types';
 import { AddressCepFields } from '../common/AddressCepFields';
 
 interface StudentSelfRegisterModalProps {
@@ -50,6 +51,13 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
 
+  // Cupom de Desconto fornecido pelo Instrutor
+  const [couponCodeInput, setCouponCodeInput] = useState<string>('');
+  const [appliedCoupon, setAppliedCoupon] = useState<DiscountCoupon | null>(null);
+  const [couponResult, setCouponResult] = useState<CouponDiscountResult | null>(null);
+  const [couponError, setCouponError] = useState<string>('');
+  const [couponSuccess, setCouponSuccess] = useState<string>('');
+
   // Packages released by selected instructor
   const availablePackages = db
     .getPackages(selectedOrgId, formData.instrutorId)
@@ -61,6 +69,48 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
       setSelectedPackageId(availablePackages[0].id);
     }
   }, [formData.instrutorId, availablePackages.length]);
+
+  const chosenPackage = availablePackages.find((p) => p.id === selectedPackageId) || availablePackages[0] || db.getPackages(selectedOrgId)[0];
+
+  const handleApplyCoupon = () => {
+    setCouponError('');
+    setCouponSuccess('');
+    const clean = normalizeCouponCode(couponCodeInput);
+    if (!clean) {
+      setCouponError('Informe o código do cupom.');
+      return;
+    }
+    const valCentavos = chosenPackage?.valorCentavos || 180000;
+    const preview = db.previewCoupon(
+      clean,
+      {
+        escopo: 'ALUNO',
+        referenciaId: chosenPackage?.id,
+        instrutorId: formData.instrutorId,
+        organizacaoId: selectedOrgId
+      },
+      valCentavos
+    );
+
+    if (!preview.valid || !preview.coupon || !preview.result) {
+      setCouponError(preview.error || 'Cupom inválido para este pacote.');
+      setAppliedCoupon(null);
+      setCouponResult(null);
+      return;
+    }
+
+    setAppliedCoupon(preview.coupon);
+    setCouponResult(preview.result);
+    setCouponSuccess(`Cupom "${preview.coupon.codigo}" aplicado! Desconto de ${formatCurrencyBRL(preview.result.valorDescontoCentavos)}.`);
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponResult(null);
+    setCouponCodeInput('');
+    setCouponError('');
+    setCouponSuccess('');
+  };
 
   const handleBirthDateChange = (val: string) => {
     setFormData({ ...formData, dataNascimento: val });
@@ -209,23 +259,47 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
       // Create an initial package and accounts receivable for the student
       if (chosenPackage) {
         const accId = `rec_${Date.now()}`;
+        const finalValCentavos = couponResult ? couponResult.valorFinalCentavos : chosenPackage.valorCentavos;
+        const descTexto = appliedCoupon
+          ? `Contrato de Matrícula - ${chosenPackage.nome} (Cupom ${appliedCoupon.codigo} aplicado: -${formatCurrencyBRL(couponResult?.valorDescontoCentavos || 0)})`
+          : `Contrato de Matrícula - ${chosenPackage.nome}`;
+
         db.createAccountReceivable(
           {
             id: accId,
             organizacaoId: selectedOrgId,
             alunoId: studentId,
             pacoteId: chosenPackage.id,
-            descricao: `Contrato de Matrícula - ${chosenPackage.nome}`,
-            valorTotalCentavos: chosenPackage.valorCentavos,
+            descricao: descTexto,
+            valorTotalCentavos: finalValCentavos,
             valorPagoCentavos: 0,
-            saldoDevedorCentavos: chosenPackage.valorCentavos,
+            saldoDevedorCentavos: finalValCentavos,
             dataVencimento: new Date(Date.now() + 10 * 86400000).toISOString().slice(0, 10),
             status: 'PENDENTE',
-            pixPayload: `00020126580014BR.GOV.BCB.PIX0114financeiro@direcaosegura.com.br520400005303986540${(chosenPackage.valorCentavos / 100).toFixed(2)}5802BR5925AUTOESCOLA6009SAO PAULO62070503REC016304`,
+            pixPayload: `00020126580014BR.GOV.BCB.PIX0114financeiro@direcaosegura.com.br520400005303986540${(finalValCentavos / 100).toFixed(2)}5802BR5925AUTOESCOLA6009SAO PAULO62070503REC016304`,
             criadoEm: new Date().toISOString()
           },
           userId
         );
+
+        if (appliedCoupon) {
+          db.redeemCoupon(
+            appliedCoupon.codigo,
+            {
+              escopo: 'ALUNO',
+              referenciaId: chosenPackage.id,
+              instrutorId: formData.instrutorId,
+              organizacaoId: selectedOrgId
+            },
+            chosenPackage.valorCentavos,
+            {
+              organizacaoId: selectedOrgId,
+              usuarioId: userId,
+              alunoId: studentId
+            },
+            userId
+          );
+        }
       }
 
       db.saveStudent(newStudent, userId);
@@ -456,6 +530,58 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
                   Pacote Padrão de 20 Aulas Práticas (R$ 1.800,00) com flexibilidade total de pagamento.
                 </div>
               )}
+              {/* Área de Cupom de Desconto do Instrutor */}
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 mt-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-800 text-xs">
+                    <Ticket className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Possui um cupom de desconto do seu instrutor?</span>
+                  </div>
+                  {appliedCoupon && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveCoupon}
+                      className="text-[10px] text-red-600 hover:underline cursor-pointer"
+                    >
+                      Remover
+                    </button>
+                  )}
+                </div>
+
+                {!appliedCoupon ? (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={couponCodeInput}
+                      onChange={(e) => setCouponCodeInput(normalizeCouponCode(e.target.value))}
+                      placeholder="Ex: CNH2026, ALUNO-PROMO..."
+                      className="flex-1 px-3 py-1.5 border border-slate-300 rounded-xl font-mono text-xs uppercase focus:outline-none focus:border-blue-600 bg-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyCoupon}
+                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold cursor-pointer text-xs"
+                    >
+                      Aplicar Cupom
+                    </button>
+                  </div>
+                ) : (
+                  <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center justify-between">
+                    <div>
+                      <span className="font-mono font-bold text-emerald-900 text-xs block">
+                        CUPOM ATIVO: {appliedCoupon.codigo}
+                      </span>
+                      <span className="text-[11px] text-emerald-700 font-medium">
+                        {couponResult?.resumo} (Valor a pagar: {formatCurrencyBRL(couponResult?.valorFinalCentavos || 0)})
+                      </span>
+                    </div>
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  </div>
+                )}
+
+                {couponError && <p className="text-[11px] text-red-600 font-medium">{couponError}</p>}
+                {couponSuccess && !couponError && <p className="text-[11px] text-emerald-700 font-medium">{couponSuccess}</p>}
+              </div>
             </div>
 
             <div className="sm:col-span-2">
