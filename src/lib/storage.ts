@@ -787,49 +787,69 @@ export function seedCleanProductionData(): { org: Organization; user: User } {
   return { org: defaultOrg, user: masterUser };
 }
 
-// Sincronização inicial com o Supabase (Hydration)
+// Sincronização inicial com o Supabase (Hydration & Safe Merge)
 export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'supabase' | 'clean' }> {
   if (!supabaseAdapter.enabled) return { synced: false, source: 'clean' };
 
   try {
-    const orgs = await supabaseAdapter.getOrganizations();
-    const users = await supabaseAdapter.getUsers();
+    const [remoteOrgs, remoteUsers] = await Promise.all([
+      supabaseAdapter.getOrganizations(),
+      supabaseAdapter.getUsers()
+    ]);
 
-    if (orgs.length === 0 && users.length === 0) {
-      // Supabase está 100% limpo! Garante que o localStorage também fica limpo
-      seedCleanProductionData();
+    // Se o Supabase estiver completamente sem registros, sincroniza a base local inicial com o Supabase
+    if (remoteOrgs.length === 0 && remoteUsers.length === 0) {
+      const localOrgs = readList<Organization>(STORAGE_KEYS.ORGANIZATIONS);
+      const localUsers = readList<User>(STORAGE_KEYS.USERS);
+      if (localOrgs.length > 0 && localUsers.length > 0) {
+        for (const o of localOrgs) {
+          await supabaseAdapter.saveOrganization(o).catch(console.error);
+        }
+        for (const u of localUsers) {
+          await supabaseAdapter.saveUser(u).catch(console.error);
+        }
+      } else {
+        seedCleanProductionData();
+      }
       return { synced: true, source: 'clean' };
     }
 
-    // Supabase possui dados reais cadastrados: hidrata o localStorage a partir do Supabase
-    writeList(STORAGE_KEYS.ORGANIZATIONS, orgs);
-    writeList(STORAGE_KEYS.USERS, users);
+    // Merge seguro com precedência no Supabase (garante que instrutores cadastrados no banco apareçam localmente)
+    const localOrgs = readList<Organization>(STORAGE_KEYS.ORGANIZATIONS);
+    const mergedOrgsMap = new Map<string, Organization>();
+    localOrgs.forEach((o) => mergedOrgsMap.set(o.id, o));
+    remoteOrgs.forEach((o) => mergedOrgsMap.set(o.id, o));
+    writeList(STORAGE_KEYS.ORGANIZATIONS, Array.from(mergedOrgsMap.values()));
 
-    const orgId = orgs[0]?.id;
-    if (orgId) {
-      const [students, vehicles, lessons, slots, accounts, payments, expenses, investments, packages] =
-        await Promise.all([
-          supabaseAdapter.getStudents(orgId),
-          supabaseAdapter.getVehicles(orgId),
-          supabaseAdapter.getLessons(orgId),
-          supabaseAdapter.getSlots(orgId),
-          supabaseAdapter.getAccountsReceivable(orgId),
-          supabaseAdapter.getPayments(orgId),
-          supabaseAdapter.getExpenses(orgId),
-          supabaseAdapter.getInvestments(orgId),
-          supabaseAdapter.getPackages(orgId)
-        ]);
+    const localUsers = readList<User>(STORAGE_KEYS.USERS);
+    const mergedUsersMap = new Map<string, User>();
+    localUsers.forEach((u) => mergedUsersMap.set(u.id, u));
+    remoteUsers.forEach((u) => mergedUsersMap.set(u.id, u));
+    writeList(STORAGE_KEYS.USERS, Array.from(mergedUsersMap.values()));
 
-      writeList(STORAGE_KEYS.STUDENTS, students || []);
-      writeList(STORAGE_KEYS.VEHICLES, vehicles || []);
-      writeList(STORAGE_KEYS.LESSONS, lessons || []);
-      writeList(STORAGE_KEYS.SLOTS, slots || []);
-      writeList(STORAGE_KEYS.ACCOUNTS, accounts || []);
-      writeList(STORAGE_KEYS.PAYMENTS, payments || []);
-      writeList(STORAGE_KEYS.EXPENSES, expenses || []);
-      writeList(STORAGE_KEYS.INVESTMENTS, investments || []);
-      writeList(STORAGE_KEYS.PACKAGES, packages || []);
-    }
+    // Carrega todos os registros remotos do Supabase de todas as organizações
+    const [students, vehicles, lessons, slots, accounts, payments, expenses, investments, packages] =
+      await Promise.all([
+        supabaseAdapter.getStudents(),
+        supabaseAdapter.getVehicles(),
+        supabaseAdapter.getLessons(),
+        supabaseAdapter.getSlots(),
+        supabaseAdapter.getAccountsReceivable(),
+        supabaseAdapter.getPayments(),
+        supabaseAdapter.getExpenses(),
+        supabaseAdapter.getInvestments(),
+        supabaseAdapter.getPackages()
+      ]);
+
+    if (students && students.length > 0) writeList(STORAGE_KEYS.STUDENTS, students);
+    if (vehicles && vehicles.length > 0) writeList(STORAGE_KEYS.VEHICLES, vehicles);
+    if (lessons && lessons.length > 0) writeList(STORAGE_KEYS.LESSONS, lessons);
+    if (slots && slots.length > 0) writeList(STORAGE_KEYS.SLOTS, slots);
+    if (accounts && accounts.length > 0) writeList(STORAGE_KEYS.ACCOUNTS, accounts);
+    if (payments && payments.length > 0) writeList(STORAGE_KEYS.PAYMENTS, payments);
+    if (expenses && expenses.length > 0) writeList(STORAGE_KEYS.EXPENSES, expenses);
+    if (investments && investments.length > 0) writeList(STORAGE_KEYS.INVESTMENTS, investments);
+    if (packages && packages.length > 0) writeList(STORAGE_KEYS.PACKAGES, packages);
 
     // Cupons de desconto: só sobrescreve a base local se a tabela remota existir e tiver dados
     try {
@@ -991,6 +1011,19 @@ export const db = {
     this.addAuditLog(org.id, 'SISTEMA', 'CRIACAO_ORGANIZACAO', 'Organizacao', org.id, `Criada organização ${org.nome}`);
   },
 
+  async createOrganizationAsync(org: Organization): Promise<void> {
+    const list = this.getOrganizations();
+    const index = list.findIndex((o) => o.id === org.id);
+    if (index >= 0) {
+      list[index] = org;
+    } else {
+      list.push(org);
+    }
+    writeList(STORAGE_KEYS.ORGANIZATIONS, list);
+    await supabaseAdapter.saveOrganization(org);
+    this.addAuditLog(org.id, 'SISTEMA', 'CRIACAO_ORGANIZACAO', 'Organizacao', org.id, `Criada organização ${org.nome}`);
+  },
+
   saveOrganization(org: Organization): void {
     const list = this.getOrganizations();
     const index = list.findIndex((o) => o.id === org.id);
@@ -1000,6 +1033,19 @@ export const db = {
       list.push(org);
     }
     writeList(STORAGE_KEYS.ORGANIZATIONS, list);
+    supabaseAdapter.saveOrganization(org).catch(console.error);
+  },
+
+  async saveOrganizationAsync(org: Organization): Promise<void> {
+    const list = this.getOrganizations();
+    const index = list.findIndex((o) => o.id === org.id);
+    if (index >= 0) {
+      list[index] = org;
+    } else {
+      list.push(org);
+    }
+    writeList(STORAGE_KEYS.ORGANIZATIONS, list);
+    await supabaseAdapter.saveOrganization(org);
   },
 
   updateOrganization(org: Organization, actorId: string): void {
@@ -1086,11 +1132,13 @@ export const db = {
     org.dataVencimentoPlano = vencimento;
 
     writeList(STORAGE_KEYS.ORGANIZATIONS, list);
+    supabaseAdapter.saveOrganization(org).catch(console.error);
 
     const users = readList<User>(STORAGE_KEYS.USERS);
     users.forEach((u) => {
       if (u.organizacaoId === params.orgId) {
         u.aprovadoPorMaster = true;
+        supabaseAdapter.saveUser(u).catch(console.error);
       }
     });
     writeList(STORAGE_KEYS.USERS, users);
@@ -1120,6 +1168,7 @@ export const db = {
     const tempPass = `Temp@${Math.floor(100000 + Math.random() * 900000)}`;
     user.senhaTemporaria = tempPass;
     writeList(STORAGE_KEYS.USERS, users);
+    supabaseAdapter.saveUser(user).catch(console.error);
 
     this.addAuditLog(
       user.organizacaoId,
@@ -1203,9 +1252,27 @@ export const db = {
 
   createUser(user: User): void {
     const users = readList<User>(STORAGE_KEYS.USERS);
-    users.push(user);
+    const index = users.findIndex((u) => u.id === user.id);
+    if (index >= 0) {
+      users[index] = user;
+    } else {
+      users.push(user);
+    }
     writeList(STORAGE_KEYS.USERS, users);
     supabaseAdapter.saveUser(user).catch(console.error);
+    this.addAuditLog(user.organizacaoId, user.id, 'CRIACAO_USUARIO', 'Usuario', user.id, `Criado usuário ${user.nome} (${user.papel})`);
+  },
+
+  async createUserAsync(user: User): Promise<void> {
+    const users = readList<User>(STORAGE_KEYS.USERS);
+    const index = users.findIndex((u) => u.id === user.id);
+    if (index >= 0) {
+      users[index] = user;
+    } else {
+      users.push(user);
+    }
+    writeList(STORAGE_KEYS.USERS, users);
+    await supabaseAdapter.saveUser(user);
     this.addAuditLog(user.organizacaoId, user.id, 'CRIACAO_USUARIO', 'Usuario', user.id, `Criado usuário ${user.nome} (${user.papel})`);
   },
 
@@ -1218,6 +1285,19 @@ export const db = {
       users.push(user);
     }
     writeList(STORAGE_KEYS.USERS, users);
+    supabaseAdapter.saveUser(user).catch(console.error);
+  },
+
+  async saveUserAsync(user: User): Promise<void> {
+    const users = readList<User>(STORAGE_KEYS.USERS);
+    const index = users.findIndex((u) => u.id === user.id);
+    if (index >= 0) {
+      users[index] = user;
+    } else {
+      users.push(user);
+    }
+    writeList(STORAGE_KEYS.USERS, users);
+    await supabaseAdapter.saveUser(user);
   },
 
   updateUser(user: User): void {
@@ -1292,6 +1372,19 @@ export const db = {
     }
     writeList(STORAGE_KEYS.STUDENTS, list);
     supabaseAdapter.saveStudent(student).catch(console.error);
+    this.addAuditLog(student.organizacaoId, actorId, 'SALVAR_ALUNO', 'Aluno', student.id, `Salvo dados de ${student.nome} (Aulas: ${student.aulasCumpridas}/${student.totalAulasContratadas})`);
+  },
+
+  async saveStudentAsync(student: Student, actorId: string): Promise<void> {
+    const list = readList<Student>(STORAGE_KEYS.STUDENTS);
+    const index = list.findIndex((s) => s.id === student.id);
+    if (index >= 0) {
+      list[index] = student;
+    } else {
+      list.push(student);
+    }
+    writeList(STORAGE_KEYS.STUDENTS, list);
+    await supabaseAdapter.saveStudent(student);
     this.addAuditLog(student.organizacaoId, actorId, 'SALVAR_ALUNO', 'Aluno', student.id, `Salvo dados de ${student.nome} (Aulas: ${student.aulasCumpridas}/${student.totalAulasContratadas})`);
   },
 
@@ -1628,6 +1721,7 @@ export const db = {
       list.push(pkg);
     }
     writeList(STORAGE_KEYS.PACKAGES, list);
+    supabaseAdapter.savePackage(pkg).catch(console.error);
   },
 
   togglePackageStatus(packageId: string, actorId: string): void {
@@ -1918,6 +2012,39 @@ export const db = {
     return true;
   },
 
+  async updateUserPasswordAsync(userId: string, newPassword: string): Promise<boolean> {
+    const users = readList<User>(STORAGE_KEYS.USERS);
+    const index = users.findIndex((u) => u.id === userId);
+    if (index === -1) return false;
+
+    users[index].senhaTemporaria = newPassword;
+    users[index].ultimoAcesso = new Date().toISOString();
+    writeList(STORAGE_KEYS.USERS, users);
+
+    try {
+      await supabaseAdapter.saveUser(users[index]);
+    } catch (e) {
+      console.error('[Supabase] Erro ao sincronizar nova senha:', e);
+    }
+
+    const current = this.getCurrentUser();
+    if (current && current.id === userId) {
+      current.senhaTemporaria = newPassword;
+      current.ultimoAcesso = users[index].ultimoAcesso;
+      this.setCurrentUser(current);
+    }
+
+    this.addAuditLog(
+      users[index].organizacaoId,
+      userId,
+      'REDEFINICAO_SENHA',
+      'Usuario',
+      userId,
+      `Senha redefinida com sucesso para o usuário ${users[index].nome} (${users[index].email})`
+    );
+    return true;
+  },
+
   // Cadastro de Novo Administrador Master
   createMasterUser(
     data: {
@@ -2121,6 +2248,128 @@ export const db = {
     }
 
     return { success: true, message: 'Senha do Administrador Master atualizada com sucesso!' };
+  },
+
+  /**
+   * Força o envio completo de todos os dados locais para o banco Supabase em ordem estrita de integridade
+   */
+  async pushAllLocalDataToSupabase(onProgress?: (msg: string) => void): Promise<{
+    success: boolean;
+    stats: Record<string, number>;
+    errors: string[];
+  }> {
+    const errors: string[] = [];
+    const stats: Record<string, number> = {
+      organizations: 0,
+      users: 0,
+      students: 0,
+      packages: 0,
+      vehicles: 0,
+      lessons: 0,
+      slots: 0,
+      coupons: 0
+    };
+
+    try {
+      // 1. Organizações (devem ser persistidas primeiro para evitar violações de chave estrangeira em usuários e alunos)
+      const orgs = this.getOrganizations();
+      onProgress?.(`Gravando ${orgs.length} organização(ões) no Supabase...`);
+      for (const org of orgs) {
+        try {
+          await supabaseAdapter.saveOrganization(org);
+          stats.organizations++;
+        } catch (e: any) {
+          errors.push(`Org ${org.nome}: ${e.message}`);
+        }
+      }
+
+      // 2. Usuários / Instrutores
+      const users = this.getUsers();
+      onProgress?.(`Gravando ${users.length} usuário(s)/instrutor(es) no Supabase...`);
+      for (const user of users) {
+        try {
+          await supabaseAdapter.saveUser(user);
+          stats.users++;
+        } catch (e: any) {
+          errors.push(`User ${user.nome}: ${e.message}`);
+        }
+      }
+
+      // 3. Pacotes de Aulas
+      const packages = readList<PackageOffer>(STORAGE_KEYS.PACKAGES);
+      onProgress?.(`Gravando ${packages.length} pacote(s) no Supabase...`);
+      for (const pkg of packages) {
+        try {
+          await supabaseAdapter.savePackage(pkg);
+          stats.packages++;
+        } catch (e: any) {
+          errors.push(`Pacote ${pkg.nome}: ${e.message}`);
+        }
+      }
+
+      // 4. Alunos
+      const students = readList<Student>(STORAGE_KEYS.STUDENTS);
+      onProgress?.(`Gravando ${students.length} aluno(s) no Supabase...`);
+      for (const st of students) {
+        try {
+          await supabaseAdapter.saveStudent(st);
+          stats.students++;
+        } catch (e: any) {
+          errors.push(`Aluno ${st.nome}: ${e.message}`);
+        }
+      }
+
+      // 5. Veículos
+      const vehicles = readList<Vehicle>(STORAGE_KEYS.VEHICLES);
+      for (const v of vehicles) {
+        try {
+          await supabaseAdapter.saveVehicle(v);
+          stats.vehicles++;
+        } catch (e: any) {
+          errors.push(`Veículo ${v.modelo}: ${e.message}`);
+        }
+      }
+
+      // 6. Slots e Aulas
+      const slots = readList<AvailableSlot>(STORAGE_KEYS.SLOTS);
+      for (const sl of slots) {
+        try {
+          await supabaseAdapter.saveSlot(sl);
+          stats.slots++;
+        } catch (e: any) {
+          errors.push(`Slot ${sl.id}: ${e.message}`);
+        }
+      }
+      const lessons = readList<Lesson>(STORAGE_KEYS.LESSONS);
+      for (const ls of lessons) {
+        try {
+          await supabaseAdapter.saveLesson(ls);
+          stats.lessons++;
+        } catch (e: any) {
+          errors.push(`Aula ${ls.id}: ${e.message}`);
+        }
+      }
+
+      // 7. Cupons de desconto
+      const coupons = couponStore.getAll();
+      for (const cp of coupons) {
+        try {
+          await supabaseAdapter.saveCoupon(cp);
+          stats.coupons++;
+        } catch (e: any) {
+          errors.push(`Cupom ${cp.codigo}: ${e.message}`);
+        }
+      }
+
+      return {
+        success: errors.length === 0,
+        stats,
+        errors
+      };
+    } catch (err: any) {
+      errors.push(`Erro geral: ${err?.message}`);
+      return { success: false, stats, errors };
+    }
   },
 
   reassignStudentInstructor(studentId: string, newInstructorId: string, actorId: string): boolean {

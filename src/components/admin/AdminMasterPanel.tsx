@@ -43,6 +43,7 @@ import {
 import { db, CadastrosIntegrityReport, seedDemoData } from '../../lib/storage';
 import { formatCurrencyBRL, formatDateBR } from '../../lib/validation';
 import { getPlanDetails, SAAS_PLANS } from '../../lib/saasPlans';
+import { SupabaseLiveView } from './SupabaseLiveView';
 import { Organization, User, Student, SaaSPlanType, OrganizationStatus } from '../../types';
 import { SmartScrollNav } from '../common/SmartScrollNav';
 
@@ -80,7 +81,7 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
   const allStudents = db.getStudents(organizations[0]?.id || '');
   const allPayments = db.getPayments(organizations[0]?.id || '');
 
-  const [activeSubTab, setActiveSubTab] = useState<'VERIFICADOR' | 'ORGS' | 'MASTERS' | 'PLANS' | 'COUPONS' | 'MAINTENANCE'>(
+  const [activeSubTab, setActiveSubTab] = useState<'VERIFICADOR' | 'ORGS' | 'MASTERS' | 'PLANS' | 'COUPONS' | 'MAINTENANCE' | 'SUPABASE_LIVE'>(
     () => (isSimplified ? 'ORGS' : 'VERIFICADOR')
   );
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -474,9 +475,26 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
             }`}
           >
             <Database className="w-3.5 h-3.5 xl:w-4 xl:h-4 shrink-0" />
-            <span>Manutenção & Banco Demo</span>
+            <span>Manutenção & Demo</span>
           </button>
         )}
+
+        {/* SUB-ABA: BANCO SUPABASE AO VIVO */}
+        <button
+          onClick={() => setActiveSubTab('SUPABASE_LIVE')}
+          className={`flex items-center justify-center lg:flex-1 gap-1.5 px-2.5 xl:px-3.5 py-2.5 rounded-xl text-xs xl:text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+            activeSubTab === 'SUPABASE_LIVE'
+              ? 'bg-emerald-600 text-white shadow-xs'
+              : 'bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100'
+          }`}
+          title="Listar todos os cadastros e dados em tempo real diretamente do Supabase"
+        >
+          <Database className="w-3.5 h-3.5 xl:w-4 xl:h-4 shrink-0 text-emerald-400" />
+          <span>Banco Supabase (Ao Vivo)</span>
+          <span className="px-1.5 py-0.2 rounded-full bg-emerald-700 text-white text-xs">
+            Ao Vivo
+          </span>
+        </button>
 
         {isSimplified && onSwitchToFullMode && (
           <button
@@ -1193,6 +1211,11 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
             </button>
           </div>
         </div>
+      )}
+
+      {/* SUB-ABA 7: LISTAGEM DE TODOS OS CADASTROS DO BANCO SUPABASE (AO VIVO) */}
+      {activeSubTab === 'SUPABASE_LIVE' && (
+        <SupabaseLiveView />
       )}
 
       {/* MODAL: CONSULTA DETALHADA DE INSTITUIÇÃO */}

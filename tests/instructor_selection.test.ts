@@ -108,3 +108,4 @@ if (pkgs.length === 0) {
 assert(pkgs.length > 0 && pkgs[0].totalAulas === 20, 'Fallback de pacotes garante opções ativas para o aluno se matricular');
 
 console.log('\n=== TODOS OS TESTES DE INSTRUTORES PASSARAM COM SUCESSO! ===\n');
+

@@ -94,7 +94,22 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
     async function loadRemoteInstructors() {
       setLoadingInstructors(true);
       try {
-        const fresh = await db.syncRemoteInstructors();
+        const [remoteUsers, remoteOrgs] = await Promise.all([
+          supabaseAdapter.getUsers(),
+          supabaseAdapter.getOrganizations()
+        ]);
+        if (remoteOrgs && remoteOrgs.length > 0) {
+          remoteOrgs.forEach((o) => db.saveOrganization(o));
+        }
+        if (remoteUsers && remoteUsers.length > 0) {
+          remoteUsers.forEach((u) => db.saveUser(u));
+        }
+        let fresh = db.getAllInstructors();
+        if (fresh.length === 0) {
+          // Se ainda não houver instrutores autônomos, busca qualquer usuário administrador ou credenciado
+          const allUsers = db.getUsers();
+          fresh = allUsers.filter((u) => u.papel === 'ADMIN_ORG' || u.papel === 'INSTRUTOR' || u.papel === 'SUPER_ADMIN');
+        }
         if (isMounted) {
           setInstructorsList(fresh);
 
@@ -296,7 +311,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -476,12 +491,9 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
         }
       }
 
-      db.saveStudent(newStudent, userId);
-      db.createUser(newUser);
-
-      // Dual-write Supabase direto
-      supabaseAdapter.saveStudent(newStudent).catch(console.error);
-      supabaseAdapter.saveUser(newUser).catch(console.error);
+      // Gravação assíncrona garantida no Supabase e localStorage
+      await db.saveStudentAsync(newStudent, userId);
+      await db.createUserAsync(newUser);
 
       onRegistered(newStudent, newUser);
     } catch (err: any) {

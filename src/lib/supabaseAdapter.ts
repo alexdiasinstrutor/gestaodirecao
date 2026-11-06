@@ -603,7 +603,18 @@ async function supabaseUpsert(table: string, row: Record<string, any>): Promise<
   if (!supabase) return;
   const { error } = await supabase.from(table).upsert(row, { onConflict: 'id' });
   if (error) {
-    // Se a tabela remota no Supabase ainda não executou o ALTER TABLE com os campos extras de endereço,
+    // 1. Tratamento para violação de unicidade (ex: email já existente em users ou CNPJ/CPF em organizations)
+    if (error.code === '23505' || (error.message && error.message.toLowerCase().includes('unique'))) {
+      if (table === 'users' && row.email) {
+        const updateRes = await supabase.from('users').update(row).eq('email', String(row.email).toLowerCase());
+        if (!updateRes.error) return;
+      } else if (table === 'organizations' && row.cnpj_cpf) {
+        const updateRes = await supabase.from('organizations').update(row).eq('cnpj_cpf', row.cnpj_cpf);
+        if (!updateRes.error) return;
+      }
+    }
+
+    // 2. Se a tabela remota no Supabase ainda não executou o ALTER TABLE com os campos extras de endereço,
     // faz fallback automático removendo apenas as colunas de endereço estendidas para não perder a gravação.
     if (error.message && (error.message.includes('column') || error.code === 'PGRST204')) {
       const fallbackRow = { ...row };
@@ -661,7 +672,9 @@ async function supabaseSelect<T>(
  * Use junto com a camada localStorage como dual-write durante a transição.
  */
 export const supabaseAdapter = {
-  enabled: isSupabaseEnabled(),
+  get enabled(): boolean {
+    return isSupabaseEnabled();
+  },
 
   // Organizações
   async getOrganizations(): Promise<Organization[]> {
@@ -692,8 +705,8 @@ export const supabaseAdapter = {
   },
 
   // Alunos
-  async getStudents(orgId: string): Promise<Student[]> {
-    return supabaseSelect('students', rowToStudent, { organizacao_id: orgId });
+  async getStudents(orgId?: string): Promise<Student[]> {
+    return supabaseSelect('students', rowToStudent, orgId ? { organizacao_id: orgId } : undefined);
   },
   async getStudentById(studentId: string): Promise<Student | undefined> {
     const list = await supabaseSelect('students', rowToStudent, { id: studentId });
@@ -709,24 +722,24 @@ export const supabaseAdapter = {
   },
 
   // Veículos
-  async getVehicles(orgId: string): Promise<Vehicle[]> {
-    return supabaseSelect('vehicles', rowToVehicle, { organizacao_id: orgId });
+  async getVehicles(orgId?: string): Promise<Vehicle[]> {
+    return supabaseSelect('vehicles', rowToVehicle, orgId ? { organizacao_id: orgId } : undefined);
   },
   async saveVehicle(vehicle: Vehicle): Promise<void> {
     await supabaseUpsert('vehicles', vehicleToRow(vehicle));
   },
 
   // Slots de Agenda
-  async getSlots(orgId: string): Promise<AvailableSlot[]> {
-    return supabaseSelect('available_slots', rowToSlot, { organizacao_id: orgId });
+  async getSlots(orgId?: string): Promise<AvailableSlot[]> {
+    return supabaseSelect('available_slots', rowToSlot, orgId ? { organizacao_id: orgId } : undefined);
   },
   async saveSlot(slot: AvailableSlot): Promise<void> {
     await supabaseUpsert('available_slots', slotToRow(slot));
   },
 
   // Aulas
-  async getLessons(orgId: string): Promise<Lesson[]> {
-    return supabaseSelect('lessons', rowToLesson, { organizacao_id: orgId });
+  async getLessons(orgId?: string): Promise<Lesson[]> {
+    return supabaseSelect('lessons', rowToLesson, orgId ? { organizacao_id: orgId } : undefined);
   },
   async getLessonsByStudent(studentId: string): Promise<Lesson[]> {
     return supabaseSelect('lessons', rowToLesson, { aluno_id: studentId });
@@ -736,24 +749,24 @@ export const supabaseAdapter = {
   },
 
   // Contas a Receber
-  async getAccountsReceivable(orgId: string): Promise<AccountReceivable[]> {
-    return supabaseSelect('accounts_receivable', rowToAccount, { organizacao_id: orgId });
+  async getAccountsReceivable(orgId?: string): Promise<AccountReceivable[]> {
+    return supabaseSelect('accounts_receivable', rowToAccount, orgId ? { organizacao_id: orgId } : undefined);
   },
   async saveAccountReceivable(account: AccountReceivable): Promise<void> {
     await supabaseUpsert('accounts_receivable', accountToRow(account));
   },
 
   // Pagamentos
-  async getPayments(orgId: string): Promise<PaymentRecord[]> {
-    return supabaseSelect('payment_records', rowToPayment, { organizacao_id: orgId });
+  async getPayments(orgId?: string): Promise<PaymentRecord[]> {
+    return supabaseSelect('payment_records', rowToPayment, orgId ? { organizacao_id: orgId } : undefined);
   },
   async savePayment(payment: PaymentRecord): Promise<void> {
     await supabaseUpsert('payment_records', paymentToRow(payment));
   },
 
   // Despesas
-  async getExpenses(orgId: string): Promise<Expense[]> {
-    return supabaseSelect('expenses', rowToExpense, { organizacao_id: orgId });
+  async getExpenses(orgId?: string): Promise<Expense[]> {
+    return supabaseSelect('expenses', rowToExpense, orgId ? { organizacao_id: orgId } : undefined);
   },
   async saveExpense(expense: Expense): Promise<void> {
     await supabaseUpsert('expenses', expenseToRow(expense));
@@ -763,8 +776,8 @@ export const supabaseAdapter = {
   },
 
   // Investimentos
-  async getInvestments(orgId: string): Promise<Investment[]> {
-    return supabaseSelect('investments', rowToInvestment, { organizacao_id: orgId });
+  async getInvestments(orgId?: string): Promise<Investment[]> {
+    return supabaseSelect('investments', rowToInvestment, orgId ? { organizacao_id: orgId } : undefined);
   },
   async saveInvestment(investment: Investment): Promise<void> {
     await supabaseUpsert('investments', investmentToRow(investment));
@@ -774,8 +787,8 @@ export const supabaseAdapter = {
   },
 
   // Pacotes
-  async getPackages(orgId: string): Promise<PackageOffer[]> {
-    return supabaseSelect('package_offers', rowToPackage, { organizacao_id: orgId });
+  async getPackages(orgId?: string): Promise<PackageOffer[]> {
+    return supabaseSelect('package_offers', rowToPackage, orgId ? { organizacao_id: orgId } : undefined);
   },
   async savePackage(pkg: PackageOffer): Promise<void> {
     await supabaseUpsert('package_offers', packageToRow(pkg));

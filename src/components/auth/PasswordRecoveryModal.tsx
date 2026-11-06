@@ -94,7 +94,7 @@ export const PasswordRecoveryModal: React.FC<PasswordRecoveryModalProps> = ({
     }, 500);
   };
 
-  const handleResetPassword = (e: React.FormEvent) => {
+  const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -125,11 +125,14 @@ export const PasswordRecoveryModal: React.FC<PasswordRecoveryModalProps> = ({
 
     setLoading(true);
 
-    setTimeout(() => {
-      db.updateUserPassword(validatedUser.id, newPassword);
+    try {
+      await db.updateUserPasswordAsync(validatedUser.id, newPassword);
       setLoading(false);
       setStep('SUCCESS');
-    }, 400);
+    } catch (err: any) {
+      setLoading(false);
+      setError('Erro ao salvar nova senha no banco: ' + (err?.message || 'Tente novamente.'));
+    }
   };
 
   const handleResendCode = () => {

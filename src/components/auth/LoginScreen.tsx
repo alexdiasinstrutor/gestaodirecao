@@ -13,9 +13,11 @@ import {
   Shield
 } from 'lucide-react';
 import { db } from '../../lib/storage';
-import { User } from '../../types';
+import { User, Organization, Student } from '../../types';
 import { PasswordRecoveryModal } from './PasswordRecoveryModal';
 import { Logo } from '../common/Logo';
+import { signInWithGoogleOAuth } from '../../lib/supabaseClient';
+import { generateCPFFingerprint, maskCPF } from '../../lib/validation';
 
 interface LoginScreenProps {
   onLoginAttempt: (user: User) => void;
@@ -36,6 +38,182 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [showPasswordRecovery, setShowPasswordRecovery] = useState<boolean>(false);
   const [showGoogleModal, setShowGoogleModal] = useState<boolean>(false);
+  const [googleModalMode, setGoogleModalMode] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
+  const [googleNome, setGoogleNome] = useState<string>('');
+  const [googleRole, setGoogleRole] = useState<'INSTRUTOR' | 'ALUNO'>('INSTRUTOR');
+  const [googleActionError, setGoogleActionError] = useState<string>('');
+
+  const handleStartGoogleFlow = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const res = await signInWithGoogleOAuth();
+      if (res?.error) {
+        // Se o Supabase ainda não tiver as credenciais OAuth do Google habilitadas no Dashboard,
+        // abre o modal de login/cadastro rápido Google
+        setShowGoogleModal(true);
+        setLoading(false);
+      }
+      // Se não deu erro, o redirecionamento OAuth oficial do Supabase ocorre automaticamente
+    } catch {
+      setShowGoogleModal(true);
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setGoogleActionError('');
+
+    if (!googleEmail.trim() || !googleEmail.includes('@')) {
+      setGoogleActionError('Informe um e-mail do Google válido.');
+      return;
+    }
+
+    if (!googlePassword || googlePassword.length < 6) {
+      setGoogleActionError('A senha de acesso deve ter pelo menos 6 caracteres.');
+      return;
+    }
+
+    setLoading(true);
+
+    if (googleModalMode === 'LOGIN') {
+      const user = db.getUserByEmail(googleEmail.trim());
+      if (!user) {
+        setLoading(false);
+        setGoogleActionError(`Conta Google (${googleEmail.trim()}) não encontrada. Clique na aba "Cadastrar com Google" ao lado para criar seu cadastro.`);
+        return;
+      }
+
+      const expectedPassword = user.senhaTemporaria || '123456';
+      if (googlePassword !== expectedPassword) {
+        setLoading(false);
+        setGoogleActionError('Senha incorreta para a conta Google informada.');
+        return;
+      }
+
+      setLoading(false);
+      setShowGoogleModal(false);
+      onLoginAttempt(user);
+    } else {
+      // Cadastro com Google
+      if (!googleNome.trim() || googleNome.length < 3) {
+        setLoading(false);
+        setGoogleActionError('Informe seu nome completo para o cadastro.');
+        return;
+      }
+
+      const existing = db.getUserByEmail(googleEmail.trim());
+      if (existing) {
+        setLoading(false);
+        setGoogleActionError('Este e-mail Google já possui cadastro. Alterne para a aba "Já Tenho Conta".');
+        return;
+      }
+
+      try {
+        const orgId = `org_${Date.now()}`;
+        const userId = `usr_${Date.now()}`;
+
+        if (googleRole === 'INSTRUTOR') {
+          const newOrg: Organization = {
+            id: orgId,
+            nome: `${googleNome.trim()} (Instrutor Autônomo)`,
+            tipo: 'INSTRUTOR_AUTONOMO',
+            cnpjCpf: '000.000.000-00',
+            telefone: '(11) 99999-9999',
+            email: googleEmail.trim().toLowerCase(),
+            cidade: 'Belo Horizonte',
+            estado: 'MG',
+            status: 'ATIVO',
+            plano: 'BASICO',
+            criadoEm: new Date().toISOString()
+          };
+
+          const newUser: User = {
+            id: userId,
+            organizacaoId: orgId,
+            nome: googleNome.trim(),
+            email: googleEmail.trim().toLowerCase(),
+            papel: 'ADMIN_ORG',
+            telefone: '(11) 99999-9999',
+            cpfUltimos4: '0000',
+            cpfFingerprint: generateCPFFingerprint('00000000000'),
+            cpfMascarado: '***.***.000-00',
+            senhaTemporaria: googlePassword,
+            twoFactorAtivo: true,
+            aprovadoPorMaster: true,
+            ultimoAcesso: new Date().toISOString()
+          };
+
+          await db.createOrganizationAsync(newOrg);
+          await db.createUserAsync(newUser);
+          setShowGoogleModal(false);
+          setLoading(false);
+          onLoginAttempt(newUser);
+        } else {
+          // Aluno com Google
+          const allOrgs = db.getOrganizations();
+          const targetOrgId = allOrgs[0]?.id || 'org_direcao_certa_01';
+          const instructors = db.getAllInstructors();
+          const activeInstructor = instructors[0];
+
+          const newUser: User = {
+            id: userId,
+            organizacaoId: targetOrgId,
+            nome: googleNome.trim(),
+            email: googleEmail.trim().toLowerCase(),
+            papel: 'ALUNO',
+            telefone: '(11) 99999-9999',
+            cpfUltimos4: '0000',
+            cpfFingerprint: generateCPFFingerprint('00000000000'),
+            cpfMascarado: '***.***.000-00',
+            senhaTemporaria: googlePassword,
+            twoFactorAtivo: true,
+            aprovadoPorMaster: true,
+            ultimoAcesso: new Date().toISOString()
+          };
+
+          const newStudent: Student = {
+            id: `stu_${Date.now()}`,
+            organizacaoId: targetOrgId,
+            instrutorId: activeInstructor?.id || 'usr_instrutor_carlos',
+            nome: googleNome.trim(),
+            email: googleEmail.trim().toLowerCase(),
+            telefone: '(11) 99999-9999',
+            cpfMascarado: '***.***.000-00',
+            cpfFingerprint: generateCPFFingerprint('00000000000'),
+            dataNascimento: '2000-01-01',
+            idade: 24,
+            categoriaCnh: 'B',
+            status: 'EM_ANDAMENTO',
+            aulasCumpridas: 0,
+            totalAulasContratadas: 20,
+            habilidades: {
+              baliza: 0,
+              controleEmbreagem: 0,
+              transitoPesado: 0,
+              conversoesCruzamentos: 0,
+              rodoviaVelocidade: 0,
+              sinalizacaoPreferencia: 0,
+              posturaDefensiva: 0,
+              simuladoExame: 0
+            },
+            observacoesInstrutor: 'Aluno matriculado via conta Google.',
+            dataCadastro: new Date().toISOString()
+          };
+
+          await db.createUserAsync(newUser);
+          await db.saveStudentAsync(newStudent, userId);
+          setShowGoogleModal(false);
+          setLoading(false);
+          onLoginAttempt(newUser);
+        }
+      } catch (err: any) {
+        setLoading(false);
+        setGoogleActionError('Erro ao cadastrar com Google: ' + (err?.message || 'Tente novamente.'));
+      }
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,37 +240,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       if (password !== expectedPassword) {
         setError('Senha incorreta. Verifique os dados digitados ou utilize "Esqueceu a senha?" logo abaixo para redefini-la.');
         setLoading(false);
-        return;
-      }
-
-      setLoading(false);
-      onLoginAttempt(user);
-    }, 400);
-  };
-
-  const handleGoogleLoginSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-
-    if (!googleEmail.trim()) {
-      setError('Informe o e-mail da sua conta Google cadastrada.');
-      return;
-    }
-
-    setLoading(true);
-    setShowGoogleModal(false);
-    setTimeout(() => {
-      const user = db.getUserByEmail(googleEmail.trim());
-      if (!user) {
-        setLoading(false);
-        setError(`Conta (${googleEmail.trim()}) não encontrada no sistema. Verifique o e-mail de cadastro.`);
-        return;
-      }
-
-      const expectedPassword = user.senhaTemporaria || '123456';
-      if (googlePassword !== expectedPassword) {
-        setLoading(false);
-        setError('Senha incorreta para a conta informada.');
         return;
       }
 
@@ -137,7 +284,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           <div>
             <button
               type="button"
-              onClick={() => setShowGoogleModal(true)}
+              onClick={handleStartGoogleFlow}
               disabled={loading}
               className="w-full flex items-center justify-center gap-3 py-2.5 px-4 border border-slate-300/80 rounded-xl shadow-xs bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-all cursor-pointer touch-target"
             >
@@ -159,7 +306,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                 />
               </svg>
-              <span>Acessar com Google</span>
+              <span>Acessar ou Cadastrar com Google</span>
             </button>
 
             <div className="relative my-4">
@@ -318,14 +465,77 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               </button>
             </div>
 
-            <p className="text-xs text-slate-500">
-              Informe o e-mail Google e a senha da sua conta cadastrada na plataforma:
-            </p>
+            {/* Alternador de Modo: Login ou Cadastro */}
+            <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setGoogleModalMode('LOGIN');
+                  setGoogleActionError('');
+                }}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
+                  googleModalMode === 'LOGIN' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Já Tenho Conta
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setGoogleModalMode('REGISTER');
+                  setGoogleActionError('');
+                }}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
+                  googleModalMode === 'REGISTER' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Cadastrar com Google
+              </button>
+            </div>
 
-            <form onSubmit={handleGoogleLoginSubmit} className="space-y-3">
+            {googleActionError && (
+              <div className="p-2.5 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs flex items-center gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
+                <span>{googleActionError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleGoogleSubmit} className="space-y-3">
+              {googleModalMode === 'REGISTER' && (
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Seu Nome Completo *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={googleNome}
+                      onChange={(e) => setGoogleNome(e.target.value)}
+                      placeholder="Ex: Alex Dias"
+                      className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Perfil de Acesso *
+                    </label>
+                    <select
+                      value={googleRole}
+                      onChange={(e) => setGoogleRole(e.target.value as any)}
+                      className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none bg-white font-medium cursor-pointer"
+                    >
+                      <option value="INSTRUTOR">Instrutor Autônomo / Autoescola</option>
+                      <option value="ALUNO">Aluno de Direção</option>
+                    </select>
+                  </div>
+                </>
+              )}
+
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  E-mail Google Cadastrado
+                  E-mail da sua Conta Google *
                 </label>
                 <input
                   type="email"
@@ -339,23 +549,27 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Senha de Acesso
+                  Senha de Acesso à Plataforma *
                 </label>
                 <input
                   type="password"
                   required
                   value={googlePassword}
                   onChange={(e) => setGooglePassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder="Mínimo 6 caracteres"
                   className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none"
                 />
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Esta senha será gravada no banco Supabase para acesso seguro.
+                </p>
               </div>
 
               <button
                 type="submit"
+                disabled={loading}
                 className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
               >
-                Confirmar e Entrar
+                {loading ? 'Processando...' : googleModalMode === 'REGISTER' ? 'Concluir Cadastro com Google' : 'Entrar com Conta Google'}
               </button>
             </form>
 
