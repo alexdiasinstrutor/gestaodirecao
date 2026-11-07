@@ -108,8 +108,12 @@ const STORAGE_KEYS = {
   WHATSAPP_LOGS: 'agd_whatsapp_logs',
   SYNC_QUEUE: 'agd_sync_queue',
   CURRENT_USER: 'agd_current_user',
+  SESSION_EXPIRY: 'agd_session_expiry',
   SEEDED: 'agd_seeded_v5'
 };
+
+// Duração padrão da sessão ativa do usuário (60 minutos)
+export const SESSION_DURATION_MS = 60 * 60 * 1000;
 
 // Seed dataset de demonstração (opcional para testes)
 export function seedDemoData() {
@@ -777,6 +781,7 @@ export function seedCleanProductionData(): { org: Organization; user: User } {
 
   // Nunca auto-loga em nenhum usuário (incluindo Master): exige login manual com e-mail e senha
   localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+  localStorage.removeItem(STORAGE_KEYS.SESSION_EXPIRY);
 
   // Persiste no Supabase caso esteja conectado
   if (supabaseAdapter.enabled) {
@@ -976,11 +981,27 @@ setCouponSyncHooks({
 });
 
 export const db = {
-  // Current Session User
+  // Current Session User (Sessão persistente por no mínimo 60 minutos)
   getCurrentUser(): User | null {
     try {
       const raw = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
-      return raw ? JSON.parse(raw) : null;
+      if (!raw) return null;
+
+      const expiryRaw = localStorage.getItem(STORAGE_KEYS.SESSION_EXPIRY);
+      if (expiryRaw) {
+        const expiry = parseInt(expiryRaw, 10);
+        if (Number.isFinite(expiry) && Date.now() > expiry) {
+          // Sessão expirou após 60min de inatividade
+          localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+          localStorage.removeItem(STORAGE_KEYS.SESSION_EXPIRY);
+          return null;
+        }
+      } else {
+        // Se já existia um usuário logado sem timestamp de expiração, define 60 minutos
+        localStorage.setItem(STORAGE_KEYS.SESSION_EXPIRY, (Date.now() + SESSION_DURATION_MS).toString());
+      }
+
+      return JSON.parse(raw);
     } catch {
       return null;
     }
@@ -989,8 +1010,33 @@ export const db = {
   setCurrentUser(user: User | null): void {
     if (user) {
       localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
+      localStorage.setItem(STORAGE_KEYS.SESSION_EXPIRY, (Date.now() + SESSION_DURATION_MS).toString());
     } else {
       localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+      localStorage.removeItem(STORAGE_KEYS.SESSION_EXPIRY);
+    }
+  },
+
+  refreshSession(): void {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+      if (raw) {
+        localStorage.setItem(STORAGE_KEYS.SESSION_EXPIRY, (Date.now() + SESSION_DURATION_MS).toString());
+      }
+    } catch (e) {
+      console.warn('Erro ao renovar timestamp da sessão:', e);
+    }
+  },
+
+  getSessionRemainingSeconds(): number {
+    try {
+      const expiryRaw = localStorage.getItem(STORAGE_KEYS.SESSION_EXPIRY);
+      if (!expiryRaw) return 0;
+      const expiry = parseInt(expiryRaw, 10);
+      const remainingMs = expiry - Date.now();
+      return remainingMs > 0 ? Math.floor(remainingMs / 1000) : 0;
+    } catch {
+      return 0;
     }
   },
 
@@ -1197,6 +1243,11 @@ export const db = {
   getUserByEmail(email: string): User | undefined {
     const clean = email.trim().toLowerCase();
     return readList<User>(STORAGE_KEYS.USERS).find((u) => u.email.toLowerCase() === clean);
+  },
+
+  getUserById(userId: string): User | undefined {
+    if (!userId) return undefined;
+    return readList<User>(STORAGE_KEYS.USERS).find((u) => u.id === userId);
   },
 
   /**
@@ -2531,6 +2582,7 @@ export const db = {
     }
     seedCleanProductionData();
     localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+    localStorage.removeItem(STORAGE_KEYS.SESSION_EXPIRY);
   },
 
   // Limpa todos os dados de teste para entrada em produção oficial (Go-Live)
@@ -2541,6 +2593,7 @@ export const db = {
     }
     seedCleanProductionData();
     localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+    localStorage.removeItem(STORAGE_KEYS.SESSION_EXPIRY);
   },
 
   getAllDataForExport() {

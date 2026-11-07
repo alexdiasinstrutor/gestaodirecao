@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   LayoutDashboard,
   DollarSign,
@@ -43,26 +43,25 @@ import { useInterfaceMode } from './hooks/useInterfaceMode';
 import { canAccessModule } from './lib/saasPlans';
 
 export default function App() {
-  // Initialize storage & seeds on mount, then hydrate from Supabase (sem login automático)
-  useEffect(() => {
+  // Inicializa o usuário a partir da sessão ativa no localStorage (válida por 60 minutos)
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
     initDatabase();
-    db.setCurrentUser(null);
-    syncFromSupabase().then(() => {
-      // Atualiza apenas os dados da organização padrão após sincronizar, mantendo a exigência de login manual
-      setCurrentOrg(db.getOrganizations()[0]);
-    });
-  }, []);
-
-  // Sempre exige autenticação manual por e-mail e senha ao abrir a plataforma (sem entrada automática do Master)
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+    return db.getCurrentUser();
+  });
 
   const [currentOrg, setCurrentOrg] = useState<Organization | undefined>(() => {
     const user = db.getCurrentUser();
     return user ? db.getOrganization(user.organizacaoId) : db.getOrganizations()[0];
   });
 
-  // Active navigation tab for Instructors
-  const [activeTab, setActiveTab] = useState<string>('DASHBOARD');
+  // Active navigation tab for Instructors / Admin
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    const user = db.getCurrentUser();
+    if (user && (user.papel === 'SUPER_ADMIN' || user.email === 'cassiordcosta@gmail.com')) {
+      return 'ADMIN';
+    }
+    return 'DASHBOARD';
+  });
 
   // 2FA pending state
   const [pending2FAUser, setPending2FAUser] = useState<User | null>(null);
@@ -81,6 +80,83 @@ export default function App() {
     cupom?: string;
     convite?: string;
   } | null>(null);
+
+  // Finaliza o login persistindo a sessão por 60 minutos
+  const finalizeLogin = useCallback((user: User) => {
+    db.setCurrentUser(user);
+    setCurrentUser(user);
+    const org = db.getOrganization(user.organizacaoId);
+    setCurrentOrg(org);
+    setPending2FAUser(null);
+    if (user.papel === 'SUPER_ADMIN' || user.email === 'cassiordcosta@gmail.com') {
+      setActiveTab('ADMIN');
+    } else {
+      setActiveTab('DASHBOARD');
+    }
+  }, []);
+
+  // Encerra a sessão e limpa credenciais ativas
+  const handleLogout = useCallback(() => {
+    db.setCurrentUser(null);
+    setCurrentUser(null);
+    setPending2FAUser(null);
+  }, []);
+
+  // Initialize storage & seeds on mount, then hydrate from Supabase mantendo a sessão de 60min
+  useEffect(() => {
+    initDatabase();
+    syncFromSupabase().then(() => {
+      // Atualiza os dados locais a partir do Supabase sem deslogar o usuário ativo
+      const activeUser = db.getCurrentUser();
+      if (activeUser) {
+        const freshUser = db.getUserById(activeUser.id) || activeUser;
+        setCurrentUser(freshUser);
+        const org = db.getOrganization(freshUser.organizacaoId);
+        if (org) setCurrentOrg(org);
+      } else {
+        setCurrentOrg(db.getOrganizations()[0]);
+      }
+    });
+  }, []);
+
+  // Monitoramento de expiração de sessão (mínimo 60min) e renovação por atividade do usuário
+  useEffect(() => {
+    if (!currentUser) return;
+
+    // Renova a sessão enquanto o usuário estiver interagindo (throttle de 60 segundos)
+    let lastActivity = Date.now();
+    const handleActivity = () => {
+      const now = Date.now();
+      if (now - lastActivity > 60 * 1000) {
+        lastActivity = now;
+        db.refreshSession();
+      }
+    };
+
+    window.addEventListener('mousemove', handleActivity, { passive: true });
+    window.addEventListener('keydown', handleActivity, { passive: true });
+    window.addEventListener('click', handleActivity, { passive: true });
+    window.addEventListener('touchstart', handleActivity, { passive: true });
+    window.addEventListener('scroll', handleActivity, { passive: true });
+
+    // Verificação de expiração periódica a cada 30 segundos
+    const checkInterval = setInterval(() => {
+      const active = db.getCurrentUser();
+      if (!active) {
+        // Sessão expirou (> 60 minutos sem nenhuma atividade)
+        handleLogout();
+      }
+    }, 30 * 1000);
+
+    return () => {
+      window.removeEventListener('mousemove', handleActivity);
+      window.removeEventListener('keydown', handleActivity);
+      window.removeEventListener('click', handleActivity);
+      window.removeEventListener('touchstart', handleActivity);
+      window.removeEventListener('scroll', handleActivity);
+      clearInterval(checkInterval);
+    };
+  }, [currentUser, handleLogout]);
 
   // Detecção de Link de Convite na URL ao iniciar
   useEffect(() => {
@@ -125,25 +201,6 @@ export default function App() {
     } else {
       finalizeLogin(user);
     }
-  };
-
-  const finalizeLogin = (user: User) => {
-    db.setCurrentUser(user);
-    setCurrentUser(user);
-    const org = db.getOrganization(user.organizacaoId);
-    setCurrentOrg(org);
-    setPending2FAUser(null);
-    if (user.papel === 'SUPER_ADMIN' || user.email === 'cassiordcosta@gmail.com') {
-      setActiveTab('ADMIN');
-    } else {
-      setActiveTab('DASHBOARD');
-    }
-  };
-
-  const handleLogout = () => {
-    db.setCurrentUser(null);
-    setCurrentUser(null);
-    setPending2FAUser(null);
   };
 
   const handleSwitchUser = (email: string) => {
