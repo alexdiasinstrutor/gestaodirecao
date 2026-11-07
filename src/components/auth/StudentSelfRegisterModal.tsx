@@ -11,7 +11,17 @@ import {
   Search,
   Check,
   Loader2,
-  RotateCcw
+  ArrowRight,
+  ArrowLeft,
+  Eye,
+  EyeOff,
+  User as UserIcon,
+  Lock,
+  Mail,
+  ShieldCheck,
+  Sparkles,
+  Award,
+  CreditCard
 } from 'lucide-react';
 import { db } from '../../lib/storage';
 import { supabaseAdapter } from '../../lib/supabaseAdapter';
@@ -29,6 +39,22 @@ interface StudentSelfRegisterModalProps {
   defaultOrgId?: string;
 }
 
+function maskCpfInput(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 11);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+  if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+}
+
+function maskPhoneInput(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 11);
+  if (digits.length <= 2) return digits.length ? `(${digits}` : '';
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
+
 export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> = ({
   onClose,
   onRegistered,
@@ -36,24 +62,32 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
   defaultCouponCode,
   defaultOrgId
 }) => {
-  const orgs = db.getOrganizations();
+  // Controle de Etapas do Cadastro (3 Telas/Passos)
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
+
+  // Lista de instrutores
   const [instructorsList, setInstructorsList] = useState<User[]>(() => db.getAllInstructors());
-  const [loadingInstructors, setLoadingInstructors] = useState<boolean>(true);
+  const [loadingInstructors, setLoadingInstructors] = useState<boolean>(false);
 
-  // Instrutor inicial identificado
-  const initialInstructor = defaultInstructorId
-    ? db.findInstructorByCode(defaultInstructorId) || instructorsList.find((i) => i.id === defaultInstructorId)
-    : instructorsList[0];
+  // Determina instrutor inicial
+  const initialInstructor = React.useMemo(() => {
+    if (defaultInstructorId) {
+      return db.findInstructorByCode(defaultInstructorId) || instructorsList.find((i) => i.id === defaultInstructorId);
+    }
+    return instructorsList[0];
+  }, [defaultInstructorId, instructorsList]);
 
-  const [instructorCodeInput, setInstructorCodeInput] = useState<string>(
-    initialInstructor ? initialInstructor.id.replace('usr_', '').toUpperCase() : (defaultInstructorId || '')
-  );
   const [selectedInstructor, setSelectedInstructor] = useState<User | undefined>(initialInstructor);
+  const [instructorCodeInput, setInstructorCodeInput] = useState<string>(
+    initialInstructor ? initialInstructor.id.replace('usr_', '').toUpperCase() : ''
+  );
   const [codeFeedback, setCodeFeedback] = useState<{ message: string; isError: boolean } | null>(null);
 
-  // Organização vinculada ao instrutor selecionado (ou fallback para a padrão)
+  // Organizações
+  const orgs = db.getOrganizations();
   const targetOrgId = selectedInstructor?.organizacaoId || defaultOrgId || orgs[0]?.id || 'org_direcao_certa_01';
 
+  // Dados do formulário
   const [formData, setFormData] = useState({
     nome: '',
     email: '',
@@ -77,74 +111,59 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
   });
 
   const [selectedPackageId, setSelectedPackageId] = useState<string>('');
+  const [packageCategoryFilter, setPackageCategoryFilter] = useState<string>('ALL');
   const [ageCheck, setAgeCheck] = useState<{ valid: boolean; age: number; error?: string } | null>(null);
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [termsAccepted, setTermsAccepted] = useState<boolean>(true);
 
-  // Cupom de Desconto fornecido pelo Instrutor
+  // Cupom de Desconto
   const [couponCodeInput, setCouponCodeInput] = useState<string>(defaultCouponCode || '');
   const [appliedCoupon, setAppliedCoupon] = useState<DiscountCoupon | null>(null);
   const [couponResult, setCouponResult] = useState<CouponDiscountResult | null>(null);
   const [couponError, setCouponError] = useState<string>('');
   const [couponSuccess, setCouponSuccess] = useState<string>('');
 
-  // Sincronização e carregamento dinâmico de todos os instrutores cadastrados no Banco de Dados (Supabase)
+  // Sincroniza instrutores do Supabase
   useEffect(() => {
     let isMounted = true;
     async function loadRemoteInstructors() {
-      setLoadingInstructors(true);
-      try {
-        const [remoteUsers, remoteOrgs] = await Promise.all([
-          supabaseAdapter.getUsers(),
-          supabaseAdapter.getOrganizations()
-        ]);
-        if (remoteOrgs && remoteOrgs.length > 0) {
-          remoteOrgs.forEach((o) => db.saveOrganization(o));
-        }
-        if (remoteUsers && remoteUsers.length > 0) {
-          remoteUsers.forEach((u) => db.saveUser(u));
-        }
-        let fresh = db.getAllInstructors();
-        if (fresh.length === 0) {
-          // Se ainda não houver instrutores autônomos, busca qualquer usuário administrador ou credenciado
-          const allUsers = db.getUsers();
-          fresh = allUsers.filter((u) => u.papel === 'ADMIN_ORG' || u.papel === 'INSTRUTOR' || u.papel === 'SUPER_ADMIN');
-        }
-        if (isMounted) {
-          setInstructorsList(fresh);
-
-          // Se veio com defaultInstructorId ou código da URL
-          if (defaultInstructorId) {
-            const found = db.findInstructorByCode(defaultInstructorId) || fresh.find((i) => i.id === defaultInstructorId);
-            if (found) {
-              setSelectedInstructor(found);
-              setFormData((prev) => ({ ...prev, instrutorId: found.id }));
-              setInstructorCodeInput(found.id.replace('usr_', '').toUpperCase());
-              setCodeFeedback({ message: `Instrutor reconhecido: ${found.nome}`, isError: false });
-            }
-          } else if (!selectedInstructor && fresh.length > 0) {
-            setSelectedInstructor(fresh[0]);
-            setFormData((prev) => ({ ...prev, instrutorId: fresh[0].id }));
-            setInstructorCodeInput(fresh[0].id.replace('usr_', '').toUpperCase());
-          }
-
-          // Carrega pacotes remotos se disponíveis
-          const activeOrg = (selectedInstructor || fresh[0])?.organizacaoId;
-          if (activeOrg) {
-            try {
-              const remotePkgs = await supabaseAdapter.getPackages(activeOrg);
-              if (remotePkgs && remotePkgs.length > 0) {
-                remotePkgs.forEach((pkg) => db.savePackage(pkg));
+      if (supabaseAdapter.enabled) {
+        setLoadingInstructors(true);
+        try {
+          const remoteUsers = await supabaseAdapter.getUsers();
+          if (remoteUsers && remoteUsers.length > 0 && isMounted) {
+            remoteUsers.forEach((u) => {
+              if (u.papel === 'ADMIN_ORG' || u.papel === 'INSTRUTOR' || u.papel === 'SUPER_ADMIN') {
+                db.saveUser(u);
               }
-            } catch {
-              // Silencioso se não houver pacotes remotos
+            });
+            const fresh = db.getAllInstructors();
+            setInstructorsList(fresh);
+            if (!selectedInstructor && fresh.length > 0) {
+              const matched = defaultInstructorId
+                ? db.findInstructorByCode(defaultInstructorId) || fresh.find((i) => i.id === defaultInstructorId) || fresh[0]
+                : fresh[0];
+              setSelectedInstructor(matched);
+              setFormData((prev) => ({ ...prev, instrutorId: matched.id }));
+              setInstructorCodeInput(matched.id.replace('usr_', '').toUpperCase());
             }
           }
+
+          // Carrega pacotes remotos
+          const activeOrg = (selectedInstructor || instructorsList[0])?.organizacaoId;
+          if (activeOrg) {
+            const remotePkgs = await supabaseAdapter.getPackages(activeOrg);
+            if (remotePkgs && remotePkgs.length > 0 && isMounted) {
+              remotePkgs.forEach((pkg) => db.savePackage(pkg));
+            }
+          }
+        } catch (e) {
+          console.warn('[StudentRegister] Erro ao sincronizar instrutores remotos:', e);
+        } finally {
+          if (isMounted) setLoadingInstructors(false);
         }
-      } catch (err) {
-        console.warn('Falha na sincronização de instrutores do banco:', err);
-      } finally {
-        if (isMounted) setLoadingInstructors(false);
       }
     }
 
@@ -154,51 +173,32 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
     };
   }, [defaultInstructorId]);
 
-  // Packages released by selected instructor / organization
-  let availablePackages = db
-    .getPackages(targetOrgId, selectedInstructor?.id)
-    .filter((p) => p.ativo);
+  // Pacotes disponíveis para o instrutor/organização selecionada
+  const availablePackages = React.useMemo(() => {
+    return db.getPackages(targetOrgId, selectedInstructor?.id).filter((p) => p.ativo);
+  }, [targetOrgId, selectedInstructor?.id]);
 
-  // Fallback 1: Pacotes gerais da organização do instrutor
-  if (availablePackages.length === 0) {
-    availablePackages = db.getPackages(targetOrgId).filter((p) => p.ativo);
-  }
-  // Fallback 2: Pacotes gerais cadastrados no sistema
-  if (availablePackages.length === 0) {
-    const allPkgs = orgs.flatMap((o) => db.getPackages(o.id));
-    availablePackages = allPkgs.filter((p) => p.ativo);
-  }
-  // Fallback 3: Pacote padrão automático para novos instrutores / ambiente limpo
-  if (availablePackages.length === 0) {
-    availablePackages = [
-      {
-        id: `pkg_padrao_${targetOrgId}`,
-        organizacaoId: targetOrgId,
-        instrutorId: selectedInstructor?.id,
-        nome: 'Pacote CNH B (20 Aulas Práticas)',
-        categoriaCnh: 'B',
-        totalAulas: 20,
-        valorCentavos: 180000,
-        formaPagamento: 'TODAS',
-        maxParcelas: 12,
-        descontoAvistaPercentual: 5,
-        descricao: 'Treinamento prático veicular completo com suporte e simulados de exame.',
-        ativo: true,
-        criadoEm: new Date().toISOString()
-      }
-    ];
-  }
-
-  // Auto select first package when instructor packages change
-  React.useEffect(() => {
-    if (availablePackages.length > 0 && (!selectedPackageId || !availablePackages.some((p) => p.id === selectedPackageId))) {
-      setSelectedPackageId(availablePackages[0].id);
+  // Filtro por categoria nos pacotes
+  const displayedPackages = React.useMemo(() => {
+    if (packageCategoryFilter === 'ALL') return availablePackages;
+    if (packageCategoryFilter === 'OUTROS') {
+      return availablePackages.filter((p) => p.categoriaCnh !== 'A' && p.categoriaCnh !== 'B' && p.categoriaCnh !== 'AB');
     }
-  }, [selectedInstructor?.id, availablePackages.length]);
+    return availablePackages.filter((p) => p.categoriaCnh === packageCategoryFilter);
+  }, [availablePackages, packageCategoryFilter]);
+
+  // Auto-seleciona primeiro pacote se nenhum estiver selecionado
+  useEffect(() => {
+    if (availablePackages.length > 0 && (!selectedPackageId || !availablePackages.some((p) => p.id === selectedPackageId))) {
+      // Prioriza pacote compatível com a CNH pretendida
+      const matchCat = availablePackages.find((p) => p.categoriaCnh === formData.categoriaCnh);
+      setSelectedPackageId(matchCat ? matchCat.id : availablePackages[0].id);
+    }
+  }, [selectedInstructor?.id, availablePackages, formData.categoriaCnh]);
 
   const chosenPackage = availablePackages.find((p) => p.id === selectedPackageId) || availablePackages[0];
 
-  // Aplicação de código de instrutor digitado manualmente
+  // Localização do instrutor por código ou digitação manual
   const handleLookupInstructor = (codeToSearch?: string) => {
     const raw = (codeToSearch !== undefined ? codeToSearch : instructorCodeInput).trim();
     if (!raw) {
@@ -234,8 +234,8 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
     }
   };
 
-  // Se houver defaultCouponCode vindo da URL, tenta aplicar automaticamente
-  React.useEffect(() => {
+  // Aplicação de cupom via URL
+  useEffect(() => {
     if (defaultCouponCode && chosenPackage) {
       const clean = normalizeCouponCode(defaultCouponCode);
       const preview = db.previewCoupon(
@@ -311,66 +311,94 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Navegação entre etapas com validações específicas
+  const handleGoToStep2 = () => {
     setError('');
-
-    if (!selectedInstructor) {
-      setError('Por favor, selecione seu instrutor credenciado antes de prosseguir com a matrícula.');
+    if (!selectedInstructor || !formData.instrutorId) {
+      setError('Por favor, selecione ou localize o instrutor credenciado antes de prosseguir.');
       return;
     }
+    if (!selectedPackageId || !chosenPackage) {
+      setError('Por favor, selecione o pacote de aulas desejado antes de prosseguir.');
+      return;
+    }
+    setCurrentStep(2);
+  };
 
-    // 1. Rigorous age check (CTB and Prompt requirement)
+  const handleGoToStep3 = () => {
+    setError('');
+    if (!formData.nome.trim() || formData.nome.trim().length < 3) {
+      setError('Informe o seu nome completo com no mínimo 3 caracteres.');
+      return;
+    }
+    if (!formData.dataNascimento) {
+      setError('Informe sua data de nascimento.');
+      return;
+    }
     const check = validateMinimumAge(formData.dataNascimento);
     if (!check.valid) {
-      setError(check.error || 'Idade inválida para obtenção da CNH.');
+      setError(check.error || 'Apenas maiores de 18 anos podem se cadastrar (Art. 140 CTB).');
       return;
     }
-
-    if (!formData.nome.trim() || formData.nome.length < 3) {
-      setError('Por favor, informe o nome completo do estudante.');
-      return;
-    }
-
     if (!isValidCPF(formData.cpf)) {
-      setError('CPF inválido. Por favor, verifique os dígitos verificadores informados.');
+      setError('CPF inválido. Verifique os dígitos informados.');
       return;
     }
-
-    // Strict Rule: Cada aluno (CPF) fica acondicionado a apenas 1 instrutor por vez
     const enrollmentCheck = db.checkStudentCPFEnrollment(targetOrgId, formData.cpf);
     if (enrollmentCheck.alreadyRegistered) {
       setError(enrollmentCheck.message || 'Este CPF já está condicionado a outro instrutor.');
       return;
     }
+    const phoneDigits = formData.telefone.replace(/\D/g, '');
+    if (phoneDigits.length < 10) {
+      setError('Informe um WhatsApp válido com DDD (ex: 11 98765-4321).');
+      return;
+    }
+    if (!address.cep || address.cep.replace(/\D/g, '').length !== 8) {
+      setError('Informe um CEP válido com 8 dígitos.');
+      return;
+    }
+    if (!address.logradouro?.trim() || !address.numero?.trim() || !address.bairro?.trim() || !address.cidade?.trim() || !address.estado?.trim()) {
+      setError('Preencha os campos obrigatórios do endereço (Rua, Número, Bairro, Cidade e UF).');
+      return;
+    }
+    setCurrentStep(3);
+  };
 
-    if (!formData.telefone.trim()) {
-      setError('Por favor, informe um número de telefone celular com WhatsApp.');
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!selectedInstructor) {
+      setError('Selecione seu instrutor credenciado.');
+      setCurrentStep(1);
       return;
     }
 
-    if (!isValidCEPFormat(address.cep || '')) {
-      setError('Por favor, informe um CEP válido com 8 dígitos para localizar o endereço do aluno.');
-      return;
-    }
-
-    if (!address.logradouro?.trim() || !address.bairro?.trim() || !address.cidade?.trim() || !address.estado?.trim()) {
-      setError('Preencha o CEP para carregar Logradouro, Bairro, Cidade e Estado (UF).');
-      return;
-    }
-
-    if (!address.numero?.trim()) {
-      setError('Por favor, informe o número da residência do aluno (ou digite S/N).');
+    if (!formData.email.trim() || !formData.email.includes('@')) {
+      setError('Informe um endereço de e-mail válido para login.');
       return;
     }
 
     if (!formData.senha || formData.senha.length < 6) {
-      setError('A senha deve ter pelo menos 6 dígitos.');
+      setError('A senha de acesso deve possuir no mínimo 6 dígitos.');
       return;
     }
 
     if (formData.senha !== formData.confirmarSenha) {
-      setError('As senhas digitadas não coincidem.');
+      setError('A confirmação de senha não coincide com a senha digitada.');
+      return;
+    }
+
+    if (!termsAccepted) {
+      setError('É necessário concordar com os Termos de Uso e Política de Privacidade para prosseguir.');
+      return;
+    }
+
+    const check = validateMinimumAge(formData.dataNascimento);
+    if (!check.valid) {
+      setError(check.error || 'Idade inválida para obtenção da CNH.');
+      setCurrentStep(2);
       return;
     }
 
@@ -380,8 +408,6 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
       const studentId = `stu_${Date.now()}`;
       const userId = `usr_${Date.now()}`;
       const activeInstructorId = selectedInstructor.id;
-
-      // Selected package
       const contractedLessons = chosenPackage ? chosenPackage.totalAulas : 20;
 
       const newStudent: Student = {
@@ -418,7 +444,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
           posturaDefensiva: 0,
           simuladoExame: 0
         },
-        observacoesInstrutor: `Aluno matriculado com instrutor ${selectedInstructor.nome} no plano "${chosenPackage?.nome || 'Plano Padrão'}". Pronto para iniciar as aulas práticas de direção.`,
+        observacoesInstrutor: `Aluno matriculado com instrutor ${selectedInstructor.nome} no pacote "${chosenPackage?.nome}".`,
         dataCadastro: new Date().toISOString().slice(0, 10)
       };
 
@@ -445,13 +471,12 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
         ultimoAcesso: new Date().toISOString()
       };
 
-      // Create an initial package and accounts receivable for the student
       if (chosenPackage) {
         const accId = `rec_${Date.now()}`;
         const finalValCentavos = couponResult ? couponResult.valorFinalCentavos : chosenPackage.valorCentavos;
         const descTexto = appliedCoupon
-          ? `Contrato de Matrícula - ${chosenPackage.nome} (Cupom ${appliedCoupon.codigo} aplicado: -${formatCurrencyBRL(couponResult?.valorDescontoCentavos || 0)})`
-          : `Contrato de Matrícula - ${chosenPackage.nome}`;
+          ? `Matrícula - ${chosenPackage.nome} (Cupom ${appliedCoupon.codigo}: -${formatCurrencyBRL(couponResult?.valorDescontoCentavos || 0)})`
+          : `Matrícula - ${chosenPackage.nome}`;
 
         db.createAccountReceivable(
           {
@@ -491,7 +516,6 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
         }
       }
 
-      // Gravação assíncrona garantida no Supabase e localStorage
       await db.saveStudentAsync(newStudent, userId);
       await db.createUserAsync(newUser);
 
@@ -504,15 +528,15 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/70 backdrop-blur-sm p-0 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh]">
-        {/* Header */}
-        <div className="bg-slate-900 text-white p-5 flex items-center justify-between border-b border-slate-800">
+      <div className="bg-white w-full max-w-xl rounded-t-3xl sm:rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[94vh] sm:max-h-[90vh]">
+        {/* Header Superior */}
+        <div className="bg-slate-900 text-white p-4 sm:p-5 flex items-center justify-between border-b border-slate-800 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 rounded-xl">
-              <GraduationCap className="w-6 h-6" />
+              <GraduationCap className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-white">Auto-Cadastro de Aluno</h2>
+              <h2 className="text-sm sm:text-base font-bold text-white">Auto-Cadastro de Aluno</h2>
               <p className="text-xs text-slate-300">Habilitação de direção com instrutor credenciado</p>
             </div>
           </div>
@@ -521,307 +545,384 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-4 text-xs">
+        {/* Indicador de 3 Etapas (Step Wizard) */}
+        <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 shrink-0">
+          <div className="flex items-center justify-between max-w-md mx-auto">
+            {/* Passo 1 */}
+            <button
+              type="button"
+              onClick={() => setCurrentStep(1)}
+              className="flex items-center gap-2 cursor-pointer focus:outline-none"
+            >
+              <div
+                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                  currentStep === 1
+                    ? 'bg-blue-600 text-white ring-2 ring-blue-300 shadow-xs'
+                    : currentStep > 1
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-slate-200 text-slate-600'
+                }`}
+              >
+                {currentStep > 1 ? <Check className="w-4 h-4" /> : '1'}
+              </div>
+              <div className="hidden xs:block text-left">
+                <span className={`block text-[11px] font-bold ${currentStep === 1 ? 'text-blue-700' : 'text-slate-700'}`}>
+                  Passo 1
+                </span>
+                <span className="block text-[10px] text-slate-500 font-medium leading-none">Instrutor & Pacote</span>
+              </div>
+            </button>
+
+            <div className={`flex-1 h-0.5 mx-2 transition-colors ${currentStep > 1 ? 'bg-emerald-500' : 'bg-slate-200'}`} />
+
+            {/* Passo 2 */}
+            <button
+              type="button"
+              onClick={() => {
+                if (selectedInstructor && selectedPackageId) setCurrentStep(2);
+              }}
+              className="flex items-center gap-2 cursor-pointer focus:outline-none"
+            >
+              <div
+                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                  currentStep === 2
+                    ? 'bg-blue-600 text-white ring-2 ring-blue-300 shadow-xs'
+                    : currentStep > 2
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-slate-200 text-slate-600'
+                }`}
+              >
+                {currentStep > 2 ? <Check className="w-4 h-4" /> : '2'}
+              </div>
+              <div className="hidden xs:block text-left">
+                <span className={`block text-[11px] font-bold ${currentStep === 2 ? 'text-blue-700' : 'text-slate-700'}`}>
+                  Passo 2
+                </span>
+                <span className="block text-[10px] text-slate-500 font-medium leading-none">Dados & Endereço</span>
+              </div>
+            </button>
+
+            <div className={`flex-1 h-0.5 mx-2 transition-colors ${currentStep > 2 ? 'bg-emerald-500' : 'bg-slate-200'}`} />
+
+            {/* Passo 3 */}
+            <button
+              type="button"
+              onClick={() => {
+                if (selectedInstructor && selectedPackageId && formData.nome && formData.cpf) setCurrentStep(3);
+              }}
+              className="flex items-center gap-2 cursor-pointer focus:outline-none"
+            >
+              <div
+                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                  currentStep === 3
+                    ? 'bg-blue-600 text-white ring-2 ring-blue-300 shadow-xs'
+                    : 'bg-slate-200 text-slate-600'
+                }`}
+              >
+                3
+              </div>
+              <div className="hidden xs:block text-left">
+                <span className={`block text-[11px] font-bold ${currentStep === 3 ? 'text-blue-700' : 'text-slate-700'}`}>
+                  Passo 3
+                </span>
+                <span className="block text-[10px] text-slate-500 font-medium leading-none">Acesso & Senha</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {/* Corpo do Formulário */}
+        <form onSubmit={handleSubmit} className="p-4 sm:p-5 overflow-y-auto space-y-4 text-xs flex-1">
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl flex items-start gap-2">
+            <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl flex items-start gap-2 animate-in fade-in">
               <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-              <span>{error}</span>
+              <span className="font-medium">{error}</span>
             </div>
           )}
 
-          {/* Age Notice / Alert */}
-          <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 space-y-1">
-            <div className="flex items-center gap-1.5 font-bold">
-              <ShieldAlert className="w-4 h-4 text-amber-600" />
-              <span>Regra de Maioridade Rigorosa (Art. 140 CTB)</span>
-            </div>
-            <p className="text-xs text-amber-800">
-              Não é permitido o cadastro de alunos menores que 18 anos. A data de nascimento será validada matematicamente.
-            </p>
-          </div>
-
-          {/* Localização do Instrutor por Código ou Link */}
-          <div className="p-3.5 bg-blue-50/80 border border-blue-200 rounded-2xl space-y-3">
-            <div className="flex items-center justify-between">
-              <label className="block font-bold text-slate-900 text-xs flex items-center gap-1.5">
-                <UserCheck className="w-4 h-4 text-blue-600" />
-                <span>Instrutor Credenciado Responsável *</span>
-              </label>
-              {loadingInstructors ? (
-                <span className="text-xs font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full flex items-center gap-1">
-                  <Loader2 className="w-3 h-3 animate-spin" /> Sincronizando banco...
-                </span>
-              ) : selectedInstructor ? (
-                <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1">
-                  <Check className="w-3 h-3" /> Reconhecido
-                </span>
-              ) : (
-                <span className="text-xs font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
-                  Pendente Seleção
-                </span>
-              )}
-            </div>
-
-            {/* Busca por Código */}
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={instructorCodeInput}
-                onChange={(e) => {
-                  setInstructorCodeInput(e.target.value.toUpperCase());
-                  setCodeFeedback(null);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleLookupInstructor();
-                  }
-                }}
-                placeholder="Ex: INSTRUTOR_CARLOS ou código do link"
-                className="flex-1 px-3 py-2 border border-slate-300 rounded-xl font-mono text-xs uppercase focus:outline-none focus:border-blue-600 bg-white"
-              />
-              <button
-                type="button"
-                onClick={() => handleLookupInstructor()}
-                className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold cursor-pointer text-xs flex items-center gap-1 shrink-0"
-              >
-                <Search className="w-3.5 h-3.5" />
-                <span>Localizar</span>
-              </button>
-            </div>
-
-            {codeFeedback && (
-              <p className={`text-xs font-medium ${codeFeedback.isError ? 'text-red-600' : 'text-emerald-700'}`}>
-                {codeFeedback.message}
-              </p>
-            )}
-
-            {/* Seleção em Dropdown de todos os instrutores cadastrados no Banco */}
-            <div className="space-y-1">
-              <label className="block text-xs font-bold text-slate-700">
-                Ou selecione seu instrutor na listagem do sistema:
-              </label>
-              <select
-                value={selectedInstructor?.id || formData.instrutorId || ''}
-                onChange={(e) => {
-                  const instId = e.target.value;
-                  const found = instructorsList.find((i) => i.id === instId);
-                  if (found) {
-                    setSelectedInstructor(found);
-                    setFormData((prev) => ({ ...prev, instrutorId: found.id }));
-                    setInstructorCodeInput(found.id.replace('usr_', '').toUpperCase());
-                    setCodeFeedback({ message: `Instrutor selecionado: ${found.nome}`, isError: false });
-                  } else {
-                    setSelectedInstructor(undefined);
-                    setFormData((prev) => ({ ...prev, instrutorId: '' }));
-                    setCodeFeedback(null);
-                  }
-                }}
-                className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none bg-white font-medium text-xs cursor-pointer"
-              >
-                <option value="">
-                  {loadingInstructors
-                    ? 'Carregando instrutores do banco de dados...'
-                    : instructorsList.length === 0
-                    ? '-- Nenhum instrutor localizado no banco --'
-                    : `-- Selecione o seu Instrutor (${instructorsList.length} cadastrados no banco) --`}
-                </option>
-                {instructorsList.map((ins) => {
-                  const org = db.getOrganization(ins.organizacaoId);
-                  const orgName = org?.nome ? ` (${org.nome})` : '';
-                  const roleLabel = ins.papel === 'SUPER_ADMIN' ? 'Diretor' : 'Instrutor';
-                  const code = ins.id.replace('usr_', '').toUpperCase();
-                  return (
-                    <option key={ins.id} value={ins.id}>
-                      {ins.nome} · {roleLabel}{orgName} — Cód: {code}
-                    </option>
-                  );
-                })}
-              </select>
-              <p className="text-xs text-slate-500">
-                O aluno ficará vinculado exclusivamente à grade e pacotes do instrutor selecionado.
-              </p>
-            </div>
-
-            {/* Card com Detalhes do Instrutor Selecionado */}
-            {selectedInstructor && (
-              <div className="p-3 bg-white border border-blue-200 rounded-xl flex items-center justify-between shadow-xs">
-                <div>
-                  <span className="text-xs uppercase font-bold text-blue-600 block">Instrutor Selecionado</span>
-                  <span className="font-bold text-slate-900 text-xs block">{selectedInstructor.nome}</span>
-                  <span className="text-xs text-slate-600 block">
-                    {selectedInstructor.email}
-                    {db.getOrganization(selectedInstructor.organizacaoId)?.nome
-                      ? ` · ${db.getOrganization(selectedInstructor.organizacaoId)?.nome}`
-                      : ''}
-                  </span>
+          {/* ========================================================= */}
+          {/* TELA 1: INSTRUTOR & PACOTE DE AULAS */}
+          {/* ========================================================= */}
+          {currentStep === 1 && (
+            <div className="space-y-4 animate-in fade-in duration-150">
+              {/* Seleção do Instrutor */}
+              <div className="p-3.5 bg-blue-50/80 border border-blue-200 rounded-2xl space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <label className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                    <UserCheck className="w-4 h-4 text-blue-600" />
+                    <span>1. Instrutor Credenciado Responsável *</span>
+                  </label>
+                  {loadingInstructors ? (
+                    <span className="text-xs font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Loader2 className="w-3 h-3 animate-spin" /> Sincronizando banco...
+                    </span>
+                  ) : selectedInstructor ? (
+                    <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Check className="w-3 h-3" /> Reconhecido
+                    </span>
+                  ) : (
+                    <span className="text-xs font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+                      Pendente Seleção
+                    </span>
+                  )}
                 </div>
-                <div className="flex flex-col items-end gap-1">
-                  <span className="px-2 py-0.5 rounded bg-blue-100 font-mono text-blue-800 font-bold text-xs">
-                    {selectedInstructor.id.replace('usr_', '').toUpperCase()}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedInstructor(undefined);
-                      setFormData((prev) => ({ ...prev, instrutorId: '' }));
-                      setInstructorCodeInput('');
+
+                {/* Código de Indicação */}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={instructorCodeInput}
+                    onChange={(e) => {
+                      setInstructorCodeInput(e.target.value.toUpperCase());
                       setCodeFeedback(null);
                     }}
-                    className="text-xs text-slate-600 hover:text-red-600 underline font-medium cursor-pointer"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleLookupInstructor();
+                      }
+                    }}
+                    placeholder="Código do instrutor (Ex: ALEX ou cód. do link)"
+                    className="flex-1 px-3 py-2 border border-slate-300 rounded-xl font-mono text-xs uppercase focus:outline-none focus:border-blue-600 bg-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleLookupInstructor()}
+                    className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold cursor-pointer text-xs flex items-center gap-1 shrink-0"
                   >
-                    Trocar instrutor
+                    <Search className="w-3.5 h-3.5" />
+                    <span>Localizar</span>
                   </button>
                 </div>
+
+                {codeFeedback && (
+                  <p className={`text-xs font-medium ${codeFeedback.isError ? 'text-red-600' : 'text-emerald-700'}`}>
+                    {codeFeedback.message}
+                  </p>
+                )}
+
+                {/* Dropdown de Instrutores Cadastrados */}
+                <div className="space-y-1">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Ou selecione na listagem de instrutores cadastrados:
+                  </label>
+                  <select
+                    value={selectedInstructor?.id || formData.instrutorId || ''}
+                    onChange={(e) => {
+                      const instId = e.target.value;
+                      const found = instructorsList.find((i) => i.id === instId);
+                      if (found) {
+                        setSelectedInstructor(found);
+                        setFormData((prev) => ({ ...prev, instrutorId: found.id }));
+                        setInstructorCodeInput(found.id.replace('usr_', '').toUpperCase());
+                        setCodeFeedback({ message: `Instrutor selecionado: ${found.nome}`, isError: false });
+                      } else {
+                        setSelectedInstructor(undefined);
+                        setFormData((prev) => ({ ...prev, instrutorId: '' }));
+                        setCodeFeedback(null);
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none bg-white font-medium text-xs cursor-pointer"
+                  >
+                    <option value="">
+                      {loadingInstructors
+                        ? 'Carregando instrutores do banco de dados...'
+                        : instructorsList.length === 0
+                        ? '-- Nenhum instrutor localizado no banco --'
+                        : `-- Selecione seu Instrutor (${instructorsList.length} cadastrados) --`}
+                    </option>
+                    {instructorsList.map((ins) => {
+                      const org = db.getOrganization(ins.organizacaoId);
+                      const orgName = org?.nome ? ` (${org.nome})` : '';
+                      const roleLabel = ins.papel === 'SUPER_ADMIN' ? 'Diretor' : 'Instrutor';
+                      const code = ins.id.replace('usr_', '').toUpperCase();
+                      return (
+                        <option key={ins.id} value={ins.id}>
+                          {ins.nome} · {roleLabel}{orgName} — Cód: {code}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+
+                {/* Card do Instrutor Ativo */}
+                {selectedInstructor && (
+                  <div className="p-3 bg-white border border-blue-200 rounded-xl flex items-center justify-between shadow-xs">
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-blue-600 block">Instrutor Selecionado</span>
+                      <span className="font-bold text-slate-900 text-xs block">{selectedInstructor.nome}</span>
+                      <span className="text-xs text-slate-600 block">
+                        {selectedInstructor.email}
+                        {db.getOrganization(selectedInstructor.organizacaoId)?.nome
+                          ? ` · ${db.getOrganization(selectedInstructor.organizacaoId)?.nome}`
+                          : ''}
+                      </span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-blue-100 font-mono text-blue-800 font-bold text-xs">
+                      {selectedInstructor.id.replace('usr_', '').toUpperCase()}
+                    </span>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="sm:col-span-2">
-              <label className="block font-medium text-slate-700 mb-1">Nome Completo do Aluno *</label>
-              <input
-                type="text"
-                required
-                value={formData.nome}
-                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                placeholder="Ex: Pedro Henrique Silva"
-                className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none"
-              />
-            </div>
+              {/* Categoria CNH Pretendida */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Categoria CNH Pretendida *
+                </label>
+                <select
+                  value={formData.categoriaCnh}
+                  onChange={(e) => {
+                    const newCat = e.target.value as CnhCategory;
+                    setFormData({ ...formData, categoriaCnh: newCat });
+                    const matchingPkg = availablePackages.find((p) => p.categoriaCnh === newCat);
+                    if (matchingPkg) setSelectedPackageId(matchingPkg.id);
+                  }}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none bg-white font-medium text-xs cursor-pointer"
+                >
+                  {CNH_CATEGORIES.map((cat) => (
+                    <option key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            <div>
-              <label className="block font-medium text-slate-700 mb-1">
-                Data de Nascimento * <span className="text-red-500 font-bold">(Mín. 18 anos)</span>
-              </label>
-              <input
-                type="date"
-                required
-                value={formData.dataNascimento}
-                onChange={(e) => handleBirthDateChange(e.target.value)}
-                className={`w-full px-3 py-2 border rounded-xl focus:outline-none ${
-                  ageCheck && !ageCheck.valid ? 'border-red-500 bg-red-50' : 'border-slate-300 focus:border-blue-600'
-                }`}
-              />
-              {ageCheck && (
-                <p className={`mt-1 text-xs font-semibold ${ageCheck.valid ? 'text-emerald-600' : 'text-red-600'}`}>
-                  {ageCheck.valid ? `✓ Idade confirmada: ${ageCheck.age} anos (Maior de idade)` : `✗ Idade calculada: ${ageCheck.age} anos (Menor de 18 anos)`}
-                </p>
-              )}
-            </div>
+              {/* Catálogo Completo de Pacotes de Aulas */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <label className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                    <Package className="w-4 h-4 text-emerald-600" />
+                    <span>Escolha seu Pacote de Aulas ({availablePackages.length} disponíveis) *</span>
+                  </label>
+                </div>
 
-            <div>
-              <label className="block font-medium text-slate-700 mb-1">CPF (com validação estrita) *</label>
-              <input
-                type="text"
-                required
-                value={formData.cpf}
-                onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
-                placeholder="000.000.000-00"
-                className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none font-mono"
-              />
-            </div>
+                {/* Filtro rápido por Categoria dos Pacotes */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => setPackageCategoryFilter('ALL')}
+                    className={`px-2.5 py-1 rounded-lg font-bold transition-colors cursor-pointer shrink-0 ${
+                      packageCategoryFilter === 'ALL'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    Todos ({availablePackages.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPackageCategoryFilter('B')}
+                    className={`px-2.5 py-1 rounded-lg font-bold transition-colors cursor-pointer shrink-0 ${
+                      packageCategoryFilter === 'B'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    CNH B (Carro)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPackageCategoryFilter('A')}
+                    className={`px-2.5 py-1 rounded-lg font-bold transition-colors cursor-pointer shrink-0 ${
+                      packageCategoryFilter === 'A'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    CNH A (Moto)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPackageCategoryFilter('AB')}
+                    className={`px-2.5 py-1 rounded-lg font-bold transition-colors cursor-pointer shrink-0 ${
+                      packageCategoryFilter === 'AB'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    CNH A+B (Duplo)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPackageCategoryFilter('OUTROS')}
+                    className={`px-2.5 py-1 rounded-lg font-bold transition-colors cursor-pointer shrink-0 ${
+                      packageCategoryFilter === 'OUTROS'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    Outros / Reforço
+                  </button>
+                </div>
 
-            <div>
-              <label className="block font-medium text-slate-700 mb-1">WhatsApp Celular *</label>
-              <input
-                type="text"
-                required
-                value={formData.telefone}
-                onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
-                placeholder="(11) 98765-4321"
-                className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block font-medium text-slate-700 mb-1">Categoria CNH Pretendida *</label>
-              <select
-                value={formData.categoriaCnh}
-                onChange={(e) => setFormData({ ...formData, categoriaCnh: e.target.value as CnhCategory })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none bg-white font-medium"
-              >
-                {CNH_CATEGORIES.map((cat) => (
-                  <option key={cat.value} value={cat.value}>
-                    {cat.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Endereço Completo do Aluno com Validação por CEP */}
-            <div className="sm:col-span-2">
-              <AddressCepFields
-                value={address}
-                onChange={setAddress}
-                required={true}
-                title="Endereço Residencial do Aluno (Validação por CEP)"
-                accentColor="emerald"
-              />
-            </div>
-
-            {/* Package selector for chosen instructor */}
-            <div className="sm:col-span-2 space-y-2">
-              <label className="block font-bold text-slate-800">
-                Escolha o Pacote de Aulas Liberado pelo Instrutor ({selectedInstructor?.nome || 'Instrutor'}) *
-              </label>
-
-              {availablePackages.length > 0 ? (
-                <div className="space-y-2">
-                  {availablePackages.map((pkg) => {
-                    const isSelected = selectedPackageId === pkg.id;
-                    return (
-                      <div
-                        key={pkg.id}
-                        onClick={() => setSelectedPackageId(pkg.id)}
-                        className={`p-3 sm:p-3.5 rounded-xl border transition-all cursor-pointer flex flex-col xs:flex-row xs:items-center justify-between gap-2.5 ${
-                          isSelected
-                            ? 'border-blue-600 bg-blue-50/70 ring-2 ring-blue-500/20 shadow-xs'
-                            : 'border-slate-200 bg-white hover:border-slate-300'
-                        }`}
-                      >
-                        <div className="space-y-1 min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-bold text-slate-900 text-xs">{pkg.nome}</span>
-                            <span className="px-1.5 py-0.2 rounded bg-slate-900 text-white font-mono text-xs shrink-0">
-                              CNH {pkg.categoriaCnh}
+                {/* Lista de Cards de Pacotes */}
+                <div className="space-y-2 max-h-72 overflow-y-auto pr-0.5">
+                  {displayedPackages.length > 0 ? (
+                    displayedPackages.map((pkg) => {
+                      const isSelected = selectedPackageId === pkg.id;
+                      return (
+                        <div
+                          key={pkg.id}
+                          onClick={() => setSelectedPackageId(pkg.id)}
+                          className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 ${
+                            isSelected
+                              ? 'border-blue-600 bg-blue-50/80 ring-2 ring-blue-500/20 shadow-xs'
+                              : 'border-slate-200 bg-white hover:border-slate-300'
+                          }`}
+                        >
+                          <div className="space-y-1 min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-bold text-slate-900 text-xs">{pkg.nome}</span>
+                              <span className="px-1.5 py-0.2 rounded bg-slate-900 text-white font-mono text-[10px] shrink-0">
+                                CNH {pkg.categoriaCnh}
+                              </span>
+                              <span className="px-1.5 py-0.2 rounded bg-blue-100 text-blue-800 font-semibold text-[10px] shrink-0">
+                                {pkg.totalAulas} aulas práticas
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-600 leading-snug">
+                              {pkg.descricao || 'Curso prático veicular com suporte instrucional.'}
+                            </p>
+                            <span className="inline-block text-[11px] text-blue-700 font-semibold leading-tight">
+                              {pkg.formaPagamento === 'A_VISTA'
+                                ? 'À vista (PIX / Dinheiro)'
+                                : pkg.formaPagamento === 'PARCELADO_CARTAO'
+                                ? `Até ${pkg.maxParcelas || 12}x no cartão de crédito`
+                                : pkg.formaPagamento === 'NEGOCIADO'
+                                ? 'Condição negociada'
+                                : 'À vista, parcelado no cartão ou negociado'}
                             </span>
                           </div>
-                          <p className="text-xs text-slate-600 leading-snug">
-                            {pkg.totalAulas} aulas práticas · {pkg.descricao || 'Curso prático'}
-                          </p>
-                          <span className="inline-block text-xs text-blue-700 font-semibold leading-tight">
-                            {pkg.formaPagamento === 'A_VISTA'
-                              ? 'Pagamento à vista (PIX / Dinheiro)'
-                              : pkg.formaPagamento === 'PARCELADO_CARTAO'
-                              ? `Até ${pkg.maxParcelas || 12}x no cartão de crédito`
-                              : pkg.formaPagamento === 'NEGOCIADO'
-                              ? 'Condição especial negociada'
-                              : 'À vista, parcelado no cartão ou negociado'}
-                          </span>
-                        </div>
 
-                        <div className="flex xs:flex-col items-center xs:items-end justify-between xs:justify-center border-t xs:border-t-0 pt-2 xs:pt-0 border-slate-100 shrink-0">
-                          <span className="font-mono font-extrabold text-sm text-slate-900 block whitespace-nowrap">
-                            {formatCurrencyBRL(pkg.valorCentavos)}
-                          </span>
-                          <span className={`text-xs font-bold ${isSelected ? 'text-blue-600' : 'text-slate-400'}`}>
-                            {isSelected ? '✓ Selecionado' : 'Selecionar'}
-                          </span>
+                          <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-100 shrink-0">
+                            <span className="font-mono font-extrabold text-sm text-slate-900 block whitespace-nowrap">
+                              {formatCurrencyBRL(pkg.valorCentavos)}
+                            </span>
+                            <span className={`text-xs font-bold ${isSelected ? 'text-blue-600' : 'text-slate-400'}`}>
+                              {isSelected ? '✓ Selecionado' : 'Selecionar'}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })
+                  ) : (
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-center text-slate-600 text-xs">
+                      Nenhum pacote específico nesta categoria.
+                      <button
+                        type="button"
+                        onClick={() => setPackageCategoryFilter('ALL')}
+                        className="block mx-auto mt-1 text-blue-600 font-bold hover:underline cursor-pointer"
+                      >
+                        Ver todos os pacotes
+                      </button>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-600 text-xs">
-                  Pacote Padrão de 20 Aulas Práticas (R$ 1.800,00) com flexibilidade total de pagamento.
-                </div>
-              )}
+              </div>
 
-              {/* Área de Cupom de Desconto do Instrutor */}
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 mt-2">
+              {/* Cupom de Desconto */}
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 font-bold text-slate-800 text-xs">
                     <Ticket className="w-3.5 h-3.5 text-blue-600" />
@@ -831,9 +932,9 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
                     <button
                       type="button"
                       onClick={handleRemoveCoupon}
-                      className="text-xs text-red-600 hover:underline cursor-pointer"
+                      className="text-xs text-red-600 hover:underline cursor-pointer font-semibold"
                     >
-                      Remover
+                      Remover cupom
                     </button>
                   )}
                 </div>
@@ -850,7 +951,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
                     <button
                       type="button"
                       onClick={handleApplyCoupon}
-                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold cursor-pointer text-xs"
+                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold cursor-pointer text-xs shrink-0"
                     >
                       Aplicar Cupom
                     </button>
@@ -872,61 +973,292 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
                 {couponError && <p className="text-xs text-red-600 font-medium">{couponError}</p>}
                 {couponSuccess && !couponError && <p className="text-xs text-emerald-700 font-medium">{couponSuccess}</p>}
               </div>
-            </div>
 
-            <div className="sm:col-span-2">
-              <label className="block font-medium text-slate-700 mb-1">E-mail para Login *</label>
-              <input
-                type="email"
-                required
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="aluno@email.com.br"
-                className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none font-mono text-sm sm:text-xs"
-              />
+              {/* Botão Avançar Tela 1 -> Tela 2 */}
+              <div className="pt-2 flex justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-100 font-semibold cursor-pointer text-xs"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleGoToStep2}
+                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-xs transition-colors cursor-pointer text-xs flex items-center gap-1.5"
+                >
+                  <span>Avançar para Dados Pessoais</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
+          )}
 
-            <div>
-              <label className="block font-medium text-slate-700 mb-1">Senha de Acesso (Mín. 6 dígitos) *</label>
-              <input
-                type="password"
-                required
-                value={formData.senha}
-                onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
-                placeholder="••••••••"
-                className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none text-sm sm:text-xs"
-              />
+          {/* ========================================================= */}
+          {/* TELA 2: DADOS PESSOAIS & ENDEREÇO */}
+          {/* ========================================================= */}
+          {currentStep === 2 && (
+            <div className="space-y-4 animate-in fade-in duration-150">
+              {/* Alerta de Maioridade Rigorosa (Art. 140 CTB) */}
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 space-y-1">
+                <div className="flex items-center gap-1.5 font-bold">
+                  <ShieldAlert className="w-4 h-4 text-amber-600" />
+                  <span>Regra de Maioridade Rigorosa (Art. 140 CTB)</span>
+                </div>
+                <p className="text-xs text-amber-800">
+                  Não é permitido o cadastro de alunos menores que 18 anos. A data de nascimento será validada matematicamente.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="block font-bold text-slate-700 mb-1">Nome Completo do Aluno *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.nome}
+                    onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                    placeholder="Ex: Pedro Henrique Silva"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Data de Nascimento * <span className="text-red-600 font-bold">(Mín. 18 anos)</span>
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={formData.dataNascimento}
+                    onChange={(e) => handleBirthDateChange(e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-xl focus:outline-none text-xs ${
+                      ageCheck && !ageCheck.valid ? 'border-red-500 bg-red-50' : 'border-slate-300 focus:border-blue-600'
+                    }`}
+                  />
+                  {ageCheck && (
+                    <p className={`mt-1 text-[11px] font-semibold ${ageCheck.valid ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {ageCheck.valid
+                        ? `✓ Idade confirmada: ${ageCheck.age} anos (Maior de idade)`
+                        : `✗ Idade calculada: ${ageCheck.age} anos (Menor de 18 anos)`}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">CPF (com validação estrita) *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.cpf}
+                    onChange={(e) => setFormData({ ...formData, cpf: maskCpfInput(e.target.value) })}
+                    placeholder="000.000.000-00"
+                    maxLength={14}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none font-mono text-xs"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block font-bold text-slate-700 mb-1">WhatsApp Celular *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.telefone}
+                    onChange={(e) => setFormData({ ...formData, telefone: maskPhoneInput(e.target.value) })}
+                    placeholder="(11) 98765-4321"
+                    maxLength={15}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none text-xs"
+                  />
+                </div>
+
+                {/* Endereço Residencial com Busca Automática por CEP */}
+                <div className="sm:col-span-2">
+                  <AddressCepFields
+                    value={address}
+                    onChange={setAddress}
+                    required={true}
+                    title="Endereço Residencial do Aluno (Validação por CEP)"
+                    accentColor="emerald"
+                  />
+                </div>
+              </div>
+
+              {/* Botões Navegação Tela 2 */}
+              <div className="pt-2 flex justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(1)}
+                  className="px-4 py-2 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-100 font-semibold cursor-pointer text-xs flex items-center gap-1.5"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Voltar</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleGoToStep3}
+                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-xs transition-colors cursor-pointer text-xs flex items-center gap-1.5"
+                >
+                  <span>Avançar para Acesso & Senha</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
+          )}
 
-            <div>
-              <label className="block font-medium text-slate-700 mb-1">Confirmar Senha *</label>
-              <input
-                type="password"
-                required
-                value={formData.confirmarSenha}
-                onChange={(e) => setFormData({ ...formData, confirmarSenha: e.target.value })}
-                placeholder="••••••••"
-                className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none text-sm sm:text-xs"
-              />
+          {/* ========================================================= */}
+          {/* TELA 3: CRIAÇÃO DE ACESSO & CONFIRMAÇÃO */}
+          {/* ========================================================= */}
+          {currentStep === 3 && (
+            <div className="space-y-4 animate-in fade-in duration-150">
+              {/* Resumo Visual da Matrícula */}
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                <span className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-blue-600" />
+                  <span>Resumo da Matrícula do Aluno</span>
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <div className="bg-white p-2 rounded-xl border border-slate-200">
+                    <span className="text-[10px] text-slate-600 font-bold uppercase block">Instrutor</span>
+                    <span className="font-bold text-slate-900 block">{selectedInstructor?.nome || 'Não definido'}</span>
+                  </div>
+                  <div className="bg-white p-2 rounded-xl border border-slate-200">
+                    <span className="text-[10px] text-slate-600 font-bold uppercase block">Categoria</span>
+                    <span className="font-bold text-slate-900 block">CNH {formData.categoriaCnh}</span>
+                  </div>
+                  <div className="bg-white p-2 rounded-xl border border-slate-200">
+                    <span className="text-[10px] text-slate-600 font-bold uppercase block">Aluno</span>
+                    <span className="font-bold text-slate-900 block">{formData.nome || 'Aluno'}</span>
+                    <span className="text-[11px] text-slate-500 font-mono">{formData.cpf}</span>
+                  </div>
+                  <div className="bg-white p-2 rounded-xl border border-slate-200">
+                    <span className="text-[10px] text-slate-600 font-bold uppercase block">Pacote & Valor</span>
+                    <span className="font-bold text-slate-900 block">{chosenPackage?.nome}</span>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <span className="font-bold text-emerald-700 font-mono">
+                        {formatCurrencyBRL(couponResult?.valorFinalCentavos || chosenPackage?.valorCentavos || 0)}
+                      </span>
+                      {appliedCoupon && (
+                        <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-bold">
+                          Cupom {appliedCoupon.codigo}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Credenciais de Acesso */}
+              <div className="space-y-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    E-mail para Login na Plataforma *
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                    <input
+                      type="email"
+                      required
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="aluno@email.com.br"
+                      className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none font-mono text-xs"
+                    />
+                  </div>
+                  <span className="text-[11px] text-slate-600 mt-0.5 block">
+                    Este e-mail será seu usuário de login no sistema.
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">
+                      Senha de Acesso (Mín. 6 dígitos) *
+                    </label>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        required
+                        value={formData.senha}
+                        onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
+                        placeholder="••••••••"
+                        className="w-full pl-9 pr-9 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none text-xs"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                        title={showPassword ? 'Ocultar senha' : 'Ver senha'}
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">
+                      Confirmar Senha *
+                    </label>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        required
+                        value={formData.confirmarSenha}
+                        onChange={(e) => setFormData({ ...formData, confirmarSenha: e.target.value })}
+                        placeholder="••••••••"
+                        className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none text-xs"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Termos e LGPD */}
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-start gap-2.5">
+                  <input
+                    type="checkbox"
+                    id="termsCheck"
+                    checked={termsAccepted}
+                    onChange={(e) => setTermsAccepted(e.target.checked)}
+                    className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <label htmlFor="termsCheck" className="text-xs text-slate-600 cursor-pointer leading-snug">
+                    Declaro que li e concordo com os <strong>Termos de Uso</strong> e <strong>Política de Privacidade</strong> em conformidade com a LGPD (Lei Geral de Proteção de Dados).
+                  </label>
+                </div>
+              </div>
+
+              {/* Botões Navegação Tela 3 / Finalizar */}
+              <div className="pt-2 flex justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(2)}
+                  className="px-4 py-2 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-100 font-semibold cursor-pointer text-xs flex items-center gap-1.5"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Voltar</span>
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl font-bold shadow-md transition-colors cursor-pointer text-xs flex items-center gap-1.5"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Cadastrando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span>Finalizar Auto-Cadastro</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
-          </div>
-
-          <div className="pt-2 flex flex-col-reverse sm:flex-row justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-100 font-semibold cursor-pointer w-full sm:w-auto"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={loading || (ageCheck !== null && !ageCheck.valid)}
-              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl font-semibold shadow-sm transition-colors cursor-pointer w-full sm:w-auto"
-            >
-              {loading ? 'Cadastrando...' : 'Finalizar Auto-Cadastro'}
-            </button>
-          </div>
+          )}
         </form>
       </div>
     </div>

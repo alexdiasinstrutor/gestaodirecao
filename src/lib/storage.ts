@@ -980,6 +980,104 @@ setCouponSyncHooks({
   saveRedemption: (r) => supabaseAdapter.saveCouponRedemption(r)
 });
 
+/**
+ * Pacotes oficiais padrão do sistema para novas organizações e instrutores
+ */
+export function getDefaultOfficialPackages(orgId: string, instrutorId?: string): PackageOffer[] {
+  return [
+    {
+      id: `pkg_cnh_b_20_${orgId}`,
+      organizacaoId: orgId,
+      instrutorId,
+      nome: 'Pacote CNH B (20 Aulas Práticas)',
+      categoriaCnh: 'B',
+      totalAulas: 20,
+      valorCentavos: 180000,
+      formaPagamento: 'TODAS',
+      maxParcelas: 12,
+      descontoAvistaPercentual: 5,
+      descricao: 'Treinamento prático veicular completo com suporte e simulados de exame.',
+      ativo: true,
+      criadoEm: new Date().toISOString()
+    },
+    {
+      id: `pkg_cnh_a_20_${orgId}`,
+      organizacaoId: orgId,
+      instrutorId,
+      nome: 'Pacote CNH Moto A (20 Aulas Práticas)',
+      categoriaCnh: 'A',
+      totalAulas: 20,
+      valorCentavos: 140000,
+      formaPagamento: 'TODAS',
+      maxParcelas: 12,
+      descontoAvistaPercentual: 5,
+      descricao: 'Treinamento completo em pista de motocicleta, equilíbrio e circuitos oficiais do Detran.',
+      ativo: true,
+      criadoEm: new Date().toISOString()
+    },
+    {
+      id: `pkg_cnh_ab_40_${orgId}`,
+      organizacaoId: orgId,
+      instrutorId,
+      nome: 'Pacote Combinado CNH A+B (40 Aulas Práticas)',
+      categoriaCnh: 'AB',
+      totalAulas: 40,
+      valorCentavos: 290000,
+      formaPagamento: 'TODAS',
+      maxParcelas: 12,
+      descontoAvistaPercentual: 7,
+      descricao: 'Formação completa dupla: 20 aulas de carro (B) + 20 aulas de moto (A) com valor promocional.',
+      ativo: true,
+      criadoEm: new Date().toISOString()
+    },
+    {
+      id: `pkg_reforco_05_${orgId}`,
+      organizacaoId: orgId,
+      instrutorId,
+      nome: 'Pacote Reforço Pré-Exame (5 Aulas Práticas)',
+      categoriaCnh: 'B',
+      totalAulas: 5,
+      valorCentavos: 45000,
+      formaPagamento: 'TODAS',
+      maxParcelas: 6,
+      descontoAvistaPercentual: 5,
+      descricao: 'Aulas práticas de refinamento para baliza, controle de embreagem e percurso de exame.',
+      ativo: true,
+      criadoEm: new Date().toISOString()
+    },
+    {
+      id: `pkg_habilitados_10_${orgId}`,
+      organizacaoId: orgId,
+      instrutorId,
+      nome: 'Treinamento para Habilitados / Perda do Medo (10 Aulas)',
+      categoriaCnh: 'B',
+      totalAulas: 10,
+      valorCentavos: 85000,
+      formaPagamento: 'TODAS',
+      maxParcelas: 10,
+      descontoAvistaPercentual: 5,
+      descricao: 'Aulas especializadas para quem já tem CNH mas precisa perder o medo de dirigir no trânsito real.',
+      ativo: true,
+      criadoEm: new Date().toISOString()
+    },
+    {
+      id: `pkg_cnh_d_20_${orgId}`,
+      organizacaoId: orgId,
+      instrutorId,
+      nome: 'Pacote CNH D - Passageiros / Van / Ônibus (20 Aulas)',
+      categoriaCnh: 'D',
+      totalAulas: 20,
+      valorCentavos: 240000,
+      formaPagamento: 'TODAS',
+      maxParcelas: 12,
+      descontoAvistaPercentual: 5,
+      descricao: 'Capacitação prática profissional para transporte de passageiros em micro-ônibus e van.',
+      ativo: true,
+      criadoEm: new Date().toISOString()
+    }
+  ];
+}
+
 export const db = {
   // Current Session User (Sessão persistente por no mínimo 60 minutos)
   getCurrentUser(): User | null {
@@ -1750,9 +1848,17 @@ export const db = {
 
   // Package Offers
   getPackages(orgId: string, instrutorId?: string): PackageOffer[] {
-    const list = readList<PackageOffer>(STORAGE_KEYS.PACKAGES).filter((p) => p.organizacaoId === orgId);
+    const all = readList<PackageOffer>(STORAGE_KEYS.PACKAGES);
+    let list = all.filter((p) => p.organizacaoId === orgId);
+    if (list.length === 0) {
+      const defaults = getDefaultOfficialPackages(orgId, instrutorId);
+      writeList(STORAGE_KEYS.PACKAGES, [...all, ...defaults]);
+      defaults.forEach((pkg) => supabaseAdapter.savePackage(pkg).catch(() => {}));
+      list = defaults;
+    }
     if (!instrutorId) return list;
-    return list.filter((p) => !p.instrutorId || p.instrutorId === instrutorId);
+    const instructorSpecific = list.filter((p) => p.instrutorId === instrutorId);
+    return instructorSpecific.length > 0 ? instructorSpecific : list;
   },
 
   createPackage(pkg: PackageOffer, actorId: string): void {
