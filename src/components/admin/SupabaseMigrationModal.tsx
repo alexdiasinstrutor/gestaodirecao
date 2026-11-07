@@ -15,8 +15,12 @@ import {
   Layers,
   ArrowRight,
   ShieldCheck,
-  ExternalLink
+  ExternalLink,
+  Eye,
+  EyeOff,
+  Sparkles
 } from 'lucide-react';
+import { OFFICIAL_SUPABASE_URL, OFFICIAL_SUPABASE_ANON_KEY } from '../../lib/supabaseClient';
 import {
   generateSupabaseSchemaSQL,
   generateSupabaseDataDumpSQL,
@@ -41,6 +45,7 @@ export const SupabaseMigrationModal: React.FC<SupabaseMigrationModalProps> = ({
   const [config, setConfig] = useState<SupabaseConfig>(getStoredSupabaseConfig());
   const [activeStep, setActiveStep] = useState<'CREDENTIALS' | 'SCHEMA' | 'SYNC'>('CREDENTIALS');
   const [testStatus, setTestStatus] = useState<{ testing: boolean; message?: string; success?: boolean } | null>(null);
+  const [showApiKey, setShowApiKey] = useState(false);
   const [copiedSchema, setCopiedSchema] = useState(false);
   const [copiedDump, setCopiedDump] = useState(false);
   const [syncState, setSyncState] = useState<{
@@ -214,11 +219,28 @@ export const SupabaseMigrationModal: React.FC<SupabaseMigrationModalProps> = ({
           {/* STEP 1: CREDENCIAIS */}
           {activeStep === 'CREDENTIALS' && (
             <div className="space-y-4">
-              <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl text-emerald-900 space-y-1">
-                <span className="font-bold flex items-center gap-1.5 text-emerald-800 text-xs">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                  Como obter as credenciais do seu projeto Supabase:
-                </span>
+              <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl text-emerald-900 space-y-2">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <span className="font-bold flex items-center gap-1.5 text-emerald-800 text-xs">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                    Como obter as credenciais do seu projeto Supabase:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setConfig({
+                        projectUrl: OFFICIAL_SUPABASE_URL,
+                        apiKey: OFFICIAL_SUPABASE_ANON_KEY
+                      });
+                      setTestStatus(null);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                    title="Preenche instantaneamente com a URL e chave anon oficial configuradas no sistema"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Preencher com Credenciais Oficiais</span>
+                  </button>
+                </div>
                 <p className="text-xs leading-relaxed text-emerald-800">
                   Acesse seu painel no <strong>supabase.com</strong>, selecione seu projeto e vá em <strong>Project Settings → API</strong>. Copie a <strong>Project URL</strong> e a chave <strong>anon public</strong> (ou <strong>service_role</strong> para bypass de RLS).
                 </p>
@@ -235,7 +257,7 @@ export const SupabaseMigrationModal: React.FC<SupabaseMigrationModalProps> = ({
                       type="url"
                       placeholder="https://abcdefghijklmnop.supabase.co"
                       value={config.projectUrl}
-                      onChange={(e) => setConfig({ ...config, projectUrl: e.target.value })}
+                      onChange={(e) => setConfig({ ...config, projectUrl: e.target.value.trim() })}
                       className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-xl text-xs font-mono focus:border-emerald-600 focus:outline-none"
                     />
                   </div>
@@ -251,12 +273,20 @@ export const SupabaseMigrationModal: React.FC<SupabaseMigrationModalProps> = ({
                   <div className="relative">
                     <Key className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                     <input
-                      type="password"
+                      type={showApiKey ? 'text' : 'password'}
                       placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
                       value={config.apiKey}
-                      onChange={(e) => setConfig({ ...config, apiKey: e.target.value })}
-                      className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-xl text-xs font-mono focus:border-emerald-600 focus:outline-none"
+                      onChange={(e) => setConfig({ ...config, apiKey: e.target.value.trim() })}
+                      className="w-full pl-9 pr-10 py-2 border border-slate-300 rounded-xl text-xs font-mono focus:border-emerald-600 focus:outline-none"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowApiKey(!showApiKey)}
+                      className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                      title={showApiKey ? 'Ocultar chave' : 'Mostrar chave'}
+                    >
+                      {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                   <span className="text-xs text-slate-600 font-medium mt-0.5 block">
                     Utilizada exclusivamente para autenticar as requisições com o PostgREST.

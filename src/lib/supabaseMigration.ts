@@ -5,6 +5,7 @@
 
 import { db } from './storage';
 import { Organization, User, Student, Vehicle, Lesson, AccountReceivable, PaymentRecord, Expense, Investment, PackageOffer, AuditLog } from '../types';
+import { OFFICIAL_SUPABASE_URL, OFFICIAL_SUPABASE_ANON_KEY } from './supabaseClient';
 
 export interface SupabaseConfig {
   projectUrl: string;
@@ -17,12 +18,18 @@ export function getStoredSupabaseConfig(): SupabaseConfig {
   try {
     const raw = localStorage.getItem(SUPABASE_CONFIG_STORAGE_KEY);
     if (raw) {
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      if (parsed.projectUrl && parsed.apiKey) {
+        return parsed;
+      }
     }
   } catch (e) {
     console.warn('Erro ao carregar credenciais Supabase salvas', e);
   }
-  return { projectUrl: '', apiKey: '' };
+  return {
+    projectUrl: OFFICIAL_SUPABASE_URL,
+    apiKey: OFFICIAL_SUPABASE_ANON_KEY
+  };
 }
 
 export function saveStoredSupabaseConfig(config: SupabaseConfig): void {
@@ -467,7 +474,7 @@ export function generateSupabaseDataDumpSQL(): string {
 }
 
 /**
- * Testa conectividade direta com o endpoint REST do Supabase
+ * Testa conectividade direta com o endpoint REST e Auth do Supabase
  */
 export async function testSupabaseConnection(config: SupabaseConfig): Promise<{ success: boolean; message: string }> {
   if (!config.projectUrl || !config.apiKey) {
@@ -475,27 +482,51 @@ export async function testSupabaseConnection(config: SupabaseConfig): Promise<{ 
   }
 
   const cleanUrl = config.projectUrl.trim().replace(/\/$/, '');
+  const cleanKey = config.apiKey.trim();
 
   try {
-    const res = await fetch(`${cleanUrl}/rest/v1/`, {
+    // 1. Testa a autenticação da chave contra o endpoint GoTrue Auth
+    const authRes = await fetch(`${cleanUrl}/auth/v1/settings`, {
       method: 'GET',
       headers: {
-        'apikey': config.apiKey.trim(),
-        'Authorization': `Bearer ${config.apiKey.trim()}`
+        'apikey': cleanKey,
+        'Authorization': `Bearer ${cleanKey}`
       }
     });
 
-    if (res.ok || res.status === 200 || res.status === 404) {
-      return {
-        success: true,
-        message: 'Conexão com a API do Supabase estabelecida com sucesso!'
-      };
-    } else {
+    if (!authRes.ok) {
+      if (authRes.status === 401) {
+        return {
+          success: false,
+          message: 'Chave de API inválida (HTTP 401). Verifique se copiou a chave "anon public" ou "service_role" completa sem espaços adicionais.'
+        };
+      }
       return {
         success: false,
-        message: `Servidor Supabase retornou status HTTP ${res.status}: ${res.statusText}`
+        message: `Servidor Supabase retornou status HTTP ${authRes.status}: ${authRes.statusText}`
       };
     }
+
+    // 2. Testa o PostgREST contra a tabela organizations
+    const dbRes = await fetch(`${cleanUrl}/rest/v1/organizations?select=id&limit=1`, {
+      method: 'GET',
+      headers: {
+        'apikey': cleanKey,
+        'Authorization': `Bearer ${cleanKey}`
+      }
+    });
+
+    if (dbRes.ok) {
+      return {
+        success: true,
+        message: 'Conexão com a API do Supabase e tabelas PostgreSQL estabelecida com sucesso!'
+      };
+    }
+
+    return {
+      success: true,
+      message: 'Conexão com a API do Supabase confirmada! O esquema SQL ainda não foi criado. Avance para a aba "2. Esquema SQL" para criar as tabelas.'
+    };
   } catch (err: any) {
     return {
       success: false,
