@@ -10,7 +10,11 @@ import {
   Sparkles,
   AlertCircle,
   HelpCircle,
-  Shield
+  Shield,
+  Info,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink
 } from 'lucide-react';
 import { db } from '../../lib/storage';
 import { User, Organization, Student } from '../../types';
@@ -42,6 +46,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [googleNome, setGoogleNome] = useState<string>('');
   const [googleRole, setGoogleRole] = useState<'INSTRUTOR' | 'ALUNO'>('INSTRUTOR');
   const [googleActionError, setGoogleActionError] = useState<string>('');
+  const [showGoogleOAuthHelp, setShowGoogleOAuthHelp] = useState<boolean>(false);
 
   const handleStartGoogleFlow = async () => {
     setError('');
@@ -50,8 +55,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       const res = await signInWithGoogleOAuth();
       if (res?.error) {
         // Se o Supabase ainda não tiver as credenciais OAuth do Google habilitadas no Dashboard,
-        // abre o modal de login/cadastro rápido Google
+        // abre o modal de login/cadastro rápido Google sem quebrar o usuário em tela de erro 400
         setShowGoogleModal(true);
+        if (res.providerDisabled) {
+          setGoogleActionError('O provedor Google OAuth ainda não está ativo no painel do Supabase. Você pode criar seu cadastro ou acessar pelo formulário rápido abaixo.');
+        }
         setLoading(false);
       }
       // Se não deu erro, o redirecionamento OAuth oficial do Supabase ocorre automaticamente
@@ -494,9 +502,52 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             </div>
 
             {googleActionError && (
-              <div className="p-2.5 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs flex items-center gap-1.5">
-                <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
-                <span>{googleActionError}</span>
+              <div className="p-2.5 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl text-xs space-y-1.5">
+                <div className="flex items-center gap-1.5 font-semibold text-amber-800">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-600" />
+                  <span>{googleActionError}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowGoogleOAuthHelp(!showGoogleOAuthHelp)}
+                  className="flex items-center gap-1 text-[11px] font-bold text-blue-700 hover:text-blue-900 hover:underline cursor-pointer"
+                >
+                  <Info className="w-3 h-3" />
+                  <span>Como habilitar o Google OAuth no Supabase?</span>
+                  {showGoogleOAuthHelp ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                </button>
+              </div>
+            )}
+
+            {showGoogleOAuthHelp && (
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-950 space-y-2">
+                <p className="font-bold text-blue-900 flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0" />
+                  Passo a passo para habilitar no Supabase:
+                </p>
+                <ol className="list-decimal pl-4 space-y-1 text-slate-700">
+                  <li>
+                    Acesse o <strong>Google Cloud Console</strong> &gt; <em>APIs &amp; Services</em> &gt; <em>Credentials</em> e crie um <strong>OAuth 2.0 Client ID</strong> do tipo <em>Web application</em>.
+                  </li>
+                  <li>
+                    Em <strong>Authorized redirect URIs</strong>, adicione:
+                    <div className="mt-1 p-1.5 bg-white border border-blue-200 rounded font-mono text-[11px] text-blue-800 select-all break-all">
+                      https://ozizhwejagjlhmaygvlf.supabase.co/auth/v1/callback
+                    </div>
+                  </li>
+                  <li>
+                    Acesse seu painel no <strong>supabase.com</strong> &gt; Projeto <em>ozizhwejagjlhmaygvlf</em> &gt; <strong>Authentication</strong> &gt; <strong>Providers</strong> &gt; <strong>Google</strong>.
+                  </li>
+                  <li>
+                    Ative a opção <strong>Enable Google provider</strong>, cole o <em>Client ID</em> e o <em>Client Secret</em> gerados e clique em <strong>Save</strong>.
+                  </li>
+                  <li>
+                    Em <strong>Authentication</strong> &gt; <strong>URL Configuration</strong>, defina a <strong>Site URL</strong> como:
+                    <div className="mt-1 p-1 bg-white border border-blue-200 rounded font-mono text-[11px] text-blue-800 select-all">
+                      https://gestaoad.vercel.app
+                    </div>
+                  </li>
+                </ol>
               </div>
             )}
 

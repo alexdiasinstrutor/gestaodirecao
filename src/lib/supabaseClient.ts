@@ -60,15 +60,47 @@ export async function testSupabaseClientConnection(): Promise<{
 }
 
 /**
+ * Verifica se o provedor Google está habilitado no Supabase
+ */
+export async function checkIsGoogleAuthEnabled(): Promise<boolean> {
+  if (!supabase) return false;
+  try {
+    const res = await fetch(`${OFFICIAL_SUPABASE_URL}/auth/v1/settings`, {
+      headers: {
+        'apikey': OFFICIAL_SUPABASE_ANON_KEY,
+      },
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    return Boolean(data?.external?.google);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Inicia fluxo de autenticação / cadastro via Google OAuth
  */
 export async function signInWithGoogleOAuth(): Promise<{
   data: any;
   error: any;
+  providerDisabled?: boolean;
 }> {
   if (!supabase) {
     return { data: null, error: new Error('Supabase indisponível') };
   }
+
+  // Pre-flight: verifica se o provedor Google está ativo no Supabase
+  // para evitar redirecionar o usuário para a tela crua de erro HTTP 400 do Supabase
+  const isEnabled = await checkIsGoogleAuthEnabled();
+  if (!isEnabled) {
+    return {
+      data: null,
+      error: new Error('Provedor Google ainda não habilitado no painel do Supabase.'),
+      providerDisabled: true,
+    };
+  }
+
   try {
     const res = await supabase.auth.signInWithOAuth({
       provider: 'google',
