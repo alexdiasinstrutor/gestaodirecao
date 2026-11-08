@@ -373,9 +373,11 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
         telefone: currentUser.telefone,
         cidade: currentOrg.nome,
         estado: 'BR',
-        assinaturaUrl: currentUser.assinaturaUrl
+        assinaturaUrl: currentUser.assinaturaUrl,
+        assinaturaConfig: currentUser.assinaturaConfig
       },
       assinaturaUrl: currentUser.assinaturaUrl,
+      assinaturaConfig: currentUser.assinaturaConfig,
       observacoes: payment.observacao || 'Comprovante emitido com valor fiscal e registrado na gestão de direção.',
       codigoAutenticacao: payment.comprovanteNumero || `AUT-${Math.floor(100000 + Math.random() * 900000)}`
     };

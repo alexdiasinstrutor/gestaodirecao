@@ -901,7 +901,8 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
       const existing = mergedUsersMap.get(u.id);
       mergedUsersMap.set(u.id, {
         ...u,
-        assinaturaUrl: u.assinaturaUrl || existing?.assinaturaUrl
+        assinaturaUrl: u.assinaturaUrl || existing?.assinaturaUrl,
+        assinaturaConfig: u.assinaturaConfig || existing?.assinaturaConfig
       });
     });
     writeList(STORAGE_KEYS.USERS, Array.from(mergedUsersMap.values()));
@@ -950,8 +951,9 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
             const parsed = JSON.parse(log.detalhes);
             if (parsed && parsed.userId && parsed.signatureUrl) {
               const u = mergedUsersMap.get(parsed.userId);
-              if (u && !u.assinaturaUrl) {
-                u.assinaturaUrl = parsed.signatureUrl;
+              if (u) {
+                if (!u.assinaturaUrl) u.assinaturaUrl = parsed.signatureUrl;
+                if (!u.assinaturaConfig && parsed.signatureConfig) u.assinaturaConfig = parsed.signatureConfig;
               }
             }
           } catch {
@@ -2080,10 +2082,14 @@ export const db = {
   },
 
   /**
-   * Salva a assinatura digital do instrutor (imagem base64 PNG/JPG até 2MB)
+   * Salva a assinatura digital do instrutor (imagem base64 PNG/JPG até 2MB e ajustes de escala/posição)
    * Vincula ao perfil do instrutor, atualiza sessão e grava no Supabase + audit logs
    */
-  async saveUserSignature(userId: string, signatureBase64: string): Promise<User | null> {
+  async saveUserSignature(
+    userId: string,
+    signatureBase64: string,
+    config?: SignatureConfig
+  ): Promise<User | null> {
     const users = readList<User>(STORAGE_KEYS.USERS);
     const index = users.findIndex((u) => u.id === userId);
     if (index === -1) {
@@ -2093,7 +2099,8 @@ export const db = {
 
     const updatedUser: User = {
       ...users[index],
-      assinaturaUrl: signatureBase64 || undefined
+      assinaturaUrl: signatureBase64 || undefined,
+      assinaturaConfig: config || users[index].assinaturaConfig
     };
     users[index] = updatedUser;
     writeList(STORAGE_KEYS.USERS, users);
@@ -2121,6 +2128,7 @@ export const db = {
           userId,
           hasSignature: !!signatureBase64,
           signatureUrl: signatureBase64,
+          signatureConfig: config || updatedUser.assinaturaConfig,
           updatedAt: new Date().toISOString()
         }),
         timestamp: new Date().toISOString()

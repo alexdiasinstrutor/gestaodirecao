@@ -1094,8 +1094,21 @@ Abaixo estão registradas todas as melhorias estruturais, correções de sincron
   - O modal disponibiliza o botão **"💾 Salvar no Meu Perfil"**. Ao clicar, a assinatura é persistida no cadastro do instrutor (`currentUser.assinaturaUrl`), sincronizada no banco de dados Supabase e registrada com cópia de segurança no cofre de auditoria (`InstructorSignatureMeta`).
   - Uma vez salva no perfil, todos os próximos recibos emitidos pelo instrutor já carregam a sua assinatura digital automaticamente, com opções de substituir ou remover a qualquer momento.
 
-### 14.12 Suite de 19 Testes Automatizados Rigorosos (`run_automated_tests.mjs`)
-- Suite automatizada com **19 baterias de testes (`T01` a `T19`)** cobrindo confidencialidade de instrutores, exibição de pacotes, geolocalização Haversine 5–40 km, filtros do mapa, demanda reversa, sanitização de telefone, agenda por período com notificação ao aluno, persistência da ficha do aluno, blindagem de pacotes, gestão de veículos dos instrutores, digitação completa de número de aulas e upload/posicionamento/persistência de assinatura digital (**19/19 aprovados — 100% de conformidade e sem quebras**).
+### 14.12 Posicionamento Interativo e Redimensionamento da Assinatura Digital no Recibo (`PaymentReceiptModal.tsx`, `receiptPdfGenerator.ts` & `storage.ts`)
+- **Redimensionamento Interativo em Tamanho (Escala de 50% a 200%)**:
+  - O painel de ajuste da assinatura conta com controle de zoom/escala de 50% a 200%, botões rápidos de incremento e decremento `[-]` e `[+]` (passo de 10%), além de atalhos rápidos com presets dimensionais (`75% Pequena`, `100% Padrão`, `135% Grande`, `175% Máxima`).
+- **Ajuste de Posição Fina Vertical e Horizontal**:
+  - **Deslocamento Vertical**: Slider de -35px a +35px com botões `Subir ↑`, `Descer ↓` e atalho para o `Nível Linha (0)`.
+  - **Deslocamento Horizontal**: Slider de -60px a +60px com botões `← Esquerda`, `Centro` (reset horizontal) e `Direita →`.
+  - **Botão Redefinir Padrão**: Restaura instantaneamente escala em 100% e deslocamento em (0, 0).
+- **Manipulação Direta por Drag & Drop no Documento**:
+  - Na prévia oficial do recibo, o instrutor pode clicar ou tocar diretamente na assinatura e **arrastá-la livremente com o mouse ou dedo** (`onMouseDown` / `onTouchStart` / `window.mousemove`), posicionando-a milimetricamente sobre a linha do documento com feedback tátil e visual em tempo real.
+- **Persistência das Configurações de Posição e Escala (`SignatureConfig`)**:
+  - Ao clicar em **"💾 Salvar Assinatura e Posição no Meu Perfil"**, o sistema persiste a imagem e as preferências `{ scale, offsetY, offsetX }` no perfil do usuário (`User.assinaturaConfig`), no `localStorage` e na nuvem via Supabase.
+  - O gerador de PDF (`receiptPdfGenerator.ts`) replica proporcionalmente a escala e as coordenadas no documento final baixado ou impresso.
+
+### 14.13 Suite de 20 Testes Automatizados Rigorosos (`run_automated_tests.mjs`)
+- Suite automatizada com **20 baterias de testes (`T01` a `T20`)** cobrindo confidencialidade de instrutores, exibição de pacotes, geolocalização Haversine 5–40 km, filtros do mapa, demanda reversa, sanitização de telefone, agenda por período com notificação ao aluno, persistência da ficha do aluno, blindagem de pacotes, gestão de veículos dos instrutores, digitação completa de número de aulas, upload de assinatura digital e redimensionamento/posicionamento interativo com salvamento no perfil (**20/20 aprovados — 100% de conformidade e sem quebras**).
 
 ---
 
@@ -1105,7 +1118,7 @@ Este Dossiê constitui o registro definitivo e exaustivo de todas as funcionalid
 
 *Homologado para produção e operação contínua.*  
 *Administração Master: cassiordcosta@gmail.com*  
-*Versão do Sistema: v6.9 Estável, Com Assinatura Digital do Instrutor no Recibo (2MB), Digitação Completa de Aulas, Mapa Geográfico (5–40 km), Blindagem Cloud Vault de Pacotes, Gestão de Veículos dos Instrutores, Auditada (19/19 Testes) e Sincronizada em Tempo Real no Supabase*
+*Versão do Sistema: v7.0 Estável, Com Posicionamento e Redimensionamento da Assinatura no Recibo, Assinatura Digital do Instrutor (2MB), Digitação Completa de Aulas, Mapa Geográfico (5–40 km), Blindagem Cloud Vault de Pacotes, Gestão de Veículos dos Instrutores, Auditada (20/20 Testes) e Sincronizada em Tempo Real no Supabase*
 
 
 

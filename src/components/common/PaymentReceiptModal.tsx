@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   X,
   FileText,
@@ -17,7 +17,16 @@ import {
   Upload,
   Trash2,
   Save,
-  FileSignature
+  FileSignature,
+  ZoomIn,
+  ZoomOut,
+  Move,
+  RotateCcw,
+  Sliders,
+  ArrowUp,
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight
 } from 'lucide-react';
 import { db } from '../../lib/storage';
 import {
@@ -29,7 +38,7 @@ import {
 import type { PaymentReceiptData } from '../../lib/receiptPdfGenerator';
 import { formatCurrencyBRL, formatDateBR } from '../../lib/validation';
 import { buildWhatsAppLink } from '../../lib/whatsapp';
-import type { PaymentMethod } from '../../types';
+import type { PaymentMethod, SignatureConfig } from '../../types';
 
 interface PaymentReceiptModalProps {
   isOpen: boolean;
@@ -60,20 +69,104 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
       ''
     );
   });
+
+  // Configurações de posicionamento e tamanho da assinatura
+  const [signatureConfig, setSignatureConfig] = useState<SignatureConfig>(() => {
+    return (
+      receiptData.assinaturaConfig ||
+      receiptData.instrutor?.assinaturaConfig ||
+      db.getCurrentUser()?.assinaturaConfig || {
+        scale: 100,
+        offsetY: 0,
+        offsetX: 0
+      }
+    );
+  });
+
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const dragStartRef = useRef<{ startX: number; startY: number; initOffsetX: number; initOffsetY: number }>({
+    startX: 0,
+    startY: 0,
+    initOffsetX: 0,
+    initOffsetY: 0
+  });
+
   const [signatureFileError, setSignatureFileError] = useState<string>('');
   const [signatureSavedToProfile, setSignatureSavedToProfile] = useState<boolean>(false);
   const [isSavingSignature, setIsSavingSignature] = useState<boolean>(false);
 
-  // Sincroniza a assinatura no receiptData caso o perfil já a tenha carregado
-  React.useEffect(() => {
-    if (signatureImage && !receiptData.assinaturaUrl) {
-      setReceiptData((prev) => ({
+  // Sincroniza a assinatura e sua configuração no receiptData
+  useEffect(() => {
+    setReceiptData((prev) => ({
+      ...prev,
+      assinaturaUrl: signatureImage || undefined,
+      assinaturaConfig,
+      instrutor: {
+        ...prev.instrutor,
+        assinaturaUrl: signatureImage || undefined,
+        assinaturaConfig
+      }
+    }));
+  }, [signatureImage, signatureConfig]);
+
+  // Listener global de drag para posicionar a assinatura arrastando com mouse ou touch
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const dx = e.clientX - dragStartRef.current.startX;
+      const dy = e.clientY - dragStartRef.current.startY;
+      setSignatureConfig((prev) => ({
         ...prev,
-        assinaturaUrl: signatureImage,
-        instrutor: { ...prev.instrutor, assinaturaUrl: signatureImage }
+        offsetX: Math.max(-80, Math.min(80, Math.round(dragStartRef.current.initOffsetX + dx))),
+        offsetY: Math.max(-40, Math.min(40, Math.round(dragStartRef.current.initOffsetY + dy)))
       }));
-    }
-  }, [signatureImage]);
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!e.touches[0]) return;
+      const dx = e.touches[0].clientX - dragStartRef.current.startX;
+      const dy = e.touches[0].clientY - dragStartRef.current.startY;
+      setSignatureConfig((prev) => ({
+        ...prev,
+        offsetX: Math.max(-80, Math.min(80, Math.round(dragStartRef.current.initOffsetX + dx))),
+        offsetY: Math.max(-40, Math.min(40, Math.round(dragStartRef.current.initOffsetY + dy)))
+      }));
+    };
+
+    const handleDragEnd = () => {
+      setIsDragging(false);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleDragEnd);
+    window.addEventListener('touchmove', handleTouchMove);
+    window.addEventListener('touchend', handleDragEnd);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleDragEnd);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleDragEnd);
+    };
+  }, [isDragging]);
+
+  const startDrag = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    dragStartRef.current = {
+      startX: clientX,
+      startY: clientY,
+      initOffsetX: signatureConfig.offsetX,
+      initOffsetY: signatureConfig.offsetY
+    };
+    setIsDragging(true);
+  };
+
+  const handleResetPosition = () => {
+    setSignatureConfig({ scale: 100, offsetY: 0, offsetX: 0 });
+  };
 
   const handleSignatureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -99,11 +192,6 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
     reader.onload = () => {
       const base64 = reader.result as string;
       setSignatureImage(base64);
-      setReceiptData((prev) => ({
-        ...prev,
-        assinaturaUrl: base64,
-        instrutor: { ...prev.instrutor, assinaturaUrl: base64 }
-      }));
     };
     reader.readAsDataURL(file);
   };
@@ -114,7 +202,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
     try {
       const current = db.getCurrentUser();
       if (current) {
-        await db.saveUserSignature(current.id, signatureImage);
+        await db.saveUserSignature(current.id, signatureImage, signatureConfig);
         setSignatureSavedToProfile(true);
         setTimeout(() => setSignatureSavedToProfile(false), 3500);
       }
@@ -130,10 +218,12 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
     setSignatureImage('');
     setSignatureFileError('');
     if (signatureFileInputRef.current) signatureFileInputRef.current.value = '';
+    handleResetPosition();
     setReceiptData((prev) => ({
       ...prev,
       assinaturaUrl: undefined,
-      instrutor: { ...prev.instrutor, assinaturaUrl: undefined }
+      assinaturaConfig: undefined,
+      instrutor: { ...prev.instrutor, assinaturaUrl: undefined, assinaturaConfig: undefined }
     }));
   };
 
@@ -358,7 +448,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
             </div>
 
             {/* Campo e Painel para Anexar Assinatura Digital do Instrutor (PNG, JPG máx 2MB) */}
-            <div className="pt-3 border-t border-slate-200 mt-2 space-y-2">
+            <div className="pt-3 border-t border-slate-200 mt-2 space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-white p-3 rounded-xl border border-blue-200">
                 <div className="space-y-0.5">
                   <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
@@ -366,7 +456,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                     Assinatura Digital do Instrutor
                   </span>
                   <p className="text-[11px] text-slate-500">
-                    Anexe uma foto ou imagem da sua assinatura (PNG ou JPG, máx 2MB).
+                    Anexe uma foto ou imagem da sua assinatura (PNG ou JPG, máx 2MB) e ajuste tamanho e posição.
                   </p>
                 </div>
 
@@ -394,7 +484,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                         onClick={handleSaveSignatureToProfile}
                         disabled={isSavingSignature}
                         className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors disabled:opacity-50"
-                        title="Salva esta assinatura permanentemente no seu perfil de instrutor"
+                        title="Salva esta assinatura e os ajustes de tamanho e posição permanentemente no seu perfil"
                       >
                         <Save className="w-3.5 h-3.5" />
                         <span>{isSavingSignature ? 'Salvando...' : 'Salvar no Meu Perfil'}</span>
@@ -413,6 +503,254 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                 </div>
               </div>
 
+              {/* Controles de Redimensionamento e Posicionamento da Assinatura */}
+              {signatureImage && (
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-3">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+                      <Sliders className="w-4 h-4 text-blue-600" />
+                      <span>Ajustes de Posicionamento e Tamanho da Assinatura</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleResetPosition}
+                      className="text-[11px] font-semibold text-slate-500 hover:text-slate-800 flex items-center gap-1 cursor-pointer transition-colors"
+                      title="Redefinir tamanho e posição para os padrões originais"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>Redefinir Padrão</span>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                    {/* 1. Redimensionar Tamanho / Escala */}
+                    <div className="space-y-1.5 bg-white p-2.5 rounded-lg border border-slate-200">
+                      <div className="flex items-center justify-between">
+                        <label className="font-bold text-slate-700 flex items-center gap-1">
+                          <ZoomIn className="w-3.5 h-3.5 text-blue-600" />
+                          <span>Tamanho: {signatureConfig.scale}%</span>
+                        </label>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSignatureConfig((prev) => ({
+                                ...prev,
+                                scale: Math.max(50, prev.scale - 10)
+                              }))
+                            }
+                            className="w-6 h-6 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded text-slate-700 font-bold text-xs"
+                            title="Diminuir tamanho"
+                          >
+                            -
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSignatureConfig((prev) => ({
+                                ...prev,
+                                scale: Math.min(200, prev.scale + 10)
+                              }))
+                            }
+                            className="w-6 h-6 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded text-slate-700 font-bold text-xs"
+                            title="Aumentar tamanho"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                      <input
+                        type="range"
+                        min="50"
+                        max="200"
+                        step="5"
+                        value={signatureConfig.scale}
+                        onChange={(e) =>
+                          setSignatureConfig((prev) => ({
+                            ...prev,
+                            scale: Number(e.target.value)
+                          }))
+                        }
+                        className="w-full accent-blue-600 cursor-pointer"
+                      />
+                      <div className="flex justify-between gap-1 pt-1">
+                        {[75, 100, 135, 175].map((val) => (
+                          <button
+                            key={val}
+                            type="button"
+                            onClick={() => setSignatureConfig((prev) => ({ ...prev, scale: val }))}
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-semibold transition-colors ${
+                              signatureConfig.scale === val
+                                ? 'bg-blue-600 text-white font-bold'
+                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            }`}
+                          >
+                            {val}%
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* 2. Posição Vertical (Subir / Descer) */}
+                    <div className="space-y-1.5 bg-white p-2.5 rounded-lg border border-slate-200">
+                      <div className="flex items-center justify-between">
+                        <label className="font-bold text-slate-700 flex items-center gap-1">
+                          <Move className="w-3.5 h-3.5 text-blue-600" />
+                          <span>
+                            Vertical:{' '}
+                            {signatureConfig.offsetY > 0
+                              ? `+${signatureConfig.offsetY}px`
+                              : `${signatureConfig.offsetY}px`}
+                          </span>
+                        </label>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSignatureConfig((prev) => ({
+                                ...prev,
+                                offsetY: Math.max(-35, prev.offsetY - 3)
+                              }))
+                            }
+                            className="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 rounded text-slate-700 text-[10px] flex items-center gap-0.5 font-medium"
+                            title="Subir assinatura"
+                          >
+                            <ArrowUp className="w-3 h-3" /> Subir
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSignatureConfig((prev) => ({
+                                ...prev,
+                                offsetY: Math.min(35, prev.offsetY + 3)
+                              }))
+                            }
+                            className="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 rounded text-slate-700 text-[10px] flex items-center gap-0.5 font-medium"
+                            title="Descer assinatura"
+                          >
+                            <ArrowDown className="w-3 h-3" /> Descer
+                          </button>
+                        </div>
+                      </div>
+                      <input
+                        type="range"
+                        min="-35"
+                        max="35"
+                        step="1"
+                        value={signatureConfig.offsetY}
+                        onChange={(e) =>
+                          setSignatureConfig((prev) => ({
+                            ...prev,
+                            offsetY: Number(e.target.value)
+                          }))
+                        }
+                        className="w-full accent-blue-600 cursor-pointer"
+                      />
+                      <div className="flex justify-between text-[10px] text-slate-400">
+                        <span>Mais Alto (-35px)</span>
+                        <button
+                          type="button"
+                          onClick={() => setSignatureConfig((prev) => ({ ...prev, offsetY: 0 }))}
+                          className="text-blue-600 hover:underline font-medium"
+                        >
+                          Nível Linha (0)
+                        </button>
+                        <span>Mais Baixo (+35px)</span>
+                      </div>
+                    </div>
+
+                    {/* 3. Posição Horizontal (Esquerda / Direita) */}
+                    <div className="space-y-1.5 bg-white p-2.5 rounded-lg border border-slate-200">
+                      <div className="flex items-center justify-between">
+                        <label className="font-bold text-slate-700 flex items-center gap-1">
+                          <Move className="w-3.5 h-3.5 text-blue-600" />
+                          <span>
+                            Horizontal:{' '}
+                            {signatureConfig.offsetX > 0
+                              ? `+${signatureConfig.offsetX}px`
+                              : `${signatureConfig.offsetX}px`}
+                          </span>
+                        </label>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSignatureConfig((prev) => ({
+                                ...prev,
+                                offsetX: Math.max(-60, prev.offsetX - 5)
+                              }))
+                            }
+                            className="p-1 bg-slate-100 hover:bg-slate-200 rounded text-slate-700"
+                            title="Mover para esquerda"
+                          >
+                            <ArrowLeft className="w-3 h-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSignatureConfig((prev) => ({ ...prev, offsetX: 0 }))}
+                            className="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 rounded text-slate-700 text-[10px] font-semibold"
+                            title="Centralizar horizontalmente"
+                          >
+                            Centro
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSignatureConfig((prev) => ({
+                                ...prev,
+                                offsetX: Math.min(60, prev.offsetX + 5)
+                              }))
+                            }
+                            className="p-1 bg-slate-100 hover:bg-slate-200 rounded text-slate-700"
+                            title="Mover para direita"
+                          >
+                            <ArrowRight className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                      <input
+                        type="range"
+                        min="-60"
+                        max="60"
+                        step="2"
+                        value={signatureConfig.offsetX}
+                        onChange={(e) =>
+                          setSignatureConfig((prev) => ({
+                            ...prev,
+                            offsetX: Number(e.target.value)
+                          }))
+                        }
+                        className="w-full accent-blue-600 cursor-pointer"
+                      />
+                      <div className="flex justify-between text-[10px] text-slate-400">
+                        <span>Esquerda (-60px)</span>
+                        <span>Centro (0)</span>
+                        <span>Direita (+60px)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Dica interativa e ação de salvar */}
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-1 border-t border-slate-200">
+                    <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                      <span>💡</span>
+                      <span>
+                        Dica: Você também pode <strong>clicar e arrastar a assinatura diretamente</strong> sobre a linha no comprovante abaixo!
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleSaveSignatureToProfile}
+                      disabled={isSavingSignature}
+                      className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-colors disabled:opacity-50"
+                    >
+                      <Save className="w-4 h-4" />
+                      <span>{isSavingSignature ? 'Salvando...' : 'Salvar Assinatura e Posição no Meu Perfil'}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {signatureFileError && (
                 <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs font-medium flex items-center gap-2">
                   <span>⚠️ {signatureFileError}</span>
@@ -422,7 +760,9 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
               {signatureSavedToProfile && (
                 <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-medium flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Assinatura salva com sucesso no seu perfil de instrutor! Seus próximos recibos já a incluirão automaticamente.</span>
+                  <span>
+                    Assinatura, tamanho e posição salvos com sucesso no seu perfil de instrutor! Seus próximos recibos já a incluirão automaticamente ajustada.
+                  </span>
                 </div>
               )}
             </div>
@@ -541,15 +881,35 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                     Assinatura do Instrutor
                   </span>
 
-                  {/* Espaço reservado e posicionado sobre a linha */}
-                  <div className="h-16 w-full flex items-center justify-center relative mb-1">
+                  {/* Espaço reservado e posicionado sobre a linha com suporte a Arrastar (Drag & Drop) */}
+                  <div className="h-24 w-full flex items-end justify-center relative mb-1 select-none overflow-visible">
                     {signatureImage ? (
-                      <div className="relative group flex items-center justify-center h-full">
+                      <div
+                        onMouseDown={startDrag}
+                        onTouchStart={startDrag}
+                        style={{
+                          transform: `translate(${signatureConfig.offsetX}px, ${signatureConfig.offsetY}px) scale(${signatureConfig.scale / 100})`,
+                          transformOrigin: 'center bottom',
+                          cursor: isDragging ? 'grabbing' : 'grab',
+                          touchAction: 'none'
+                        }}
+                        className={`relative group inline-flex items-center justify-center p-1 rounded-lg transition-shadow duration-100 ${
+                          isDragging
+                            ? 'ring-2 ring-blue-500 bg-blue-50/50 shadow-md'
+                            : 'hover:ring-1 hover:ring-blue-300 hover:bg-slate-50/70'
+                        }`}
+                        title="Clique e arraste a assinatura para posicionar exatamente sobre a linha"
+                      >
                         <img
                           src={signatureImage}
                           alt="Assinatura Digital do Instrutor"
-                          className="max-h-14 max-w-[240px] object-contain drop-shadow-xs"
+                          draggable={false}
+                          className="max-h-16 max-w-[220px] object-contain drop-shadow-xs pointer-events-none select-none"
                         />
+                        {/* Tooltip ao passar o cursor sobre a assinatura */}
+                        <span className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900/90 text-white text-[9px] px-2 py-0.5 rounded shadow pointer-events-none whitespace-nowrap z-20">
+                          🖱️ Arraste para posicionar
+                        </span>
                       </div>
                     ) : (
                       <div className="border border-dashed border-slate-300 rounded-lg w-full h-12 flex items-center justify-center text-[11px] text-slate-400 bg-white">

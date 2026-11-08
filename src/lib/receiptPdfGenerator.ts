@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import { formatCurrencyBRL, formatDateBR } from './validation';
-import type { PaymentMethod } from '../types';
+import type { PaymentMethod, SignatureConfig } from '../types';
 
 export interface PaymentReceiptData {
   id: string;
@@ -27,8 +27,10 @@ export interface PaymentReceiptData {
     cidade?: string;
     estado?: string;
     assinaturaUrl?: string;
+    assinaturaConfig?: SignatureConfig;
   };
   assinaturaUrl?: string;
+  assinaturaConfig?: SignatureConfig;
   observacoes?: string;
   codigoAutenticacao: string;
 }
@@ -264,14 +266,25 @@ export function generateReceiptPdf(data: PaymentReceiptData): jsPDF {
   const signLineWidth = contentWidth - 12 - metadeLargura;
   const centerSignX = signX + signLineWidth / 2;
 
-  // Imagem da Assinatura Digital do Instrutor (se anexada)
+  // Imagem da Assinatura Digital do Instrutor (se anexada, aplicando escala e posicionamento customizados)
   const signatureImg = data.assinaturaUrl || data.instrutor?.assinaturaUrl;
+  const sigConfig = data.assinaturaConfig || data.instrutor?.assinaturaConfig || { scale: 100, offsetY: 0, offsetX: 0 };
+
   if (signatureImg && typeof signatureImg === 'string' && signatureImg.startsWith('data:image')) {
     try {
-      const imgWidth = Math.min(46, signLineWidth - 8);
-      const imgHeight = 13.5;
-      const imgX = centerSignX - imgWidth / 2;
-      const imgY = blocoAssinaturaY - 16;
+      const scaleMultiplier = Math.max(0.5, Math.min(2.5, (sigConfig.scale || 100) / 100));
+      const baseWidth = 46;
+      const baseHeight = 13.5;
+      const imgWidth = baseWidth * scaleMultiplier;
+      const imgHeight = baseHeight * scaleMultiplier;
+
+      // Conversão proporcional de pixels de tela para mm no PDF (1px ~ 0.22mm)
+      const mmOffsetX = (sigConfig.offsetX || 0) * 0.22;
+      const mmOffsetY = (sigConfig.offsetY || 0) * 0.22;
+
+      const imgX = centerSignX - imgWidth / 2 + mmOffsetX;
+      const imgY = blocoAssinaturaY - 2 - imgHeight + mmOffsetY;
+
       const format = signatureImg.includes('image/jpeg') || signatureImg.includes('image/jpg') ? 'JPEG' : 'PNG';
       doc.addImage(signatureImg, format, imgX, imgY, imgWidth, imgHeight);
     } catch (e) {

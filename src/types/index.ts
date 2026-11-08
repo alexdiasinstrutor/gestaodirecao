@@ -88,6 +88,13 @@ export interface User {
   cidadePix?: string;
   // Assinatura digital do instrutor para recibos (PNG/JPG base64 até 2MB)
   assinaturaUrl?: string;
+  assinaturaConfig?: SignatureConfig;
+}
+
+export interface SignatureConfig {
+  scale: number;   // Escala em porcentagem (ex: 50 a 200, padrão 100)
+  offsetY: number; // Deslocamento vertical em pixels (ex: -40 a 40, padrão 0)
+  offsetX: number; // Deslocamento horizontal em pixels (ex: -60 a 60, padrão 0)
 }
 
 export type CnhCategory =

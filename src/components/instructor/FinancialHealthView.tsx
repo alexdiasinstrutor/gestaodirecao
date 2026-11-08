@@ -223,9 +223,8 @@ export const FinancialHealthView: React.FC<FinancialHealthViewProps> = ({
             <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
               <ShieldCheck className="w-5 h-5" />
             </div>
-            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-              mesesDeReserva >= 3 ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
-            }`}>
+            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${mesesDeReserva >= 3 ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
+              }`}>
               {mesesDeReserva.toFixed(1)} meses cobertos
             </span>
           </div>
@@ -290,9 +289,8 @@ export const FinancialHealthView: React.FC<FinancialHealthViewProps> = ({
             <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
               <DollarSign className="w-5 h-5" />
             </div>
-            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-              contasVencidas.length === 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
-            }`}>
+            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${contasVencidas.length === 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
+              }`}>
               {contasVencidas.length} em atraso
             </span>
           </div>

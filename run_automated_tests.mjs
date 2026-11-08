@@ -686,7 +686,7 @@ runTest(
     // 4. Posicionamento no PDF gerado
     assert.equal(
       pdfGeneratorFile.includes('doc.addImage(signatureImg') &&
-      pdfGeneratorFile.includes('blocoAssinaturaY - 16'),
+      (pdfGeneratorFile.includes('blocoAssinaturaY - 2 - imgHeight') || pdfGeneratorFile.includes('blocoAssinaturaY - 16')),
       true,
       'Gerador de PDF posiciona a assinatura digital sobre a linha de assinatura do instrutor'
     );
@@ -701,7 +701,8 @@ runTest(
     );
 
     assert.equal(
-      storageFile.includes('saveUserSignature(userId: string, signatureBase64: string)') &&
+      storageFile.includes('saveUserSignature(') &&
+      storageFile.includes('signatureBase64') &&
       storageFile.includes('InstructorSignatureMeta'),
       true,
       'Storage possui método saveUserSignature com sincronização no Supabase e cofre audit_logs'
@@ -711,6 +712,89 @@ runTest(
       typesFile.includes('assinaturaUrl?: string'),
       true,
       'Tipo User inclui campo assinaturaUrl para persistência no perfil'
+    );
+  }
+);
+
+runTest(
+  'T20',
+  'Redimensionamento e Posicionamento Interativo da Assinatura no Recibo',
+  'Permite ao instrutor redimensionar em tamanho (escala) e posicionar a assinatura sobre a linha de forma interativa (sliders e drag-and-drop), salvando as preferências ao perfil',
+  () => {
+    const receiptModalFile = fs.readFileSync(
+      path.join(BASE_DIR, 'src/components/common/PaymentReceiptModal.tsx'),
+      'utf-8'
+    );
+    const pdfGeneratorFile = fs.readFileSync(
+      path.join(BASE_DIR, 'src/lib/receiptPdfGenerator.ts'),
+      'utf-8'
+    );
+    const storageFile = fs.readFileSync(
+      path.join(BASE_DIR, 'src/lib/storage.ts'),
+      'utf-8'
+    );
+    const typesFile = fs.readFileSync(
+      path.join(BASE_DIR, 'src/types/index.ts'),
+      'utf-8'
+    );
+
+    // 1. Tipagem de SignatureConfig
+    assert.equal(
+      typesFile.includes('export interface SignatureConfig') &&
+      typesFile.includes('scale: number') &&
+      typesFile.includes('offsetY: number') &&
+      typesFile.includes('offsetX: number'),
+      true,
+      'Tipagem SignatureConfig definida com scale, offsetY e offsetX'
+    );
+    assert.equal(
+      typesFile.includes('assinaturaConfig?: SignatureConfig'),
+      true,
+      'Interface User possui campo assinaturaConfig?: SignatureConfig'
+    );
+
+    // 2. Controles de redimensionamento no modal
+    assert.equal(
+      receiptModalFile.includes('signatureConfig') &&
+      receiptModalFile.includes('setSignatureConfig') &&
+      receiptModalFile.includes('scale: Number(e.target.value)') &&
+      receiptModalFile.includes('min="50"') &&
+      receiptModalFile.includes('max="200"'),
+      true,
+      'PaymentReceiptModal possui controle de redimensionamento de 50% a 200%'
+    );
+
+    // 3. Controles de posicionamento e Drag & Drop
+    assert.equal(
+      receiptModalFile.includes('startDrag') &&
+      receiptModalFile.includes('onMouseDown={startDrag}') &&
+      receiptModalFile.includes('onTouchStart={startDrag}') &&
+      receiptModalFile.includes('offsetY') &&
+      receiptModalFile.includes('offsetX'),
+      true,
+      'PaymentReceiptModal implementa arrasto interativo (drag-and-drop) e controle bidirecional'
+    );
+
+    // 4. Salvamento de assinatura com configuração no perfil
+    assert.equal(
+      receiptModalFile.includes('db.saveUserSignature(current.id, signatureImage, signatureConfig)'),
+      true,
+      'handleSaveSignatureToProfile persiste a imagem e as configurações no storage'
+    );
+    assert.equal(
+      storageFile.includes('config?: SignatureConfig') &&
+      storageFile.includes('assinaturaConfig: config'),
+      true,
+      'Storage persiste assinaturaConfig no perfil do usuário e no Supabase'
+    );
+
+    // 5. Aplicação no gerador de PDF
+    assert.equal(
+      pdfGeneratorFile.includes('scaleMultiplier') &&
+      pdfGeneratorFile.includes('mmOffsetX') &&
+      pdfGeneratorFile.includes('mmOffsetY'),
+      true,
+      'Gerador de PDF aplica as configurações de escala e deslocamento na imagem final'
     );
   }
 );
