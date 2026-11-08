@@ -99,6 +99,9 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
     if (editingPackage) {
       const updated: PackageOffer = {
         ...editingPackage,
+        organizacaoId: editingPackage.organizacaoId || orgId,
+        instrutorId: editingPackage.instrutorId || currentUser.id,
+        instrutorNome: editingPackage.instrutorNome || currentUser.nome,
         nome: form.nome.trim(),
         categoriaCnh: form.categoriaCnh,
         totalAulas: Number(form.totalAulas) || 20,

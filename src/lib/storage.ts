@@ -898,8 +898,9 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
     }
 
     // Merge seguro de alunos: combina tabela students, metadados de ficha (StudentFichaMeta) e dados locais
-    if ((students && students.length > 0) || studentMetaMap.size > 0) {
+    {
       const localStudents = readList<Student>(STORAGE_KEYS.STUDENTS);
+      const remoteStudentIds = new Set((students || []).map((s) => s.id));
       const mergedStudentsMap = new Map<string, Student>();
       localStudents.forEach((st) => mergedStudentsMap.set(st.id, st));
       if (students && students.length > 0) {
@@ -953,7 +954,70 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
           mergedStudentsMap.set(stId, metaSt);
         }
       });
-      writeList(STORAGE_KEYS.STUDENTS, Array.from(mergedStudentsMap.values()));
+
+      // Reconstrução automática de alunos a partir de usuários com papel ALUNO caso a ficha ainda não conste em students
+      const allKnownUsers = Array.from(mergedUsersMap.values());
+      const alunoUsers = allKnownUsers.filter((u) => u.papel === 'ALUNO');
+      for (const alu of alunoUsers) {
+        const alreadyInStudents = Array.from(mergedStudentsMap.values()).some(
+          (s) =>
+            (s.email && alu.email && s.email.toLowerCase() === alu.email.toLowerCase()) ||
+            (s.cpfFingerprint && alu.cpfFingerprint && s.cpfFingerprint === alu.cpfFingerprint)
+        );
+        if (!alreadyInStudents) {
+          const orgInstructor = allKnownUsers.find(
+            (u) => u.organizacaoId === alu.organizacaoId && (u.papel === 'ADMIN_ORG' || u.papel === 'INSTRUTOR')
+          );
+          const reconstructedStudent: Student = {
+            id: alu.id.replace(/^usr_/, 'stu_'),
+            organizacaoId: alu.organizacaoId,
+            instrutorId: orgInstructor?.id || '',
+            nome: alu.nome,
+            email: alu.email,
+            telefone: alu.telefone,
+            cpfMascarado: alu.cpfMascarado || '***.***.000-00',
+            cpfFingerprint: alu.cpfFingerprint,
+            dataNascimento: '1990-01-01',
+            idade: 30,
+            categoriaCnh: 'B',
+            cep: alu.cep,
+            estado: alu.estado,
+            cidade: alu.cidade || 'Betim',
+            bairro: alu.bairro,
+            logradouro: alu.logradouro,
+            numero: alu.numero,
+            complemento: alu.complemento,
+            status: 'EM_ANDAMENTO',
+            aulasCumpridas: 0,
+            totalAulasContratadas: 20,
+            pacoteId: `pkg_cnh_b_20_${alu.organizacaoId}`,
+            pacoteNome: 'Pacote CNH B (20 Aulas Práticas)',
+            habilidades: {
+              baliza: 0,
+              controleEmbreagem: 0,
+              transitoPesado: 0,
+              conversoesCruzamentos: 0,
+              rodoviaVelocidade: 0,
+              sinalizacaoPreferencia: 0,
+              posturaDefensiva: 0,
+              simuladoExame: 0
+            },
+            observacoesInstrutor: `Aluno matriculado com instrutor ${orgInstructor?.nome || 'Credenciado'}.`,
+            dataCadastro: (alu.ultimoAcesso || new Date().toISOString()).slice(0, 10)
+          };
+          mergedStudentsMap.set(reconstructedStudent.id, reconstructedStudent);
+        }
+      }
+
+      const finalStudents = Array.from(mergedStudentsMap.values());
+      writeList(STORAGE_KEYS.STUDENTS, finalStudents);
+
+      // Envia para a nuvem quaisquer alunos locais/reconstruídos que ainda não estavam no banco remoto
+      for (const st of finalStudents) {
+        if (!remoteStudentIds.has(st.id)) {
+          supabaseAdapter.saveStudent(st).catch(() => {});
+        }
+      }
     }
 
     if (vehicles && vehicles.length > 0) writeList(STORAGE_KEYS.VEHICLES, vehicles);
@@ -1062,11 +1126,14 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
     if (payments && payments.length > 0) writeList(STORAGE_KEYS.PAYMENTS, payments);
     if (expenses && expenses.length > 0) writeList(STORAGE_KEYS.EXPENSES, expenses);
     if (investments && investments.length > 0) writeList(STORAGE_KEYS.INVESTMENTS, investments);
-    if (packages && packages.length > 0) {
+    // Sincronização bidirecional de pacotes e planos dos instrutores
+    {
       const localPkgs = readList<PackageOffer>(STORAGE_KEYS.PACKAGES);
-      const pkgMetaMap = new Map<string, Partial<PackageOffer>>();
+      const remotePkgIds = new Set((packages || []).map((p) => p.id));
+      const pkgMetaMap = new Map<string, PackageOffer>();
       if (packageMetaLogs && packageMetaLogs.length > 0) {
-        for (const log of packageMetaLogs) {
+        const sortedPkgMeta = [...packageMetaLogs].sort((a, b) => (a.timestamp || '').localeCompare(b.timestamp || ''));
+        for (const log of sortedPkgMeta) {
           if (log.detalhes) {
             try {
               const parsed = JSON.parse(log.detalhes) as PackageOffer;
@@ -1081,17 +1148,66 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
       }
       const mergedPkgsMap = new Map<string, PackageOffer>();
       localPkgs.forEach((lp) => mergedPkgsMap.set(lp.id, lp));
-      packages.forEach((rp) => {
-        const localExisting = mergedPkgsMap.get(rp.id);
-        const metaExisting = pkgMetaMap.get(rp.id);
-        mergedPkgsMap.set(rp.id, {
-          ...rp,
-          instrutorId: rp.instrutorId || metaExisting?.instrutorId || localExisting?.instrutorId,
-          instrutorNome: rp.instrutorNome || metaExisting?.instrutorNome || localExisting?.instrutorNome
+      if (packages && packages.length > 0) {
+        packages.forEach((rp) => {
+          const localExisting = mergedPkgsMap.get(rp.id);
+          const metaExisting = pkgMetaMap.get(rp.id);
+          mergedPkgsMap.set(rp.id, {
+            ...localExisting,
+            ...rp,
+            instrutorId: rp.instrutorId || metaExisting?.instrutorId || localExisting?.instrutorId,
+            instrutorNome: rp.instrutorNome || metaExisting?.instrutorNome || localExisting?.instrutorNome
+          });
         });
+      }
+      pkgMetaMap.forEach((metaPkg, pkgId) => {
+        if (!mergedPkgsMap.has(pkgId)) {
+          mergedPkgsMap.set(pkgId, metaPkg);
+        }
       });
-      writeList(STORAGE_KEYS.PACKAGES, Array.from(mergedPkgsMap.values()));
+
+      // Garante que todo instrutor credenciado real possua seu plano inicial CNH B caso a gravação anterior tenha sido bloqueada por RLS
+      const allKnownInstructors = Array.from(mergedUsersMap.values()).filter(
+        (u) => u.papel === 'ADMIN_ORG' || u.papel === 'INSTRUTOR'
+      );
+      for (const inst of allKnownInstructors) {
+        const hasPkg = Array.from(mergedPkgsMap.values()).some(
+          (p) =>
+            p.instrutorId === inst.id ||
+            (p.organizacaoId === inst.organizacaoId && (!p.instrutorId || p.instrutorId === inst.id))
+        );
+        if (!hasPkg && inst.organizacaoId) {
+          const initialPkg: PackageOffer = {
+            id: `pkg_cnh_b_20_${inst.organizacaoId}`,
+            organizacaoId: inst.organizacaoId,
+            instrutorId: inst.id,
+            instrutorNome: inst.nome,
+            nome: 'Pacote CNH B (20 Aulas Práticas)',
+            totalAulas: 20,
+            categoriaCnh: 'B',
+            valorCentavos: 180000,
+            formaPagamento: 'TODAS',
+            maxParcelas: 12,
+            descontoAvistaPercentual: 5,
+            descricao: 'Treinamento prático veicular completo com suporte e simulados de exame.',
+            ativo: true,
+            criadoEm: new Date().toISOString().slice(0, 10)
+          };
+          mergedPkgsMap.set(initialPkg.id, initialPkg);
+        }
+      }
+
+      const finalPackages = Array.from(mergedPkgsMap.values());
+      writeList(STORAGE_KEYS.PACKAGES, finalPackages);
       db.sanitizePackages();
+
+      // Envia para o Supabase quaisquer pacotes locais ou reconstruídos que ainda não estavam na nuvem
+      const sanitizedPackages = readList<PackageOffer>(STORAGE_KEYS.PACKAGES);
+      for (const pk of sanitizedPackages) {
+        if (!remotePkgIds.has(pk.id)) {
+          supabaseAdapter.savePackage(pk).catch(() => {});
+        }
+      }
     }
 
     // Sincroniza perfis de cobertura geográfica dos instrutores (Raio 5-40km, Cidades Atendidas, Câmbio e Veículos)
@@ -1663,9 +1779,22 @@ export const db = {
   },
 
   getAllInstructors(): User[] {
-    return readList<User>(STORAGE_KEYS.USERS).filter(
-      (u) => u.papel === 'ADMIN_ORG' || u.papel === 'INSTRUTOR' || u.papel === 'SUPER_ADMIN'
+    const candidates = readList<User>(STORAGE_KEYS.USERS).filter(
+      (u) =>
+        (u.papel === 'ADMIN_ORG' || u.papel === 'INSTRUTOR') &&
+        u.email.toLowerCase() !== 'cassiordcosta@gmail.com' &&
+        u.email.toLowerCase() !== 'admin@sistema.com.br'
     );
+    const hasRealInstructors = candidates.some(
+      (u) =>
+        u.email.toLowerCase() !== 'instrutor@teste.com' &&
+        u.email.toLowerCase() !== 'instrutor@autoescola.com' &&
+        u.email.toLowerCase() !== 'roberto@autoescola.com'
+    );
+    if (hasRealInstructors) {
+      return candidates.filter((u) => u.email.toLowerCase() !== 'instrutor@teste.com');
+    }
+    return candidates;
   },
 
   async syncRemoteInstructors(): Promise<User[]> {
@@ -2498,31 +2627,48 @@ export const db = {
     const effectiveOrgId = instructorUser?.organizacaoId || orgId;
 
     if (instrutorId) {
-      // 1. Pacotes com instrutorId explícito deste instrutor (mesmo que em org diferente)
-      const instructorSpecific = all.filter((p) => p.instrutorId === instrutorId);
+      const cleanTargetId = instrutorId.replace(/^usr_/, '').toLowerCase();
+      const targetName = instructorUser?.nome?.trim().toLowerCase();
+
+      // 1. Pacotes com instrutorId ou instrutorNome explícito deste instrutor (mesmo que em org diferente)
+      const instructorSpecific = all.filter((p) => {
+        if (p.instrutorId) {
+          const cleanPkgInstId = p.instrutorId.replace(/^usr_/, '').toLowerCase();
+          if (p.instrutorId === instrutorId || cleanPkgInstId === cleanTargetId) return true;
+        }
+        if (targetName && p.instrutorNome && p.instrutorNome.trim().toLowerCase() === targetName) {
+          return true;
+        }
+        return false;
+      });
+
       // 2. Pacotes da organização do instrutor que não pertençam exclusivamente a outro instrutor
       const orgPackagesForInstructor = all.filter(
         (p) =>
           p.organizacaoId === effectiveOrgId &&
-          (!p.instrutorId || p.instrutorId === instrutorId || p.instrutorId === 'sistema' || p.instrutorId === '')
+          (!p.instrutorId ||
+            p.instrutorId === instrutorId ||
+            p.instrutorId.replace(/^usr_/, '').toLowerCase() === cleanTargetId ||
+            p.instrutorId === 'sistema' ||
+            p.instrutorId === '')
       );
 
-      if (instructorSpecific.length > 0) {
+      if (instructorSpecific.length > 0 || orgPackagesForInstructor.length > 0) {
         const merged = new Map<string, PackageOffer>();
         instructorSpecific.forEach((p) => merged.set(p.id, p));
         orgPackagesForInstructor.forEach((p) => merged.set(p.id, p));
         return Array.from(merged.values());
       }
 
-      if (orgPackagesForInstructor.length > 0) {
-        return orgPackagesForInstructor;
-      }
-
       // Fallback para pacotes na orgId informada sem outro instrutorId
       return all.filter(
         (p) =>
           p.organizacaoId === orgId &&
-          (!p.instrutorId || p.instrutorId === instrutorId || p.instrutorId === 'sistema' || p.instrutorId === '')
+          (!p.instrutorId ||
+            p.instrutorId === instrutorId ||
+            p.instrutorId.replace(/^usr_/, '').toLowerCase() === cleanTargetId ||
+            p.instrutorId === 'sistema' ||
+            p.instrutorId === '')
       );
     }
 

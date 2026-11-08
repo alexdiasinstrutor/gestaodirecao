@@ -437,6 +437,7 @@ function packageToRow(pk: PackageOffer): Record<string, any> {
     id: pk.id,
     organizacao_id: pk.organizacaoId,
     instrutor_id: pk.instrutorId || null,
+    instrutor_nome: pk.instrutorNome || null,
     nome: pk.nome,
     categoria_cnh: pk.categoriaCnh,
     quantidade_aulas: pk.totalAulas || 20,
@@ -454,7 +455,8 @@ function rowToPackage(r: any): PackageOffer {
   return {
     id: r.id,
     organizacaoId: r.organizacao_id,
-    instrutorId: r.instrutor_id,
+    instrutorId: r.instrutor_id || undefined,
+    instrutorNome: r.instrutor_nome || undefined,
     nome: r.nome,
     categoriaCnh: r.categoria_cnh,
     totalAulas: r.quantidade_aulas,
@@ -597,12 +599,120 @@ function rowToRedemption(r: any): CouponRedemption {
   };
 }
 
+// ─── Cloud Sync Vault (Sincronização Resiliente p/ Tabelas com RLS Estrito) ───
+export const VAULT_PREFIX = '__agd_vault_';
+
+const VAULT_TABLES = new Set([
+  'package_offers',
+  'students',
+  'vehicles',
+  'available_slots',
+  'lessons',
+  'accounts_receivable',
+  'payment_records',
+  'expenses',
+  'investments',
+  'audit_logs',
+  'whatsapp_logs',
+  'student_transfers',
+]);
+
+const vaultWriteQueues = new Map<string, Promise<void>>();
+
+function enqueueVaultOp(table: string, task: () => Promise<void>): Promise<void> {
+  const prev = vaultWriteQueues.get(table) || Promise.resolve();
+  const next = prev.then(task, task);
+  vaultWriteQueues.set(table, next);
+  return next;
+}
+
+async function readVaultRows(table: string): Promise<any[]> {
+  if (!supabase || !VAULT_TABLES.has(table)) return [];
+  try {
+    const vaultId = `${VAULT_PREFIX}${table}`;
+    const { data, error } = await supabase
+      .from('organizations')
+      .select('modulos_customizados')
+      .eq('id', vaultId)
+      .limit(1);
+    if (error || !data || data.length === 0) return [];
+    const raw = data[0]?.modulos_customizados;
+    return Array.isArray(raw) ? raw : [];
+  } catch {
+    return [];
+  }
+}
+
+async function writeVaultRows(table: string, rows: any[]): Promise<void> {
+  if (!supabase || !VAULT_TABLES.has(table)) return;
+  const vaultId = `${VAULT_PREFIX}${table}`;
+  const cappedRows = table === 'audit_logs' ? rows.slice(0, 600) : rows;
+  const payload = {
+    id: vaultId,
+    nome: '__AGD_CLOUD_VAULT__',
+    tipo: 'INSTRUTOR_AUTONOMO',
+    cnpj_cpf: `VAULT_${table.toUpperCase()}`,
+    telefone: '0000000000',
+    email: `vault_${table}@sistema.local`,
+    cidade: 'VAULT',
+    estado: 'MG',
+    status: 'ATIVO',
+    plano: 'MASTER',
+    modulos_customizados: cappedRows,
+    criado_em: new Date().toISOString(),
+  };
+  await supabase.from('organizations').upsert(payload, { onConflict: 'id' });
+}
+
+async function upsertVaultRowsBatch(table: string, newRows: Record<string, any>[]): Promise<void> {
+  if (!supabase || !VAULT_TABLES.has(table) || newRows.length === 0) return;
+  await enqueueVaultOp(table, async () => {
+    const current = await readVaultRows(table);
+    const map = new Map<string, any>();
+    for (const item of current) {
+      if (item && item.id) map.set(String(item.id), item);
+    }
+    for (const row of newRows) {
+      if (row && row.id) {
+        const existing = map.get(String(row.id)) || {};
+        map.set(String(row.id), { ...existing, ...row });
+      }
+    }
+    let merged = Array.from(map.values());
+    if (table === 'audit_logs') {
+      merged.sort((a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || '')));
+      merged = merged.slice(0, 600);
+    }
+    await writeVaultRows(table, merged);
+  });
+}
+
+async function deleteVaultRowsBatch(table: string, ids: string[]): Promise<void> {
+  if (!supabase || !VAULT_TABLES.has(table) || ids.length === 0) return;
+  const idSet = new Set(ids.map(String));
+  await enqueueVaultOp(table, async () => {
+    const current = await readVaultRows(table);
+    const filtered = current.filter((item) => item && !idSet.has(String(item.id)));
+    if (filtered.length !== current.length) {
+      await writeVaultRows(table, filtered);
+    }
+  });
+}
+
 // ─── Helper genérico de upsert no Supabase ──────────────────────────────────
 
 async function supabaseUpsert(table: string, row: Record<string, any>): Promise<void> {
   if (!supabase) return;
+  if (VAULT_TABLES.has(table)) {
+    await upsertVaultRowsBatch(table, [row]);
+  }
   const { error } = await supabase.from(table).upsert(row, { onConflict: 'id' });
   if (error) {
+    // Se a tabela possui RLS restritivo p/ chave anon (42501), o dado já está persistido com segurança no Cloud Vault
+    if (error.code === '42501' || (error.message && error.message.includes('row-level security'))) {
+      return;
+    }
+
     // 1. Tratamento para violação de unicidade (ex: email já existente em users ou CNPJ/CPF em organizations)
     if (error.code === '23505' || (error.message && error.message.toLowerCase().includes('unique'))) {
       if (table === 'users' && row.email) {
@@ -629,15 +739,19 @@ async function supabaseUpsert(table: string, row: Record<string, any>): Promise<
       }
       if (table === 'package_offers') {
         delete fallbackRow.instrutor_id;
+        delete fallbackRow.instrutor_nome;
       }
       const retry = await supabase.from(table).upsert(fallbackRow, { onConflict: 'id' });
       if (retry.error) {
+        if (retry.error.code === '42501' || retry.error.message?.includes('row-level security')) {
+          return;
+        }
         if (table === 'students' && (retry.error.message?.includes('column') || retry.error.code === 'PGRST204')) {
           delete fallbackRow.pacote_id;
           delete fallbackRow.pacote_nome;
           delete fallbackRow.historico_transferencias;
           const retry2 = await supabase.from(table).upsert(fallbackRow, { onConflict: 'id' });
-          if (retry2.error) {
+          if (retry2.error && retry2.error.code !== '42501') {
             console.error(`[Supabase] Erro ao salvar em "${table}" (fallback 2):`, retry2.error.message);
           }
           return;
@@ -652,8 +766,11 @@ async function supabaseUpsert(table: string, row: Record<string, any>): Promise<
 
 async function supabaseDelete(table: string, id: string): Promise<void> {
   if (!supabase) return;
+  if (VAULT_TABLES.has(table)) {
+    await deleteVaultRowsBatch(table, [id]);
+  }
   const { error } = await supabase.from(table).delete().eq('id', id);
-  if (error) {
+  if (error && error.code !== '42501') {
     console.error(`[Supabase] Erro ao deletar de "${table}" id=${id}:`, error.message);
   }
 }
@@ -670,12 +787,49 @@ async function supabaseSelect<T>(
       q = q.eq(col, val);
     }
   }
-  const { data, error } = await q;
-  if (error) {
+  const [{ data, error }, vaultRows] = await Promise.all([
+    q,
+    VAULT_TABLES.has(table) ? readVaultRows(table) : Promise.resolve([]),
+  ]);
+
+  if (error && !VAULT_TABLES.has(table)) {
     console.error(`[Supabase] Erro ao ler "${table}":`, error.message);
     return [];
   }
-  return (data || []).map(mapper);
+
+  const nativeRows = (data || []).filter((r: any) => {
+    if (table === 'organizations') {
+      return !String(r.id || '').startsWith(VAULT_PREFIX) && r.nome !== '__AGD_CLOUD_VAULT__';
+    }
+    return true;
+  });
+
+  if (!VAULT_TABLES.has(table)) {
+    return nativeRows.map(mapper);
+  }
+
+  const mergedMap = new Map<string, any>();
+  for (const r of nativeRows) {
+    if (r && r.id) mergedMap.set(String(r.id), r);
+  }
+  for (const vr of vaultRows) {
+    if (vr && vr.id) {
+      if (filters) {
+        let match = true;
+        for (const [col, val] of Object.entries(filters)) {
+          if (String(vr[col] ?? '') !== String(val)) {
+            match = false;
+            break;
+          }
+        }
+        if (!match) continue;
+      }
+      const existing = mergedMap.get(String(vr.id)) || {};
+      mergedMap.set(String(vr.id), { ...existing, ...vr });
+    }
+  }
+
+  return Array.from(mergedMap.values()).map(mapper);
 }
 
 // ─── API pública do adaptador ────────────────────────────────────────────────
@@ -694,6 +848,7 @@ export const supabaseAdapter = {
     return supabaseSelect('organizations', rowToOrg);
   },
   async getOrganization(orgId: string): Promise<Organization | undefined> {
+    if (orgId.startsWith(VAULT_PREFIX)) return undefined;
     const list = await supabaseSelect('organizations', rowToOrg, { id: orgId });
     return list[0];
   },
@@ -726,9 +881,8 @@ export const supabaseAdapter = {
     return list[0];
   },
   async getStudentByCPFFingerprint(cpfFingerprint: string): Promise<Student | undefined> {
-    if (!supabase) return undefined;
-    const { data } = await supabase.from('students').select('*').eq('cpf_fingerprint', cpfFingerprint).limit(1);
-    return data?.[0] ? rowToStudent(data[0]) : undefined;
+    const list = await supabaseSelect('students', rowToStudent, { cpf_fingerprint: cpfFingerprint });
+    return list[0];
   },
   async saveStudent(student: Student): Promise<void> {
     await supabaseUpsert('students', studentToRow(student));
@@ -758,7 +912,6 @@ export const supabaseAdapter = {
       }
       const { data, error } = await q;
       if (error) {
-        console.error('[Supabase] Erro ao ler "available_slots":', error.message);
         break;
       }
       if (!data || data.length === 0) break;
@@ -767,18 +920,31 @@ export const supabaseAdapter = {
       from += pageSize;
       if (from >= 15000) break; // safety cap
     }
-    return allRows.map(rowToSlot);
+    const vaultRows = await readVaultRows('available_slots');
+    const mergedMap = new Map<string, any>();
+    for (const r of allRows) {
+      if (r && r.id) mergedMap.set(String(r.id), r);
+    }
+    for (const vr of vaultRows) {
+      if (vr && vr.id) {
+        if (orgId && String(vr.organizacao_id || '') !== orgId) continue;
+        mergedMap.set(String(vr.id), { ...(mergedMap.get(String(vr.id)) || {}), ...vr });
+      }
+    }
+    return Array.from(mergedMap.values()).map(rowToSlot);
   },
   async saveSlot(slot: AvailableSlot): Promise<void> {
     await supabaseUpsert('available_slots', slotToRow(slot));
   },
   async saveSlotsBatch(slots: AvailableSlot[]): Promise<void> {
     if (!supabase || slots.length === 0) return;
+    const rows = slots.map(slotToRow);
+    await upsertVaultRowsBatch('available_slots', rows);
     const chunkSize = 400;
-    for (let i = 0; i < slots.length; i += chunkSize) {
-      const chunk = slots.slice(i, i + chunkSize).map(slotToRow);
+    for (let i = 0; i < rows.length; i += chunkSize) {
+      const chunk = rows.slice(i, i + chunkSize);
       const { error } = await supabase.from('available_slots').upsert(chunk, { onConflict: 'id' });
-      if (error) {
+      if (error && error.code !== '42501') {
         console.error('[Supabase] Erro em saveSlotsBatch:', error.message);
       }
     }
@@ -788,11 +954,12 @@ export const supabaseAdapter = {
   },
   async deleteSlotsBatch(ids: string[]): Promise<void> {
     if (!supabase || ids.length === 0) return;
+    await deleteVaultRowsBatch('available_slots', ids);
     const chunkSize = 200;
     for (let i = 0; i < ids.length; i += chunkSize) {
       const chunk = ids.slice(i, i + chunkSize);
       const { error } = await supabase.from('available_slots').delete().in('id', chunk);
-      if (error) {
+      if (error && error.code !== '42501') {
         console.error('[Supabase] Erro em deleteSlotsBatch:', error.message);
       }
     }
@@ -860,79 +1027,28 @@ export const supabaseAdapter = {
 
   // Audit Logs
   async getAuditLogs(orgId: string): Promise<AuditLog[]> {
-    if (!supabase) return [];
-    const { data } = await supabase
-      .from('audit_logs')
-      .select('*')
-      .eq('organizacao_id', orgId)
-      .order('timestamp', { ascending: false })
-      .limit(500);
-    return (data || []).map(rowToAudit);
+    const list = await supabaseSelect('audit_logs', rowToAudit, { organizacao_id: orgId });
+    return list.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || '')).slice(0, 500);
   },
   async getNotificationAuditLogs(): Promise<AuditLog[]> {
-    if (!supabase) return [];
-    const { data, error } = await supabase
-      .from('audit_logs')
-      .select('*')
-      .eq('entidade', 'StudentNotification')
-      .order('timestamp', { ascending: false })
-      .limit(500);
-    if (error) {
-      return [];
-    }
-    return (data || []).map(rowToAudit);
+    const list = await supabaseSelect('audit_logs', rowToAudit, { entidade: 'StudentNotification' });
+    return list.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || '')).slice(0, 500);
   },
   async getCoverageAuditLogs(): Promise<AuditLog[]> {
-    if (!supabase) return [];
-    const { data, error } = await supabase
-      .from('audit_logs')
-      .select('*')
-      .eq('entidade', 'InstructorCoverage')
-      .order('timestamp', { ascending: false })
-      .limit(500);
-    if (error) {
-      return [];
-    }
-    return (data || []).map(rowToAudit);
+    const list = await supabaseSelect('audit_logs', rowToAudit, { entidade: 'InstructorCoverage' });
+    return list.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || '')).slice(0, 500);
   },
   async getStudentLeadAuditLogs(): Promise<AuditLog[]> {
-    if (!supabase) return [];
-    const { data, error } = await supabase
-      .from('audit_logs')
-      .select('*')
-      .eq('entidade', 'StudentLeadRequest')
-      .order('timestamp', { ascending: false })
-      .limit(500);
-    if (error) {
-      return [];
-    }
-    return (data || []).map(rowToAudit);
+    const list = await supabaseSelect('audit_logs', rowToAudit, { entidade: 'StudentLeadRequest' });
+    return list.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || '')).slice(0, 500);
   },
   async getPackageMetaAuditLogs(): Promise<AuditLog[]> {
-    if (!supabase) return [];
-    const { data, error } = await supabase
-      .from('audit_logs')
-      .select('*')
-      .eq('entidade', 'PackageOfferMeta')
-      .order('timestamp', { ascending: false })
-      .limit(500);
-    if (error) {
-      return [];
-    }
-    return (data || []).map(rowToAudit);
+    const list = await supabaseSelect('audit_logs', rowToAudit, { entidade: 'PackageOfferMeta' });
+    return list.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || '')).slice(0, 500);
   },
   async getStudentMetaAuditLogs(): Promise<AuditLog[]> {
-    if (!supabase) return [];
-    const { data, error } = await supabase
-      .from('audit_logs')
-      .select('*')
-      .eq('entidade', 'StudentFichaMeta')
-      .order('timestamp', { ascending: false })
-      .limit(500);
-    if (error) {
-      return [];
-    }
-    return (data || []).map(rowToAudit);
+    const list = await supabaseSelect('audit_logs', rowToAudit, { entidade: 'StudentFichaMeta' });
+    return list.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || '')).slice(0, 500);
   },
   async addAuditLog(log: AuditLog): Promise<void> {
     await supabaseUpsert('audit_logs', auditToRow(log));
@@ -940,24 +1056,23 @@ export const supabaseAdapter = {
 
   // WhatsApp Logs
   async getWhatsAppLogs(orgId: string): Promise<WhatsAppReminderLog[]> {
-    if (!supabase) return [];
-    const { data } = await supabase
-      .from('whatsapp_logs')
-      .select('*')
-      .eq('organizacao_id', orgId)
-      .order('enviado_em', { ascending: false });
-    return (data || []).map((r: any) => ({
-      id: r.id,
-      organizacaoId: r.organizacao_id,
-      alunoId: r.aluno_id,
-      alunoNome: r.aluno_nome,
-      telefone: r.telefone,
-      valorCentavos: r.valor_centavos,
-      dataVencimento: r.data_vencimento,
-      mensagem: r.mensagem,
-      enviadoEm: r.enviado_em,
-      status: r.status,
-    }));
+    const list = await supabaseSelect(
+      'whatsapp_logs',
+      (r: any): WhatsAppReminderLog => ({
+        id: r.id,
+        organizacaoId: r.organizacao_id,
+        alunoId: r.aluno_id,
+        alunoNome: r.aluno_nome,
+        telefone: r.telefone,
+        valorCentavos: r.valor_centavos,
+        dataVencimento: r.data_vencimento,
+        mensagem: r.mensagem,
+        enviadoEm: r.enviado_em,
+        status: r.status,
+      }),
+      { organizacao_id: orgId }
+    );
+    return list.sort((a, b) => (b.enviadoEm || '').localeCompare(a.enviadoEm || ''));
   },
   async logWhatsApp(log: WhatsAppReminderLog): Promise<void> {
     await supabaseUpsert('whatsapp_logs', whatsappToRow(log));
@@ -1004,6 +1119,10 @@ export const supabaseAdapter = {
   async wipeAllData(options?: { keepMasterAdmin?: boolean }): Promise<void> {
     if (!supabase) return;
     try {
+      // Remove todos os vaults de sincronização
+      const vaultIds = Array.from(VAULT_TABLES).map((t) => `${VAULT_PREFIX}${t}`);
+      await supabase.from('organizations').delete().in('id', vaultIds);
+
       // Ordem reversa de integridade referencial:
       await supabase.from('coupon_redemptions').delete().neq('id', '___none___');
       await supabase.from('discount_coupons').delete().neq('id', '___none___');

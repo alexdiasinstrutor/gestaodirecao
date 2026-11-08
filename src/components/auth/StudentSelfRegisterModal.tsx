@@ -24,7 +24,7 @@ import {
   CreditCard,
   MapPin
 } from 'lucide-react';
-import { db } from '../../lib/storage';
+import { db, syncFromSupabase } from '../../lib/storage';
 import { supabaseAdapter } from '../../lib/supabaseAdapter';
 import { isValidCPF, generateCPFFingerprint, maskCPF, validateMinimumAge, formatCurrencyBRL, maskPhoneInput, cleanPhoneDigits, isValidPhone, formatPhone } from '../../lib/validation';
 import { isValidCEPFormat } from '../../lib/cepService';
@@ -140,6 +140,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
       if (supabaseAdapter.enabled) {
         setLoadingInstructors(true);
         try {
+          await syncFromSupabase();
           const [remoteUsers, remoteOrgs, remotePkgs, pkgMetaLogs] = await Promise.all([
             supabaseAdapter.getUsers(),
             supabaseAdapter.getOrganizations(),
@@ -177,8 +178,8 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
           }
 
           // Carrega todos os pacotes remotos e metadados de instrutor
-          if (remotePkgs && remotePkgs.length > 0 && isMounted) {
-            const metaMap = new Map<string, Partial<PackageOffer>>();
+          if (isMounted) {
+            const metaMap = new Map<string, PackageOffer>();
             if (pkgMetaLogs && pkgMetaLogs.length > 0) {
               pkgMetaLogs.forEach((log) => {
                 if (log.detalhes) {
@@ -191,13 +192,18 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
                 }
               });
             }
-            remotePkgs.forEach((pkg) => {
-              const meta = metaMap.get(pkg.id);
-              db.savePackage({
-                ...pkg,
-                instrutorId: pkg.instrutorId || meta?.instrutorId,
-                instrutorNome: pkg.instrutorNome || meta?.instrutorNome
+            if (remotePkgs && remotePkgs.length > 0) {
+              remotePkgs.forEach((pkg) => {
+                const meta = metaMap.get(pkg.id);
+                db.savePackage({
+                  ...pkg,
+                  instrutorId: pkg.instrutorId || meta?.instrutorId,
+                  instrutorNome: pkg.instrutorNome || meta?.instrutorNome
+                });
               });
+            }
+            metaMap.forEach((metaPkg) => {
+              db.savePackage(metaPkg);
             });
             db.sanitizePackages();
             setPackagesVersion((v) => v + 1);
@@ -293,15 +299,39 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
     setPackagesVersion((v) => v + 1);
     setCodeFeedback({ message: `Instrutor localizado com sucesso: ${found.nome}`, isError: false });
 
-    // Sincroniza pacotes remotos da organização do instrutor pesquisado para garantir exibição imediata dos planos dele
-    if (supabaseAdapter.enabled && found.organizacaoId) {
+    // Sincroniza pacotes remotos da organização e metadados do instrutor pesquisado para garantir exibição imediata dos planos dele
+    if (supabaseAdapter.enabled) {
       try {
-        const remotePkgs = await supabaseAdapter.getPackages(found.organizacaoId);
-        if (remotePkgs && remotePkgs.length > 0) {
-          remotePkgs.forEach((pkg) => db.savePackage(pkg));
-          db.sanitizePackages();
-          setPackagesVersion((v) => v + 1);
+        const [remotePkgs, pkgMetaLogs] = await Promise.all([
+          supabaseAdapter.getPackages(),
+          supabaseAdapter.getPackageMetaAuditLogs()
+        ]);
+        const metaMap = new Map<string, PackageOffer>();
+        if (pkgMetaLogs && pkgMetaLogs.length > 0) {
+          pkgMetaLogs.forEach((log) => {
+            if (log.detalhes) {
+              try {
+                const parsed = JSON.parse(log.detalhes) as PackageOffer;
+                if (parsed && parsed.id) metaMap.set(parsed.id, parsed);
+              } catch {
+                // ignore
+              }
+            }
+          });
         }
+        if (remotePkgs && remotePkgs.length > 0) {
+          remotePkgs.forEach((pkg) => {
+            const meta = metaMap.get(pkg.id);
+            db.savePackage({
+              ...pkg,
+              instrutorId: pkg.instrutorId || meta?.instrutorId,
+              instrutorNome: pkg.instrutorNome || meta?.instrutorNome
+            });
+          });
+        }
+        metaMap.forEach((metaPkg) => db.savePackage(metaPkg));
+        db.sanitizePackages();
+        setPackagesVersion((v) => v + 1);
       } catch {
         // ignore
       }
@@ -761,8 +791,16 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
                     type="text"
                     value={instructorCodeInput}
                     onChange={(e) => {
-                      setInstructorCodeInput(e.target.value.toUpperCase());
+                      const nextVal = e.target.value.toUpperCase();
+                      setInstructorCodeInput(nextVal);
                       setCodeFeedback(null);
+                      const trimmed = nextVal.trim();
+                      if (trimmed.length >= 6) {
+                        const matched = db.findInstructorByCode(trimmed);
+                        if (matched) {
+                          handleLookupInstructor(trimmed);
+                        }
+                      }
                     }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {

@@ -4,8 +4,6 @@ import {
   MapPin,
   Navigation,
   Search,
-  Car,
-  Phone,
   CheckCircle2,
   AlertCircle,
   SlidersHorizontal,
@@ -30,37 +28,49 @@ import {
   BRAZIL_CITIES_COORDS,
   buildEffectiveInstructorCoverage,
   clampRadiusKm,
-   filterInstructorsForStudentMap,
+  filterInstructorsForStudentMap,
   findNearestCityFromCoords,
   LocatedInstructorResult,
   normalizeTextKey,
   resolveCoordinatesForLocation
 } from '../../lib/geoService';
+import {
+  ESTADOS_BRASIL,
+  formatCEP,
+  isValidCEPFormat,
+  lookupAddressByCEP
+} from '../../lib/cepService';
 import { InteractiveGeoMap, GeoMapPin } from '../common/InteractiveGeoMap';
 import { buildWhatsAppLink } from '../../lib/whatsapp';
 import { cleanPhoneDigits, formatPhone, isValidPhone, maskPhoneInput } from '../../lib/validation';
 
 interface InstructorLocatorMapModalProps {
   onClose: () => void;
-  onSelectInstructor: (instructor: User, code: string) => void;
+  onSelectInstructor?: (instructor: User, code: string) => void;
 }
 
 export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps> = ({
-  onClose,
-  onSelectInstructor
+  onClose
 }) => {
   const [syncing, setSyncing] = useState<boolean>(true);
   const [dataVersion, setDataVersion] = useState<number>(0);
 
-  // Localização de referência do aluno (Cidade, Bairro, UF ou GPS)
+  // Estado e Cidade detectados da localização da pessoa (GPS ou CEP digitado)
+  const [detectedUserState, setDetectedUserState] = useState<string>('MG');
+  const [detectedUserCity, setDetectedUserCity] = useState<string>('Betim');
+
+  // Seleção de Estado primeiro (1º Passo) + CEP de auto-preenchimento + Cidade e Bairro
   const [estadoBusca, setEstadoBusca] = useState<string>('MG');
-  const [cidadeBusca, setCidadeBusca] = useState<string>('Belo Horizonte');
+  const [cepBusca, setCepBusca] = useState<string>('');
+  const [cepLoading, setCepLoading] = useState<boolean>(false);
+  const [cepFeedback, setCepFeedback] = useState<string>('');
+  const [cidadeBusca, setCidadeBusca] = useState<string>('Betim');
   const [bairroBusca, setBairroBusca] = useState<string>('');
   const [gpsCoords, setGpsCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [gpsLoading, setGpsLoading] = useState<boolean>(false);
   const [gpsFeedback, setGpsFeedback] = useState<string>('');
 
-  // Filtros do Mapa (Raio 5 a 40 km, Cidade do App, Categoria, Tipo de Veículo, Câmbio)
+  // Filtros do Mapa (Raio 5 a 40 km, Cidade listada, Categoria, Tipo de Veículo, Câmbio)
   const [radiusKm, setRadiusKm] = useState<number>(20);
   const [cidadeAppFiltro, setCidadeAppFiltro] = useState<string>('TODAS');
   const [categoriaFiltro, setCategoriaFiltro] = useState<CnhCategory | 'TODAS'>('TODAS');
@@ -69,13 +79,15 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
 
   const [selectedPinId, setSelectedPinId] = useState<string | undefined>(undefined);
 
-  // Formulário de Demanda Reversa ("Não localizou instrutor? Sinalize que está à procura")
+  // Formulário de Lista de Alunos em Busca de Instrutores (com auto-preenchimento por CEP)
   const [showLeadForm, setShowLeadForm] = useState<boolean>(false);
   const [leadNome, setLeadNome] = useState<string>('');
   const [leadTelefone, setLeadTelefone] = useState<string>('');
   const [leadEmail, setLeadEmail] = useState<string>('');
+  const [leadCep, setLeadCep] = useState<string>('');
+  const [leadCepLoading, setLeadCepLoading] = useState<boolean>(false);
   const [leadEstado, setLeadEstado] = useState<string>('MG');
-  const [leadCidade, setLeadCidade] = useState<string>('Belo Horizonte');
+  const [leadCidade, setLeadCidade] = useState<string>('Betim');
   const [leadBairro, setLeadBairro] = useState<string>('');
   const [leadCategoria, setLeadCategoria] = useState<CnhCategory>('B');
   const [leadTipoVeiculo, setLeadTipoVeiculo] = useState<LocatorVehicleType>('CARRO');
@@ -97,12 +109,14 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
         if (firstInst) {
           const org = db.getOrganization(firstInst.organizacaoId);
           const cov = db.getInstructorCoverage(firstInst.id);
-          const initialCity = cov?.cidadeBase || firstInst.cidade || org?.cidade || 'Belo Horizonte';
-          const initialState = cov?.estadoBase || firstInst.estado || org?.estado || 'MG';
-          setCidadeBusca(initialCity);
+          const initialCity = cov?.cidadeBase || firstInst.cidade || org?.cidade || 'Betim';
+          const initialState = (cov?.estadoBase || firstInst.estado || org?.estado || 'MG').toUpperCase();
+          setDetectedUserState(initialState);
+          setDetectedUserCity(initialCity);
           setEstadoBusca(initialState);
-          setLeadCidade(initialCity);
+          setCidadeBusca(initialCity);
           setLeadEstado(initialState);
+          setLeadCidade(initialCity);
         }
         setDataVersion((v) => v + 1);
       })
@@ -138,26 +152,171 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
     });
   }, [dataVersion]);
 
-  // Lista de todas as cidades cadastradas/atendidas no app para o seletor rápido
-  const appRegisteredCities = useMemo(() => {
+  // Verifica se o Estado selecionado é diferente do Estado da localização/CEP atual da pessoa
+  const isSearchingDifferentState = useMemo(() => {
+    return normalizeTextKey(estadoBusca) !== normalizeTextKey(detectedUserState);
+  }, [estadoBusca, detectedUserState]);
+
+  // Cidades que possuem instrutores cadastrados no Estado (UF) selecionado
+  const cidadesComInstrutoresNoEstado = useMemo(() => {
+    const targetUf = estadoBusca.trim().toUpperCase();
     const citySet = new Set<string>();
     allCandidates.forEach(({ coverage }) => {
-      if (coverage.cidadeBase) citySet.add(coverage.cidadeBase);
-      coverage.cidadesAtendidas.forEach((c) => {
-        if (c && c.trim()) citySet.add(c.trim());
-      });
+      if ((coverage.estadoBase || '').toUpperCase() === targetUf) {
+        if (coverage.cidadeBase && coverage.cidadeBase.trim()) {
+          citySet.add(coverage.cidadeBase.trim());
+        }
+        coverage.cidadesAtendidas.forEach((c) => {
+          if (c && c.trim()) citySet.add(c.trim());
+        });
+      }
     });
-    BRAZIL_CITIES_COORDS.slice(0, 25).forEach((c) => citySet.add(c.cidade));
     return Array.from(citySet).sort((a, b) => a.localeCompare(b));
-  }, [allCandidates]);
+  }, [allCandidates, estadoBusca]);
 
-  // Coordenada central de referência para o mapa (GPS ou Cidade/Bairro digitado)
+  // Lista inteligente de cidades exibidas após selecionar o Estado primeiro:
+  // - Se for o mesmo Estado da localização/CEP da pessoa: lista a cidade da localização/CEP + cidades com instrutores + cidades do Estado.
+  // - Se a pessoa estiver procurando em OUTRO Estado diferente da localização dela: lista estritamente as cidades que possuem instrutores cadastrados naquele Estado!
+  const cidadesListadasParaEstado = useMemo(() => {
+    const targetUf = estadoBusca.trim().toUpperCase();
+    if (isSearchingDifferentState) {
+      return cidadesComInstrutoresNoEstado;
+    }
+    const citySet = new Set<string>();
+    if (detectedUserCity && detectedUserState.toUpperCase() === targetUf) {
+      citySet.add(detectedUserCity.trim());
+    }
+    if (cidadeBusca && estadoBusca.toUpperCase() === targetUf) {
+      citySet.add(cidadeBusca.trim());
+    }
+    cidadesComInstrutoresNoEstado.forEach((c) => citySet.add(c));
+    BRAZIL_CITIES_COORDS.filter((c) => c.estado.toUpperCase() === targetUf).forEach((c) =>
+      citySet.add(c.cidade)
+    );
+    return Array.from(citySet).sort((a, b) => a.localeCompare(b));
+  }, [
+    estadoBusca,
+    isSearchingDifferentState,
+    cidadesComInstrutoresNoEstado,
+    detectedUserCity,
+    detectedUserState,
+    cidadeBusca
+  ]);
+
+  // Auto-preenchimento ao selecionar o Estado (1º Passo)
+  const handleSelectStateFirst = (newUf: string) => {
+    const cleanUf = newUf.toUpperCase();
+    setEstadoBusca(cleanUf);
+    setLeadEstado(cleanUf);
+    setGpsCoords(null);
+    setCepFeedback('');
+
+    // Calcula cidades com instrutores neste novo Estado
+    const instructorCitiesInUf = new Set<string>();
+    allCandidates.forEach(({ coverage }) => {
+      if ((coverage.estadoBase || '').toUpperCase() === cleanUf) {
+        if (coverage.cidadeBase) instructorCitiesInUf.add(coverage.cidadeBase.trim());
+        coverage.cidadesAtendidas.forEach((c) => {
+          if (c && c.trim()) instructorCitiesInUf.add(c.trim());
+        });
+      }
+    });
+    const instCitiesList = Array.from(instructorCitiesInUf).sort((a, b) => a.localeCompare(b));
+
+    if (cleanUf === detectedUserState.toUpperCase()) {
+      // Mesmo Estado da localização/CEP da pessoa: auto-preenche com a cidade da pessoa
+      const targetCity = detectedUserCity || instCitiesList[0] || 'Belo Horizonte';
+      setCidadeBusca(targetCity);
+      setCidadeAppFiltro(targetCity);
+      setLeadCidade(targetCity);
+    } else {
+      // Procurando em outro Estado diferente da localização: lista apenas as cidades que possuem instrutores cadastrados
+      if (instCitiesList.length > 0) {
+        setCidadeBusca(instCitiesList[0]);
+        setCidadeAppFiltro(instCitiesList[0]);
+        setLeadCidade(instCitiesList[0]);
+      } else {
+        const fallbackStateCity =
+          BRAZIL_CITIES_COORDS.find((c) => c.estado === cleanUf)?.cidade || '';
+        setCidadeBusca(fallbackStateCity);
+        setCidadeAppFiltro('TODAS');
+        setLeadCidade(fallbackStateCity);
+        setShowLeadForm(true);
+      }
+    }
+  };
+
+  // Auto-preenchimento ao digitar o CEP no painel do mapa
+  const handleCepBuscaChange = async (rawValue: string) => {
+    const formatted = formatCEP(rawValue);
+    setCepBusca(formatted);
+    setLeadCep(formatted);
+    setCepFeedback('');
+
+    const digits = formatted.replace(/\D/g, '');
+    if (digits.length === 8 && isValidCEPFormat(digits)) {
+      setCepLoading(true);
+      try {
+        const res = await lookupAddressByCEP(digits, estadoBusca);
+        if (res.success && res.cidade && res.estado) {
+          const uf = res.estado.toUpperCase();
+          setDetectedUserState(uf);
+          setDetectedUserCity(res.cidade);
+          setEstadoBusca(uf);
+          setCidadeBusca(res.cidade);
+          setCidadeAppFiltro(res.cidade);
+          if (res.bairro) {
+            setBairroBusca(res.bairro);
+            setLeadBairro(res.bairro);
+          }
+          setLeadEstado(uf);
+          setLeadCidade(res.cidade);
+          setGpsCoords(null);
+          setCepFeedback(
+            `CEP ${formatted} localizado automaticamente: ${res.cidade}/${uf}${
+              res.bairro ? ` (${res.bairro})` : ''
+            }.`
+          );
+        } else if (res.message) {
+          setCepFeedback(res.message);
+        }
+      } finally {
+        setCepLoading(false);
+      }
+    }
+  };
+
+  // Auto-preenchimento ao digitar o CEP no formulário de lista de alunos em busca de instrutores
+  const handleLeadCepChange = async (rawValue: string) => {
+    const formatted = formatCEP(rawValue);
+    setLeadCep(formatted);
+    const digits = formatted.replace(/\D/g, '');
+    if (digits.length === 8 && isValidCEPFormat(digits)) {
+      setLeadCepLoading(true);
+      try {
+        const res = await lookupAddressByCEP(digits, leadEstado);
+        if (res.success && res.cidade && res.estado) {
+          const uf = res.estado.toUpperCase();
+          setLeadEstado(uf);
+          setLeadCidade(res.cidade);
+          if (res.bairro) {
+            setLeadBairro(res.bairro);
+          }
+        }
+      } finally {
+        setLeadCepLoading(false);
+      }
+    }
+  };
+
+  // Coordenada central de referência para o mapa (GPS, CEP ou Cidade/Bairro selecionado)
   const referenceCoords = useMemo(() => {
     if (gpsCoords) {
       return resolveCoordinatesForLocation({
         cidade: cidadeBusca,
         estado: estadoBusca,
         bairro: bairroBusca,
+        cep: cepBusca,
         latitude: gpsCoords.latitude,
         longitude: gpsCoords.longitude
       });
@@ -166,13 +325,21 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
     return resolveCoordinatesForLocation({
       cidade: activeCity,
       estado: estadoBusca,
-      bairro: bairroBusca
+      bairro: bairroBusca,
+      cep: cepBusca
     });
-  }, [gpsCoords, cidadeBusca, estadoBusca, bairroBusca, cidadeAppFiltro]);
+  }, [gpsCoords, cidadeBusca, estadoBusca, bairroBusca, cepBusca, cidadeAppFiltro]);
 
-  // Filtra os instrutores conforme o raio (5km a 40km) e os filtros escolhidos pelo aluno
+  // Filtra os instrutores conforme o Estado, Cidade, Raio (5km a 40km) e filtros escolhidos
   const locatedInstructors: LocatedInstructorResult[] = useMemo(() => {
-    return filterInstructorsForStudentMap(allCandidates, {
+    // Se a pessoa está procurando em outro Estado e aquele Estado não tem instrutores cadastrados, retorna vazio para permitir salvar na lista de procura
+    if (isSearchingDifferentState && cidadesComInstrutoresNoEstado.length === 0) {
+      return [];
+    }
+    const candidatesInState = allCandidates.filter(
+      ({ coverage }) => (coverage.estadoBase || '').toUpperCase() === estadoBusca.trim().toUpperCase()
+    );
+    return filterInstructorsForStudentMap(candidatesInState, {
       referenceCoords,
       maxDistanceKm: clampRadiusKm(radiusKm),
       cidadeFiltro: cidadeAppFiltro,
@@ -182,6 +349,9 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
     });
   }, [
     allCandidates,
+    estadoBusca,
+    isSearchingDifferentState,
+    cidadesComInstrutoresNoEstado,
     referenceCoords,
     radiusKm,
     cidadeAppFiltro,
@@ -211,7 +381,7 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
   const handleUseBrowserGeolocation = () => {
     setGpsFeedback('');
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      setGpsFeedback('Geolocalização não suportada neste navegador. Informe sua cidade e bairro.');
+      setGpsFeedback('Geolocalização não suportada neste navegador. Digite seu CEP ou selecione seu Estado e Cidade.');
       return;
     }
     setGpsLoading(true);
@@ -220,23 +390,25 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
         const { latitude, longitude } = pos.coords;
         setGpsCoords({ latitude, longitude });
         const nearest = findNearestCityFromCoords(latitude, longitude);
-        setCidadeBusca(nearest.cidade);
+        setDetectedUserState(nearest.estado);
+        setDetectedUserCity(nearest.cidade);
         setEstadoBusca(nearest.estado);
+        setCidadeBusca(nearest.cidade);
+        setCidadeAppFiltro(nearest.cidade);
         setLeadCidade(nearest.cidade);
         setLeadEstado(nearest.estado);
-        setCidadeAppFiltro('TODAS');
         setGpsLoading(false);
-        setGpsFeedback(`Localização GPS obtida com sucesso (próximo a ${nearest.cidade}/${nearest.estado}).`);
+        setGpsFeedback(`Localização GPS obtida com sucesso: ${nearest.cidade}/${nearest.estado}.`);
       },
       () => {
         setGpsLoading(false);
-        setGpsFeedback('Permissão de GPS não concedida. Selecione sua cidade e bairro abaixo.');
+        setGpsFeedback('Permissão de GPS não concedida. Digite seu CEP ou selecione seu Estado e Cidade abaixo.');
       },
       { enableHighAccuracy: true, timeout: 8000 }
     );
   };
 
-  // Cadastro reverso do aluno que não localizou instrutor na sua região
+  // Cadastro reverso do aluno que não localizou instrutor na sua região (salvo com CEP na lista de alunos em busca de instrutores)
   const handleRegisterStudentLead = async (e: React.FormEvent) => {
     e.preventDefault();
     setLeadError('');
@@ -253,7 +425,7 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
     }
 
     if (!leadCidade.trim() || !leadEstado.trim()) {
-      setLeadError('Informe a Cidade e o Estado (UF) onde você procura instrutor.');
+      setLeadError('Informe o seu CEP ou a Cidade e o Estado (UF) onde você procura instrutor.');
       return;
     }
 
@@ -262,7 +434,8 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
       const targetCoords = resolveCoordinatesForLocation({
         cidade: leadCidade.trim(),
         estado: leadEstado.trim().toUpperCase(),
-        bairro: leadBairro.trim()
+        bairro: leadBairro.trim(),
+        cep: leadCep.trim()
       });
 
       const cityKey = normalizeTextKey(leadCidade);
@@ -272,11 +445,14 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
           coverage.cidadesAtendidas.some((c) => normalizeTextKey(c) === cityKey)
       );
 
+      const cleanCep = leadCep.replace(/\D/g, '').length === 8 ? formatCEP(leadCep) : undefined;
+
       const newLead: StudentLeadRequest = {
         id: `lead_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
         nome: leadNome.trim(),
         telefone: formatPhone(phoneDigits),
         email: leadEmail.trim() || undefined,
+        cep: cleanCep,
         estado: leadEstado.trim().toUpperCase(),
         cidade: leadCidade.trim(),
         bairro: leadBairro.trim() || 'Centro',
@@ -286,7 +462,9 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
         raioDesejadoKm: clampRadiusKm(radiusKm),
         observacoes:
           leadObservacoes.trim() ||
-          `Aluno procurando instrutor em ${leadCidade.trim()}/${leadEstado.trim().toUpperCase()} (Raio ${radiusKm} km).`,
+          `Aluno procurando instrutor em ${leadCidade.trim()}/${leadEstado.trim().toUpperCase()}${
+            cleanCep ? ` (CEP: ${cleanCep})` : ''
+          } — Raio ${radiusKm} km.`,
         latitude: targetCoords.latitude,
         longitude: targetCoords.longitude,
         semInstrutorNaCidade: !anyInstructorInCity || locatedInstructors.length === 0,
@@ -322,7 +500,7 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
                 </span>
               </div>
               <p className="text-xs text-slate-300">
-                Encontre instrutores próximos ao seu endereço, filtre por categoria, câmbio e veículo ou fale direto no WhatsApp.
+                Selecione seu Estado ou digite seu CEP para auto-preenchimento e entre em contato direto com o instrutor pelo WhatsApp.
               </p>
             </div>
           </div>
@@ -343,7 +521,7 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
               <div className="flex items-center gap-2">
                 <SlidersHorizontal className="w-4 h-4 text-blue-600 shrink-0" />
                 <span className="font-bold text-slate-900 text-xs">
-                  1. Defina sua Localização (GPS ou Cidade/Bairro) e o Raio de Distância (5 km a 40 km)
+                  1. Selecione primeiro o Estado (UF) ou digite seu CEP para Auto-Preenchimento
                 </span>
               </div>
 
@@ -369,65 +547,109 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
               </div>
             )}
 
-            {/* Linha 1 de Controles: Cidade do App, Cidade/Bairro manual e Slider de Raio 5km-40km */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {cepFeedback && (
+              <div className="px-3 py-2 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-medium flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{cepFeedback}</span>
+              </div>
+            )}
+
+            {isSearchingDifferentState && (
+              <div className="px-3 py-2 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl text-xs font-medium flex items-center justify-between gap-2 flex-wrap">
+                <span>
+                  📍 Você selecionou o estado <strong>{estadoBusca}</strong> (diferente da sua localização atual em{' '}
+                  <strong>{detectedUserState}</strong>). Listando exclusivamente as cidades de{' '}
+                  <strong>{estadoBusca}</strong> que possuem instrutores cadastrados (
+                  {cidadesComInstrutoresNoEstado.length}).
+                </span>
+                {cidadesComInstrutoresNoEstado.length === 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowLeadForm(true)}
+                    className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-[11px] cursor-pointer shrink-0"
+                  >
+                    Preencher meu CEP na Lista de Espera
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Linha 1 de Controles: 1º Estado (UF), 2º CEP (Auto-preenchimento), 3º Cidades Disponíveis, 4º Bairro e 5º Raio */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              {/* 1º PASSO: ESTADO (UF) */}
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  Cidades Cadastradas no App
+                  1º Selecione o Estado (UF) *
                 </label>
                 <select
-                  value={cidadeAppFiltro}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setCidadeAppFiltro(val);
-                    setGpsCoords(null);
-                    if (val !== 'TODAS') {
-                      setCidadeBusca(val);
-                      setLeadCidade(val);
-                    }
-                  }}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-semibold text-xs focus:border-blue-600 focus:outline-none cursor-pointer"
+                  value={estadoBusca}
+                  onChange={(e) => handleSelectStateFirst(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-bold text-xs focus:border-blue-600 focus:outline-none cursor-pointer"
                 >
-                  <option value="TODAS">-- Todas as Cidades no Raio --</option>
-                  {appRegisteredCities.map((city) => (
-                    <option key={city} value={city}>
-                      {city}
+                  {ESTADOS_BRASIL.map((st) => (
+                    <option key={st.uf} value={st.uf}>
+                      {st.uf} — {st.nome}
                     </option>
                   ))}
                 </select>
               </div>
 
+              {/* 2º PASSO: SEU CEP (AUTO-PREENCHIMENTO) */}
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  Sua Cidade / Município (UF)
+                  Seu CEP (Auto-Preenchimento)
                 </label>
-                <div className="flex gap-1.5">
+                <div className="relative">
                   <input
                     type="text"
-                    value={cidadeBusca}
-                    onChange={(e) => {
-                      setCidadeBusca(e.target.value);
-                      setLeadCidade(e.target.value);
-                      setCidadeAppFiltro('TODAS');
-                      setGpsCoords(null);
-                    }}
-                    placeholder="Ex: Belo Horizonte, São Paulo..."
-                    className="flex-1 px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs focus:border-blue-600 focus:outline-none"
+                    value={cepBusca}
+                    onChange={(e) => handleCepBuscaChange(e.target.value)}
+                    placeholder="00000-000"
+                    maxLength={9}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-mono text-xs focus:border-blue-600 focus:outline-none"
                   />
-                  <input
-                    type="text"
-                    maxLength={2}
-                    value={estadoBusca}
-                    onChange={(e) => {
-                      setEstadoBusca(e.target.value.toUpperCase());
-                      setLeadEstado(e.target.value.toUpperCase());
-                    }}
-                    placeholder="UF"
-                    className="w-14 px-2 py-2 border border-slate-300 rounded-xl bg-white text-center font-mono uppercase text-xs focus:border-blue-600 focus:outline-none"
-                  />
+                  {cepLoading && (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600 absolute right-3 top-2.5" />
+                  )}
                 </div>
               </div>
 
+              {/* 3º PASSO: CIDADES DE ACORDO COM LOCALIZAÇÃO/CEP OU INSTRUTORES NO ESTADO */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  {isSearchingDifferentState
+                    ? `Cidades c/ Instrutores (${estadoBusca})`
+                    : `Cidades (${estadoBusca} · Sua Região)`}
+                </label>
+                {cidadesListadasParaEstado.length > 0 ? (
+                  <select
+                    value={cidadeAppFiltro !== 'TODAS' ? cidadeAppFiltro : cidadeBusca}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setCidadeAppFiltro(val);
+                      setGpsCoords(null);
+                      if (val !== 'TODAS') {
+                        setCidadeBusca(val);
+                        setLeadCidade(val);
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-semibold text-xs focus:border-blue-600 focus:outline-none cursor-pointer"
+                  >
+                    <option value="TODAS">-- Todas no Raio ({estadoBusca}) --</option>
+                    {cidadesListadasParaEstado.map((city) => (
+                      <option key={city} value={city}>
+                        {city}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="px-3 py-2 border border-amber-300 rounded-xl bg-amber-50 text-amber-900 font-semibold text-[11px]">
+                    Sem instrutores em {estadoBusca}. Preencha seu CEP abaixo!
+                  </div>
+                )}
+              </div>
+
+              {/* 4º PASSO: BAIRRO / REGIÃO */}
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
                   Seu Bairro / Região
@@ -440,12 +662,12 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
                     setLeadBairro(e.target.value);
                     setGpsCoords(null);
                   }}
-                  placeholder="Ex: Centro, Savassi, Pampulha..."
+                  placeholder="Ex: Centro, Citrolândia..."
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs focus:border-blue-600 focus:outline-none"
                 />
               </div>
 
-              {/* Barra Deslizante de Distância: 5 km até 40 km */}
+              {/* 5º PASSO: BARRA DESLIZANTE DE DISTÂNCIA (5 KM A 40 KM) */}
               <div className="bg-white p-2.5 rounded-xl border border-blue-200 flex flex-col justify-center">
                 <div className="flex items-center justify-between mb-1">
                   <span className="font-bold text-slate-800 text-[11px]">Distância da Busca:</span>
@@ -565,7 +787,7 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
                 <div className="space-y-2.5">
                   {locatedInstructors.map((item) => {
                     const isSelected = selectedPinId === item.instructor.id;
-                    const whatsMsg = `Olá instrutor(a) ${item.instructor.nome}! Localizei seu perfil no mapa do Gestão AD (${item.coverage.cidadeBase}/${item.coverage.estadoBase}) e gostaria de informações sobre as aulas práticas.`;
+                    const whatsMsg = `Olá instrutor(a) ${item.instructor.nome}! Localizei seu perfil no mapa do Gestão AD (${item.coverage.cidadeBase}/${item.coverage.estadoBase}) e gostaria de informações sobre os planos e aulas práticas.`;
                     const whatsUrl = buildWhatsAppLink(item.instructor.telefone, whatsMsg);
 
                     return (
@@ -615,36 +837,24 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
                           </p>
                         )}
 
-                        {/* Botões de Ação: WhatsApp e Selecionar para Matrícula */}
-                        <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                        {/* Botão de Ação Exclusivo: Contato via WhatsApp Primeiro */}
+                        <div className="pt-1">
                           {whatsUrl ? (
                             <a
                               href={whatsUrl}
                               target="_blank"
                               rel="noopener noreferrer"
                               onClick={(e) => e.stopPropagation()}
-                              className="flex-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-colors"
+                              className="w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-colors"
                             >
-                              <MessageCircle className="w-3.5 h-3.5" />
+                              <MessageCircle className="w-4 h-4" />
                               <span>Chamar no WhatsApp</span>
                             </a>
                           ) : (
-                            <span className="flex-1 py-2 px-3 bg-slate-100 text-slate-400 rounded-xl font-semibold text-xs text-center">
+                            <span className="block w-full py-2 px-3 bg-slate-100 text-slate-400 rounded-xl font-semibold text-xs text-center">
                               WhatsApp Indisponível
                             </span>
                           )}
-
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onSelectInstructor(item.instructor, item.instructorCode);
-                            }}
-                            className="flex-1 py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>Ver Planos / Matricular</span>
-                          </button>
                         </div>
                       </div>
                     );
@@ -655,10 +865,10 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
                   <AlertCircle className="w-7 h-7 text-amber-600 mx-auto" />
                   <div className="space-y-1">
                     <p className="font-bold text-xs text-amber-900">
-                      Nenhum instrutor localizado num raio de {radiusKm} km com estes filtros.
+                      Nenhum instrutor localizado em {referenceCoords.cidade}/{estadoBusca} num raio de {radiusKm} km.
                     </p>
                     <p className="text-[11px] text-amber-800 leading-relaxed">
-                      Você pode aumentar a barra de distância (até 40 km) ou registrar seu interesse abaixo para que os instrutores da plataforma entrem em contato com você pelo WhatsApp!
+                      Preencha seu CEP abaixo para ficar salvo na <strong>lista de alunos em busca de instrutores</strong> e receber o contato de um profissional pelo WhatsApp!
                     </p>
                   </div>
                   <button
@@ -666,7 +876,7 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
                     onClick={() => setShowLeadForm(true)}
                     className="w-full py-2.5 px-4 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs cursor-pointer shadow-xs"
                   >
-                    📢 Sinalizar que Procuro Instrutor na Minha Região
+                    📢 Preencher meu CEP na Lista de Alunos em Busca de Instrutores
                   </button>
                 </div>
               )}
@@ -681,25 +891,25 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
                   <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
                   <span>
                     {showLeadForm
-                      ? 'Ocultar Formulário de Procura de Instrutor'
-                      : 'Não encontrou instrutor na sua cidade/bairro? Cadastre seu alerta aqui!'}
+                      ? 'Ocultar Lista de Alunos em Busca de Instrutores'
+                      : 'Não encontrou instrutor? Preencha seu CEP para entrar na lista de procura!'}
                   </span>
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Seção de Cadastro de Demanda Reversa (Aluno à Procura de Instrutor) */}
+          {/* Seção de Cadastro de Demanda Reversa (Lista de Alunos em Busca de Instrutores com CEP) */}
           {(showLeadForm || locatedInstructors.length === 0) && (
             <div className="p-4 sm:p-5 bg-gradient-to-br from-indigo-50 via-white to-blue-50 border border-indigo-200 rounded-2xl space-y-3.5 animate-in fade-in">
               <div className="flex items-start justify-between gap-2">
                 <div className="space-y-0.5">
                   <h3 className="font-extrabold text-indigo-950 text-xs sm:text-sm flex items-center gap-1.5">
                     <Sparkles className="w-4 h-4 text-indigo-600" />
-                    <span>Procurando Instrutor na sua Área? Deixe seu Contato para Atendimento!</span>
+                    <span>Lista de Alunos em Busca de Instrutores — Preencha seu CEP e Contato</span>
                   </h3>
                   <p className="text-xs text-slate-600">
-                    Ao registrar sua solicitação, o sistema notificará imediatamente os instrutores na seção de <strong>Mensagens e Notificações</strong> para que entrem em contato com você via WhatsApp.
+                    Ao informar seu CEP e WhatsApp, você fica salvo na lista de alunos à procura de instrutor e os profissionais credenciados serão notificados em <strong>Mensagens e Notificações</strong> para chamá-lo no WhatsApp.
                   </p>
                 </div>
               </div>
@@ -710,10 +920,11 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
                     <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
                     <div>
                       <span className="font-bold text-xs block text-emerald-900">
-                        Solicitação registrada e enviada aos instrutores com sucesso!
+                        Você foi salvo na lista de alunos em busca de instrutores com sucesso!
                       </span>
                       <span className="text-xs text-emerald-800">
-                        Os instrutores que atendem ou passarem a atender {leadCidade}/{leadEstado} receberam sua notificação e poderão chamar você no WhatsApp informado.
+                        Os instrutores que atendem ou passarem a atender {leadCidade}/{leadEstado}{' '}
+                        {leadCep ? `(CEP ${leadCep})` : ''} receberam sua notificação e entrarão em contato pelo WhatsApp.
                       </span>
                     </div>
                   </div>
@@ -735,6 +946,23 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
                   )}
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Seu CEP (Auto-Preenchimento) *</label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={leadCep}
+                          onChange={(e) => handleLeadCepChange(e.target.value)}
+                          placeholder="00000-000"
+                          maxLength={9}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-mono text-xs focus:border-indigo-600 focus:outline-none"
+                        />
+                        {leadCepLoading && (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600 absolute right-3 top-2.5" />
+                        )}
+                      </div>
+                    </div>
+
                     <div>
                       <label className="block font-bold text-slate-700 mb-1">Seu Nome Completo *</label>
                       <input
@@ -771,15 +999,17 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
                           placeholder="Ex: Betim"
                           className="flex-1 px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs focus:border-indigo-600 focus:outline-none"
                         />
-                        <input
-                          type="text"
-                          required
-                          maxLength={2}
+                        <select
                           value={leadEstado}
                           onChange={(e) => setLeadEstado(e.target.value.toUpperCase())}
-                          placeholder="UF"
-                          className="w-14 px-2 py-2 border border-slate-300 rounded-xl bg-white text-center font-mono uppercase text-xs focus:border-indigo-600 focus:outline-none"
-                        />
+                          className="w-18 px-2 py-2 border border-slate-300 rounded-xl bg-white text-center font-mono uppercase text-xs focus:border-indigo-600 focus:outline-none cursor-pointer"
+                        >
+                          {ESTADOS_BRASIL.map((st) => (
+                            <option key={st.uf} value={st.uf}>
+                              {st.uf}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     </div>
 
@@ -790,7 +1020,7 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
                         required
                         value={leadBairro}
                         onChange={(e) => setLeadBairro(e.target.value)}
-                        placeholder="Ex: Centro, Jardim..."
+                        placeholder="Ex: Centro, Citrolândia..."
                         className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs focus:border-indigo-600 focus:outline-none"
                       />
                     </div>
@@ -836,30 +1066,26 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
                         <option value="AUTOMATICO">Somente Automático</option>
                       </select>
                     </div>
-
-                    <div>
-                      <label className="block font-bold text-slate-700 mb-1">Observações / Horário Preferido</label>
-                      <input
-                        type="text"
-                        value={leadObservacoes}
-                        onChange={(e) => setLeadObservacoes(e.target.value)}
-                        placeholder="Ex: Prefiro aulas pela manhã ou sábado"
-                        className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs focus:border-indigo-600 focus:outline-none"
-                      />
-                    </div>
                   </div>
 
-                  <div className="flex justify-end">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-1">
+                    <input
+                      type="text"
+                      value={leadObservacoes}
+                      onChange={(e) => setLeadObservacoes(e.target.value)}
+                      placeholder="Observações opcionais (Ex: Prefiro aulas pela manhã ou sábado)"
+                      className="w-full sm:flex-1 px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs focus:border-indigo-600 focus:outline-none"
+                    />
                     <button
                       type="submit"
                       disabled={leadSaving}
-                      className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
+                      className="w-full sm:w-auto px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm cursor-pointer transition-colors shrink-0"
                     >
                       <Send className="w-3.5 h-3.5" />
                       <span>
                         {leadSaving
-                          ? 'Registrando Solicitação...'
-                          : 'Notificar Instrutores que Procuro Atendimento nesta Região'}
+                          ? 'Salvando na Lista...'
+                          : 'Salvar meu CEP na Lista de Alunos em Busca de Instrutores'}
                       </span>
                     </button>
                   </div>
@@ -873,7 +1099,7 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
         <div className="bg-slate-50 px-5 py-3 border-t border-slate-200 flex items-center justify-between text-xs shrink-0">
           <span className="text-slate-600 flex items-center gap-1.5 font-medium">
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            <span>Privacidade Garantida: Ao escolher seu instrutor, o código dele é preenchido automaticamente no cadastro.</span>
+            <span>Entre em contato direto com o instrutor pelo WhatsApp para receber o código ou link de matrícula.</span>
           </span>
           <button
             type="button"
