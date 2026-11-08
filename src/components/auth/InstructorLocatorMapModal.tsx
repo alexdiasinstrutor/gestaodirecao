@@ -360,21 +360,25 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
     tipoCambioFiltro
   ]);
 
-  // Pinos para o Mapa Interativo (No modo público do aluno, exibe estritamente instrutores!)
+  // Pinos para o Mapa Interativo (No modo público do aluno, exibe estritamente instrutores e apenas as cidades atendidas, sem exibir o bairro do endereço do instrutor)
   const mapPins: GeoMapPin[] = useMemo(() => {
-    return locatedInstructors.map((item) => ({
-      id: item.instructor.id,
-      latitude: item.coverage.latitude ?? referenceCoords.latitude,
-      longitude: item.coverage.longitude ?? referenceCoords.longitude,
-      title: item.instructor.nome,
-      subtitle: `${item.coverage.cidadeBase}/${item.coverage.estadoBase}${
-        item.coverage.bairroBase ? ` · ${item.coverage.bairroBase}` : ''
-      } · Atende até ${item.coverage.raioAtendimentoKm} km`,
-      badgeText: `CNH ${item.coverage.categoriasAtendidas.join(', ')}`,
-      distanceKm: item.distanceKm,
-      type: 'INSTRUCTOR',
-      meta: item
-    }));
+    return locatedInstructors.map((item) => {
+      const cidadesExibidas =
+        item.coverage.cidadesAtendidas.length > 0
+          ? item.coverage.cidadesAtendidas.join(', ')
+          : item.coverage.cidadeBase;
+      return {
+        id: item.instructor.id,
+        latitude: item.coverage.latitude ?? referenceCoords.latitude,
+        longitude: item.coverage.longitude ?? referenceCoords.longitude,
+        title: item.instructor.nome,
+        subtitle: `${cidadesExibidas}/${item.coverage.estadoBase} · Atende até ${item.coverage.raioAtendimentoKm} km`,
+        badgeText: `CNH ${item.coverage.categoriasAtendidas.join(', ')}`,
+        distanceKm: item.distanceKm,
+        type: 'INSTRUCTOR',
+        meta: item
+      };
+    });
   }, [locatedInstructors, referenceCoords]);
 
   // Captura Geolocalização do navegador do aluno
@@ -806,8 +810,10 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
                               {item.instructor.nome}
                             </span>
                             <span className="text-[11px] text-slate-600 block">
-                              📍 {item.coverage.cidadeBase}/{item.coverage.estadoBase}
-                              {item.coverage.bairroBase ? ` · ${item.coverage.bairroBase}` : ''}
+                              📍{' '}
+                              {item.coverage.cidadesAtendidas.length > 0
+                                ? `${item.coverage.cidadesAtendidas.join(', ')}/${item.coverage.estadoBase}`
+                                : `${item.coverage.cidadeBase}/${item.coverage.estadoBase}`}
                             </span>
                           </div>
                           <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-mono font-bold text-[11px] shrink-0">

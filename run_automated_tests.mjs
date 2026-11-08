@@ -199,17 +199,17 @@ runTest(
     );
     assert.equal(
       locatorModalFile.includes('categoriaFiltro') &&
-        locatorModalFile.includes('tipoVeiculoFiltro') &&
-        locatorModalFile.includes('tipoCambioFiltro') &&
-        locatorModalFile.includes('cidadeAppFiltro'),
+      locatorModalFile.includes('tipoVeiculoFiltro') &&
+      locatorModalFile.includes('tipoCambioFiltro') &&
+      locatorModalFile.includes('cidadeAppFiltro'),
       true,
       'Todos os filtros (Cidade, Categoria, Tipo de Veículo e Tipo de Câmbio) devem estar presentes'
     );
     assert.equal(
       locatorModalFile.includes('MOTO') &&
-        locatorModalFile.includes('CARRO') &&
-        locatorModalFile.includes('CAMINHAO') &&
-        locatorModalFile.includes('ONIBUS'),
+      locatorModalFile.includes('CARRO') &&
+      locatorModalFile.includes('CAMINHAO') &&
+      locatorModalFile.includes('ONIBUS'),
       true,
       'Filtro de veículos deve contemplar Moto, Carro, Caminhão e Ônibus'
     );
@@ -318,7 +318,7 @@ runTest(
     const storageFile = fs.readFileSync(path.join(BASE_DIR, 'src/lib/storage.ts'), 'utf-8');
     assert.equal(
       storageFile.includes("entidade: 'InstructorCoverage'") &&
-        storageFile.includes("entidade: 'StudentLeadRequest'"),
+      storageFile.includes("entidade: 'StudentLeadRequest'"),
       true,
       'Sincroniza InstructorCoverage e StudentLeadRequest com o Supabase'
     );
@@ -389,7 +389,7 @@ runTest(
 
     assert.equal(
       studentsViewFile.includes('handleSelectPackageInFicha') &&
-        studentsViewFile.includes('handleSelectCategoryInFicha'),
+      studentsViewFile.includes('handleSelectCategoryInFicha'),
       true,
       'Ficha do aluno permite selecionar novo plano/pacote e categoria CNH do instrutor'
     );
@@ -405,7 +405,7 @@ runTest(
     );
     assert.equal(
       storageFile.includes("entidade: 'StudentFichaMeta'") &&
-        adapterFile.includes('getStudentMetaAuditLogs'),
+      adapterFile.includes('getStudentMetaAuditLogs'),
       true,
       'Persistência redundante StudentFichaMeta garante que alterações de plano e evolução nunca sejam perdidas ao recarregar'
     );
@@ -427,20 +427,20 @@ runTest(
 
     assert.equal(
       locatorMapFile.includes('handleSelectStateFirst') &&
-        locatorMapFile.includes('1º Selecione o Estado (UF)'),
+      locatorMapFile.includes('1º Selecione o Estado (UF)'),
       true,
       'Mapa possui seleção de Estado (UF) em primeiro lugar com auto-preenchimento'
     );
     assert.equal(
       locatorMapFile.includes('handleCepBuscaChange') &&
-        locatorMapFile.includes('handleLeadCepChange') &&
-        locatorMapFile.includes('lookupAddressByCEP'),
+      locatorMapFile.includes('handleLeadCepChange') &&
+      locatorMapFile.includes('lookupAddressByCEP'),
       true,
       'Mapa possui auto-preenchimento de endereço/cidade/UF a partir do CEP tanto na busca quanto na lista de alunos à procura de instrutor'
     );
     assert.equal(
       locatorMapFile.includes('isSearchingDifferentState') &&
-        locatorMapFile.includes('cidadesComInstrutoresNoEstado'),
+      locatorMapFile.includes('cidadesComInstrutoresNoEstado'),
       true,
       'Quando o usuário seleciona outro estado diferente de sua localização, lista exclusivamente as cidades que possuem instrutores cadastrados'
     );
@@ -448,6 +448,11 @@ runTest(
       locatorMapFile.includes('Ver Planos / Matricular'),
       false,
       'Botão "Ver Planos / Matricular" foi removido da tela do mapa para que o contato ocorra via WhatsApp primeiro'
+    );
+    assert.equal(
+      locatorMapFile.includes('item.coverage.bairroBase'),
+      false,
+      'Mapa público não exibe o bairro do endereço do instrutor, apenas a(s) cidade(s) que ele cadastrou que atende'
     );
     assert.equal(
       locatorMapFile.includes('Chamar no WhatsApp'),
@@ -474,14 +479,14 @@ runTest(
 
     assert.equal(
       adapterFile.includes('VAULT_PREFIX') &&
-        adapterFile.includes('upsertVaultRowsBatch') &&
-        adapterFile.includes('readVaultRows'),
+      adapterFile.includes('upsertVaultRowsBatch') &&
+      adapterFile.includes('readVaultRows'),
       true,
       'Adaptador Supabase possui Cloud Sync Vault para persistir pacotes, alunos e agenda sem bloqueio de RLS'
     );
     assert.equal(
       selfRegFile.includes('await syncFromSupabase()') &&
-        selfRegFile.includes('supabaseAdapter.getPackages()'),
+      selfRegFile.includes('supabaseAdapter.getPackages()'),
       true,
       'Modal de Auto-Cadastro sincroniza pacotes remotos do instrutor selecionado'
     );

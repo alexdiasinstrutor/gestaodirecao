@@ -761,12 +761,16 @@ export function computeInstructorMarketOverview(params: {
   };
 
   instructorPoints.forEach((ip) => {
-    const summary = ensureCity(ip.coverage.cidadeBase, ip.coverage.estadoBase);
-    summary.totalInstrutores += 1;
-    summary.semInstrutor = false;
-    if (ip.coverage.bairroBase && !summary.bairros.includes(ip.coverage.bairroBase)) {
-      summary.bairros.push(ip.coverage.bairroBase);
-    }
+    const attendedCities =
+      ip.coverage.cidadesAtendidas.length > 0
+        ? ip.coverage.cidadesAtendidas
+        : [ip.coverage.cidadeBase];
+    attendedCities.forEach((cityName) => {
+      if (!cityName || !cityName.trim()) return;
+      const summary = ensureCity(cityName, ip.coverage.estadoBase);
+      summary.totalInstrutores += 1;
+      summary.semInstrutor = false;
+    });
   });
 
   studentPoints.forEach((sp) => {

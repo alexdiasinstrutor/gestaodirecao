@@ -206,14 +206,17 @@ export const InstructorGeoDemandView: React.FC<InstructorGeoDemandViewProps> = (
         if (cityKey && normalizeTextKey(ip.coverage.cidadeBase) !== cityKey) continue;
         if (ip.distanceToMeKm > mapFilterRadiusKm && !cityKey) continue;
 
+        const cidadesExibidas =
+          ip.coverage.cidadesAtendidas.length > 0
+            ? ip.coverage.cidadesAtendidas.join(', ')
+            : ip.coverage.cidadeBase;
+
         pins.push({
           id: `inst_pin_${ip.instructor.id}`,
           latitude: ip.latitude,
           longitude: ip.longitude,
           title: `${ip.instructor.nome}${ip.instructor.id === currentUser.id ? ' (Você)' : ''}`,
-          subtitle: `${ip.coverage.cidadeBase}/${ip.coverage.estadoBase} · Bairro: ${
-            ip.coverage.bairroBase || 'Centro'
-          } · Raio ${ip.coverage.raioAtendimentoKm} km`,
+          subtitle: `${cidadesExibidas}/${ip.coverage.estadoBase} · Raio ${ip.coverage.raioAtendimentoKm} km`,
           badgeText: `Instrutor · CNH ${ip.coverage.categoriasAtendidas.join(',')}`,
           distanceKm: ip.distanceToMeKm,
           type: 'INSTRUCTOR',
