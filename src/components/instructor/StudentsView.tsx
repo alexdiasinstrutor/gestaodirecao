@@ -72,7 +72,11 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
     }
   }, [activeStudentCategories, selectedCategory]);
 
-  // Edit skills & address state when viewing student
+  // Edit plan, category, skills & address state when viewing student
+  const [editingCategory, setEditingCategory] = useState<CnhCategory>('B');
+  const [editingPackageId, setEditingPackageId] = useState<string>('');
+  const [editingPackageName, setEditingPackageName] = useState<string>('');
+  const [editingTotalLessons, setEditingTotalLessons] = useState<number>(20);
   const [editingSkills, setEditingSkills] = useState<StudentSkills | null>(null);
   const [editingAddress, setEditingAddress] = useState<AddressFields>({
     estado: 'MG',
@@ -85,6 +89,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   });
   const [instructorNotes, setInstructorNotes] = useState<string>('');
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
+  const [isSavingFicha, setIsSavingFicha] = useState<boolean>(false);
 
   // Transfer modal state
   const [transferStudentTarget, setTransferStudentTarget] = useState<Student | null>(null);
@@ -103,6 +108,12 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   const [showDiscountModal, setShowDiscountModal] = useState<boolean>(false);
   const [studentsVersion, setStudentsVersion] = useState<number>(0);
 
+  React.useEffect(() => {
+    const onDataChanged = () => setStudentsVersion((v) => v + 1);
+    window.addEventListener('agd:data-changed', onDataChanged);
+    return () => window.removeEventListener('agd:data-changed', onDataChanged);
+  }, []);
+
   const filteredStudents = students.filter((s) => {
     const term = searchTerm.toLowerCase();
     const matchSearch =
@@ -116,8 +127,28 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
     return matchSearch && matchCategory;
   });
 
+  const getInstructorPackagesForStudent = (student: Student) => {
+    const targetInstructorId = student.instrutorId || (currentUser.papel === 'INSTRUTOR' ? currentUser.id : undefined);
+    const list = db.getPackages(orgId, targetInstructorId).filter((p) => p.ativo);
+    return list.length > 0 ? list : db.getPackages(orgId).filter((p) => p.ativo);
+  };
+
   const handleOpenStudentModal = (student: Student) => {
+    const availablePkgs = getInstructorPackagesForStudent(student);
+    const matchedPkg =
+      availablePkgs.find((p) => p.id === student.pacoteId) ||
+      availablePkgs.find((p) => p.nome === student.pacoteNome) ||
+      availablePkgs.find((p) => p.categoriaCnh === student.categoriaCnh);
+
     setActiveStudent(student);
+    setEditingCategory(student.categoriaCnh || matchedPkg?.categoriaCnh || 'B');
+    setEditingPackageId(student.pacoteId || matchedPkg?.id || '');
+    setEditingPackageName(
+      student.pacoteNome ||
+        matchedPkg?.nome ||
+        `Pacote CNH ${student.categoriaCnh || 'B'} (${student.totalAulasContratadas || 20} Aulas Práticas)`
+    );
+    setEditingTotalLessons(student.totalAulasContratadas || matchedPkg?.totalAulas || 20);
     setEditingSkills({ ...student.habilidades });
     setEditingAddress({
       estado: student.estado || 'MG',
@@ -132,26 +163,109 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
     setSavedSuccess(false);
   };
 
-  const handleSaveStudentProgress = () => {
+  const handleSelectPackageInFicha = (pkgId: string) => {
+    if (!activeStudent) return;
+    const availablePkgs = getInstructorPackagesForStudent(activeStudent);
+    const selectedPkg = availablePkgs.find((p) => p.id === pkgId);
+    if (!selectedPkg) {
+      setEditingPackageId(pkgId);
+      return;
+    }
+    const prevPkgName = editingPackageName;
+    setEditingPackageId(selectedPkg.id);
+    setEditingPackageName(selectedPkg.nome);
+    setEditingCategory(selectedPkg.categoriaCnh);
+    setEditingTotalLessons(selectedPkg.totalAulas || 20);
+
+    // Se o parecer técnico ainda estiver com o texto automático do plano anterior, atualiza o nome do plano nele também
+    if (instructorNotes && prevPkgName && instructorNotes.includes(`"${prevPkgName}"`)) {
+      setInstructorNotes(instructorNotes.replace(`"${prevPkgName}"`, `"${selectedPkg.nome}"`));
+    } else if (
+      instructorNotes &&
+      activeStudent.pacoteNome &&
+      instructorNotes.includes(`"${activeStudent.pacoteNome}"`)
+    ) {
+      setInstructorNotes(instructorNotes.replace(`"${activeStudent.pacoteNome}"`, `"${selectedPkg.nome}"`));
+    }
+  };
+
+  const handleSelectCategoryInFicha = (newCat: CnhCategory) => {
+    if (!activeStudent) return;
+    setEditingCategory(newCat);
+    const availablePkgs = getInstructorPackagesForStudent(activeStudent);
+    const matchingPkgForCat = availablePkgs.find((p) => p.categoriaCnh === newCat);
+    if (matchingPkgForCat) {
+      const prevPkgName = editingPackageName;
+      setEditingPackageId(matchingPkgForCat.id);
+      setEditingPackageName(matchingPkgForCat.nome);
+      setEditingTotalLessons(matchingPkgForCat.totalAulas || 20);
+      if (instructorNotes && prevPkgName && instructorNotes.includes(`"${prevPkgName}"`)) {
+        setInstructorNotes(instructorNotes.replace(`"${prevPkgName}"`, `"${matchingPkgForCat.nome}"`));
+      }
+    } else {
+      const fallbackName = `Pacote CNH ${newCat} (${editingTotalLessons} Aulas Práticas)`;
+      setEditingPackageId('');
+      setEditingPackageName(fallbackName);
+    }
+  };
+
+  const handleSaveStudentProgress = async () => {
     if (!activeStudent || !editingSkills) return;
+    setIsSavingFicha(true);
 
-    const updatedStudent: Student = {
-      ...activeStudent,
-      cep: editingAddress.cep?.trim(),
-      estado: editingAddress.estado?.trim().toUpperCase(),
-      cidade: editingAddress.cidade?.trim(),
-      bairro: editingAddress.bairro?.trim(),
-      logradouro: editingAddress.logradouro?.trim(),
-      numero: editingAddress.numero?.trim(),
-      complemento: editingAddress.complemento?.trim(),
-      habilidades: editingSkills,
-      observacoesInstrutor: instructorNotes
-    };
+    try {
+      const availablePkgs = getInstructorPackagesForStudent(activeStudent);
+      const selectedPkg = availablePkgs.find((p) => p.id === editingPackageId);
+      const finalCategory = selectedPkg ? selectedPkg.categoriaCnh : editingCategory;
+      const finalPackageId = selectedPkg ? selectedPkg.id : editingPackageId || undefined;
+      const finalPackageName = selectedPkg
+        ? selectedPkg.nome
+        : editingPackageName || `Pacote CNH ${finalCategory} (${editingTotalLessons} Aulas Práticas)`;
+      const finalTotalLessons = Math.max(1, Number(editingTotalLessons) || selectedPkg?.totalAulas || 20);
 
-    db.saveStudent(updatedStudent, currentUser.id);
-    setActiveStudent(updatedStudent);
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 2500);
+      const updatedStudent: Student = {
+        ...activeStudent,
+        categoriaCnh: finalCategory,
+        pacoteId: finalPackageId,
+        pacoteNome: finalPackageName,
+        totalAulasContratadas: finalTotalLessons,
+        cep: editingAddress.cep?.trim(),
+        estado: editingAddress.estado?.trim().toUpperCase(),
+        cidade: editingAddress.cidade?.trim(),
+        bairro: editingAddress.bairro?.trim(),
+        logradouro: editingAddress.logradouro?.trim(),
+        numero: editingAddress.numero?.trim(),
+        complemento: editingAddress.complemento?.trim(),
+        habilidades: editingSkills,
+        observacoesInstrutor: instructorNotes
+      };
+
+      // Se o plano foi alterado para um pacote específico, sincroniza a conta a receber em aberto do aluno
+      if (selectedPkg && (activeStudent.pacoteId !== selectedPkg.id || activeStudent.pacoteNome !== selectedPkg.nome)) {
+        const studentAccounts = db.getAccountsReceivable(orgId).filter((a) => a.alunoId === activeStudent.id);
+        const openAccount = studentAccounts.find((a) => a.status !== 'PAGO');
+        if (openAccount) {
+          const novoSaldo = Math.max(0, selectedPkg.valorCentavos - (openAccount.valorPagoCentavos || 0));
+          const updatedAcc: AccountReceivable = {
+            ...openAccount,
+            pacoteId: selectedPkg.id,
+            descricao: selectedPkg.nome,
+            valorTotalCentavos: selectedPkg.valorCentavos,
+            saldoDevedorCentavos: novoSaldo,
+            status: novoSaldo === 0 ? 'PAGO' : openAccount.valorPagoCentavos > 0 ? 'PARCIAL' : 'PENDENTE'
+          };
+          await db.updateAccountReceivableAsync(updatedAcc, currentUser.id);
+        }
+      }
+
+      await db.saveStudentAsync(updatedStudent, currentUser.id);
+      setActiveStudent(updatedStudent);
+      setStudentsVersion((v) => v + 1);
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 3500);
+    } finally {
+      setIsSavingFicha(false);
+    }
   };
 
   const calculateSkillsAverage = (skills: StudentSkills): number => {
@@ -391,6 +505,12 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                     <p className="text-xs text-slate-500 font-mono">
                       CPF: {student.cpfMascarado}
                     </p>
+                    {student.pacoteNome && (
+                      <p className="text-[11px] font-semibold text-blue-700 truncate flex items-center gap-1 mt-0.5">
+                        <Package className="w-3 h-3 shrink-0" />
+                        <span className="truncate">{student.pacoteNome}</span>
+                      </p>
+                    )}
                   </div>
                 </div>
                 <span className="px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 text-xs font-bold shrink-0">
@@ -481,14 +601,10 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                   <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2 flex-wrap">
                     <span className="break-words">{activeStudent.nome}</span>
                     <select
-                      value={activeStudent.categoriaCnh}
+                      value={editingCategory}
                       onChange={(e) => {
                         const newCat = e.target.value as CnhCategory;
-                        const updated: Student = { ...activeStudent, categoriaCnh: newCat };
-                        db.saveStudent(updated, currentUser.id);
-                        setActiveStudent(updated);
-                        setSavedSuccess(true);
-                        setTimeout(() => setSavedSuccess(false), 2500);
+                        handleSelectCategoryInFicha(newCat);
                       }}
                       className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 text-xs font-semibold border border-blue-400/30 shrink-0 cursor-pointer focus:bg-slate-800"
                       title="Clique para alterar a categoria CNH do aluno"
@@ -536,26 +652,106 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
               {savedSuccess && (
                 <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Evolução do aluno e parecer pedagógico atualizados com sucesso!</span>
+                  <span className="font-semibold">
+                    Alterações da ficha, plano contratado e evolução pedagógica salvos e sincronizados com sucesso!
+                  </span>
                 </div>
               )}
 
-              {/* Instructor & Package Info */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
-                <div>
-                  <span className="text-xs uppercase font-bold font-bold text-slate-500 block">Instrutor Responsável:</span>
-                  <span className="font-bold text-slate-900 text-xs break-words">
-                    {db.getUsers(orgId).find((u) => u.id === activeStudent.instrutorId)?.nome || currentUser.nome}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-xs uppercase font-bold font-bold text-slate-500 block">Pacote Contratado:</span>
-                  <span className="font-bold text-blue-700 text-xs flex items-center gap-1 mt-0.5 break-words">
-                    <Package className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                    <span>{activeStudent.pacoteNome || 'Pacote Completo CNH B (20 Aulas Práticas)'}</span>
-                  </span>
-                </div>
-              </div>
+              {/* Instructor & Editable Package / Plan Info */}
+              {(() => {
+                const availablePkgs = getInstructorPackagesForStudent(activeStudent);
+                const planChanged =
+                  editingCategory !== activeStudent.categoriaCnh ||
+                  (editingPackageId && editingPackageId !== (activeStudent.pacoteId || '')) ||
+                  editingPackageName !== (activeStudent.pacoteNome || '') ||
+                  editingTotalLessons !== activeStudent.totalAulasContratadas;
+
+                return (
+                  <div className="p-4 bg-blue-50/60 border border-blue-200 rounded-2xl space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-blue-200/70 pb-2.5">
+                      <div>
+                        <span className="text-[11px] uppercase font-bold text-slate-500 block">
+                          Instrutor Responsável
+                        </span>
+                        <span className="font-bold text-slate-900 text-xs break-words">
+                          {db.getUsers(orgId).find((u) => u.id === activeStudent.instrutorId)?.nome || currentUser.nome}
+                        </span>
+                      </div>
+                      {planChanged && (
+                        <button
+                          type="button"
+                          disabled={isSavingFicha}
+                          onClick={handleSaveStudentProgress}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer shrink-0"
+                        >
+                          <Save className="w-3.5 h-3.5" />
+                          <span>{isSavingFicha ? 'Salvando...' : 'Confirmar Mudança de Plano'}</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                      <div className="sm:col-span-7">
+                        <label className="text-xs uppercase font-bold text-blue-900 flex items-center gap-1.5 mb-1">
+                          <Package className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                          <span>Plano / Pacote Contratado pelo Aluno:</span>
+                        </label>
+                        <select
+                          value={editingPackageId}
+                          onChange={(e) => handleSelectPackageInFicha(e.target.value)}
+                          className="w-full px-3 py-2 bg-white border border-blue-300 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-600 cursor-pointer"
+                        >
+                          {availablePkgs.length > 0 ? (
+                            availablePkgs.map((pkg) => (
+                              <option key={pkg.id} value={pkg.id}>
+                                {pkg.nome} — CNH {pkg.categoriaCnh} ({pkg.totalAulas} aulas ·{' '}
+                                {formatCurrencyBRL(pkg.valorCentavos)})
+                              </option>
+                            ))
+                          ) : (
+                            <option value="">{editingPackageName || 'Pacote Padrão'}</option>
+                          )}
+                          {!availablePkgs.some((p) => p.id === editingPackageId) && editingPackageName && (
+                            <option value={editingPackageId}>{editingPackageName}</option>
+                          )}
+                        </select>
+                      </div>
+
+                      <div className="sm:col-span-3">
+                        <label className="text-xs uppercase font-bold text-blue-900 block mb-1">
+                          Categoria CNH:
+                        </label>
+                        <select
+                          value={editingCategory}
+                          onChange={(e) => handleSelectCategoryInFicha(e.target.value as CnhCategory)}
+                          className="w-full px-3 py-2 bg-white border border-blue-300 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-600 cursor-pointer"
+                        >
+                          {CNH_CATEGORIES.map((c) => (
+                            <option key={c.value} value={c.value}>
+                              CNH {c.value}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <label className="text-xs uppercase font-bold text-blue-900 block mb-1">
+                          Total Aulas:
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={200}
+                          value={editingTotalLessons}
+                          onChange={(e) => setEditingTotalLessons(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                          className="w-full px-3 py-2 bg-white border border-blue-300 rounded-xl text-xs font-bold font-mono text-slate-900 focus:outline-none focus:border-blue-600"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Contact info bar */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 p-3 bg-slate-50 rounded-xl border border-slate-200">
@@ -746,12 +942,12 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                 );
               })()}
 
-              {/* Progress Bar of 20 classes */}
+              {/* Progress Bar of classes */}
               <div className="space-y-2 p-4 bg-blue-50/50 border border-blue-200 rounded-xl">
                 <div className="flex justify-between items-center text-xs font-semibold text-blue-950">
                   <span>Carga Horária Prática Obrigatória (Contran/Detran)</span>
                   <span className="font-mono text-sm">
-                    {activeStudent.aulasCumpridas} de {activeStudent.totalAulasContratadas} Aulas Concluídas
+                    {activeStudent.aulasCumpridas} de {editingTotalLessons} Aulas Concluídas
                   </span>
                 </div>
                 <div className="w-full bg-blue-200/50 rounded-full h-3 overflow-hidden">
@@ -760,15 +956,15 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                     style={{
                       width: `${Math.min(
                         100,
-                        (activeStudent.aulasCumpridas / activeStudent.totalAulasContratadas) * 100
+                        (activeStudent.aulasCumpridas / Math.max(1, editingTotalLessons)) * 100
                       )}%`
                     }}
                   />
                 </div>
                 <div className="flex justify-between text-xs text-slate-500 pt-1">
-                  <span>Início do curso prático</span>
+                  <span>Início do curso prático ({editingPackageName})</span>
                   <span>
-                    Faltam {Math.max(0, activeStudent.totalAulasContratadas - activeStudent.aulasCumpridas)} aula(s) para o Exame Prático
+                    Faltam {Math.max(0, editingTotalLessons - activeStudent.aulasCumpridas)} aula(s) para o Exame Prático
                   </span>
                 </div>
               </div>
@@ -903,11 +1099,12 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
               </button>
               <button
                 type="button"
+                disabled={isSavingFicha}
                 onClick={handleSaveStudentProgress}
-                className="flex items-center justify-center gap-1.5 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold shadow-sm transition-colors cursor-pointer w-full sm:w-auto"
+                className="flex items-center justify-center gap-1.5 px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white rounded-xl font-semibold shadow-sm transition-colors cursor-pointer w-full sm:w-auto"
               >
                 <Save className="w-4 h-4" />
-                <span>Salvar Evolução Pedagógica</span>
+                <span>{isSavingFicha ? 'Salvando...' : 'Salvar Evolução e Plano'}</span>
               </button>
             </div>
           </div>

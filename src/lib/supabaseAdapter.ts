@@ -632,6 +632,16 @@ async function supabaseUpsert(table: string, row: Record<string, any>): Promise<
       }
       const retry = await supabase.from(table).upsert(fallbackRow, { onConflict: 'id' });
       if (retry.error) {
+        if (table === 'students' && (retry.error.message?.includes('column') || retry.error.code === 'PGRST204')) {
+          delete fallbackRow.pacote_id;
+          delete fallbackRow.pacote_nome;
+          delete fallbackRow.historico_transferencias;
+          const retry2 = await supabase.from(table).upsert(fallbackRow, { onConflict: 'id' });
+          if (retry2.error) {
+            console.error(`[Supabase] Erro ao salvar em "${table}" (fallback 2):`, retry2.error.message);
+          }
+          return;
+        }
         console.error(`[Supabase] Erro ao salvar em "${table}" (fallback):`, retry.error.message);
       }
       return;
@@ -904,6 +914,19 @@ export const supabaseAdapter = {
       .from('audit_logs')
       .select('*')
       .eq('entidade', 'PackageOfferMeta')
+      .order('timestamp', { ascending: false })
+      .limit(500);
+    if (error) {
+      return [];
+    }
+    return (data || []).map(rowToAudit);
+  },
+  async getStudentMetaAuditLogs(): Promise<AuditLog[]> {
+    if (!supabase) return [];
+    const { data, error } = await supabase
+      .from('audit_logs')
+      .select('*')
+      .eq('entidade', 'StudentFichaMeta')
       .order('timestamp', { ascending: false })
       .limit(500);
     if (error) {

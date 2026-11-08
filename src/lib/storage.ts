@@ -860,7 +860,8 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
       notificationLogs,
       coverageLogs,
       studentLeadLogs,
-      packageMetaLogs
+      packageMetaLogs,
+      studentMetaLogs
     ] = await Promise.all([
       supabaseAdapter.getStudents(),
       supabaseAdapter.getVehicles(),
@@ -874,15 +875,84 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
       supabaseAdapter.getNotificationAuditLogs(),
       supabaseAdapter.getCoverageAuditLogs(),
       supabaseAdapter.getStudentLeadAuditLogs(),
-      supabaseAdapter.getPackageMetaAuditLogs()
+      supabaseAdapter.getPackageMetaAuditLogs(),
+      supabaseAdapter.getStudentMetaAuditLogs()
     ]);
 
-    // Merge seguro de alunos: Supabase tem precedência, mas novos alunos locais são preservados
-    if (students && students.length > 0) {
+    const studentMetaMap = new Map<string, Student>();
+    if (studentMetaLogs && studentMetaLogs.length > 0) {
+      // Ordenado do mais antigo para o mais recente para que o mais recente prevaleça
+      const sortedMeta = [...studentMetaLogs].sort((a, b) => (a.timestamp || '').localeCompare(b.timestamp || ''));
+      for (const log of sortedMeta) {
+        if (log.detalhes) {
+          try {
+            const parsed = JSON.parse(log.detalhes) as Student;
+            if (parsed && parsed.id) {
+              studentMetaMap.set(parsed.id, parsed);
+            }
+          } catch {
+            // ignore
+          }
+        }
+      }
+    }
+
+    // Merge seguro de alunos: combina tabela students, metadados de ficha (StudentFichaMeta) e dados locais
+    if ((students && students.length > 0) || studentMetaMap.size > 0) {
       const localStudents = readList<Student>(STORAGE_KEYS.STUDENTS);
       const mergedStudentsMap = new Map<string, Student>();
       localStudents.forEach((st) => mergedStudentsMap.set(st.id, st));
-      students.forEach((st) => mergedStudentsMap.set(st.id, st));
+      if (students && students.length > 0) {
+        students.forEach((st) => {
+          const localExisting = mergedStudentsMap.get(st.id);
+          const metaExisting = studentMetaMap.get(st.id);
+          mergedStudentsMap.set(st.id, {
+            ...localExisting,
+            ...st,
+            ...(metaExisting
+              ? {
+                  categoriaCnh: metaExisting.categoriaCnh || st.categoriaCnh,
+                  pacoteId: metaExisting.pacoteId ?? st.pacoteId ?? localExisting?.pacoteId,
+                  pacoteNome: metaExisting.pacoteNome ?? st.pacoteNome ?? localExisting?.pacoteNome,
+                  totalAulasContratadas: metaExisting.totalAulasContratadas || st.totalAulasContratadas,
+                  aulasCumpridas: Math.max(st.aulasCumpridas || 0, metaExisting.aulasCumpridas || 0),
+                  habilidades: metaExisting.habilidades || st.habilidades || localExisting?.habilidades,
+                  observacoesInstrutor:
+                    metaExisting.observacoesInstrutor ?? st.observacoesInstrutor ?? localExisting?.observacoesInstrutor,
+                  cep: metaExisting.cep || st.cep || localExisting?.cep,
+                  estado: metaExisting.estado || st.estado || localExisting?.estado,
+                  cidade: metaExisting.cidade || st.cidade || localExisting?.cidade,
+                  bairro: metaExisting.bairro || st.bairro || localExisting?.bairro,
+                  logradouro: metaExisting.logradouro || st.logradouro || localExisting?.logradouro,
+                  numero: metaExisting.numero || st.numero || localExisting?.numero,
+                  complemento: metaExisting.complemento || st.complemento || localExisting?.complemento,
+                  instrutorId: metaExisting.instrutorId || st.instrutorId || localExisting?.instrutorId || '',
+                  historicoTransferencias:
+                    metaExisting.historicoTransferencias && metaExisting.historicoTransferencias.length > 0
+                      ? metaExisting.historicoTransferencias
+                      : st.historicoTransferencias && st.historicoTransferencias.length > 0
+                      ? st.historicoTransferencias
+                      : localExisting?.historicoTransferencias || []
+                }
+              : {
+                  pacoteId: st.pacoteId || localExisting?.pacoteId,
+                  pacoteNome: st.pacoteNome || localExisting?.pacoteNome,
+                  cep: st.cep || localExisting?.cep,
+                  estado: st.estado || localExisting?.estado,
+                  cidade: st.cidade || localExisting?.cidade,
+                  bairro: st.bairro || localExisting?.bairro,
+                  logradouro: st.logradouro || localExisting?.logradouro,
+                  numero: st.numero || localExisting?.numero,
+                  complemento: st.complemento || localExisting?.complemento
+                })
+          });
+        });
+      }
+      studentMetaMap.forEach((metaSt, stId) => {
+        if (!mergedStudentsMap.has(stId)) {
+          mergedStudentsMap.set(stId, metaSt);
+        }
+      });
       writeList(STORAGE_KEYS.STUDENTS, Array.from(mergedStudentsMap.values()));
     }
 
@@ -982,7 +1052,13 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
       Array.from(notifMap.values()).sort((a, b) => b.criadoEm.localeCompare(a.criadoEm))
     );
 
-    if (accounts && accounts.length > 0) writeList(STORAGE_KEYS.ACCOUNTS, accounts);
+    if (accounts && accounts.length > 0) {
+      const localAccounts = readList<AccountReceivable>(STORAGE_KEYS.ACCOUNTS);
+      const mergedAccountsMap = new Map<string, AccountReceivable>();
+      localAccounts.forEach((a) => mergedAccountsMap.set(a.id, a));
+      accounts.forEach((a) => mergedAccountsMap.set(a.id, a));
+      writeList(STORAGE_KEYS.ACCOUNTS, Array.from(mergedAccountsMap.values()));
+    }
     if (payments && payments.length > 0) writeList(STORAGE_KEYS.PAYMENTS, payments);
     if (expenses && expenses.length > 0) writeList(STORAGE_KEYS.EXPENSES, expenses);
     if (investments && investments.length > 0) writeList(STORAGE_KEYS.INVESTMENTS, investments);
@@ -1725,6 +1801,21 @@ export const db = {
     return readList<Student>(STORAGE_KEYS.STUDENTS).find((s) => s.cpfFingerprint === cpfFingerprint);
   },
 
+  async persistStudentMetaToCloud(student: Student, actorId?: string): Promise<void> {
+    const metaAudit: AuditLog = {
+      id: `stumeta_${student.id}`,
+      organizacaoId: student.organizacaoId,
+      usuarioId: actorId || student.instrutorId || 'sistema',
+      usuarioNome: 'Instrutor',
+      acao: 'META_FICHA_ALUNO',
+      entidade: 'StudentFichaMeta',
+      entidadeId: student.id,
+      detalhes: JSON.stringify(student),
+      timestamp: new Date().toISOString()
+    };
+    await supabaseAdapter.addAuditLog(metaAudit);
+  },
+
   saveStudent(student: Student, actorId: string): void {
     const list = readList<Student>(STORAGE_KEYS.STUDENTS);
     const index = list.findIndex((s) => s.id === student.id);
@@ -1734,8 +1825,17 @@ export const db = {
       list.push(student);
     }
     writeList(STORAGE_KEYS.STUDENTS, list);
+    notifyDataChange();
     supabaseAdapter.saveStudent(student).catch(console.error);
-    this.addAuditLog(student.organizacaoId, actorId, 'SALVAR_ALUNO', 'Aluno', student.id, `Salvo dados de ${student.nome} (Aulas: ${student.aulasCumpridas}/${student.totalAulasContratadas})`);
+    this.persistStudentMetaToCloud(student, actorId).catch(console.error);
+    this.addAuditLog(
+      student.organizacaoId,
+      actorId,
+      'SALVAR_ALUNO',
+      'Aluno',
+      student.id,
+      `Salvo dados de ${student.nome} — CNH ${student.categoriaCnh} · Plano: ${student.pacoteNome || 'Padrão'} (Aulas: ${student.aulasCumpridas}/${student.totalAulasContratadas})`
+    );
   },
 
   async saveStudentAsync(student: Student, actorId: string): Promise<void> {
@@ -1747,8 +1847,19 @@ export const db = {
       list.push(student);
     }
     writeList(STORAGE_KEYS.STUDENTS, list);
-    await supabaseAdapter.saveStudent(student);
-    this.addAuditLog(student.organizacaoId, actorId, 'SALVAR_ALUNO', 'Aluno', student.id, `Salvo dados de ${student.nome} (Aulas: ${student.aulasCumpridas}/${student.totalAulasContratadas})`);
+    notifyDataChange();
+    await Promise.all([
+      supabaseAdapter.saveStudent(student),
+      this.persistStudentMetaToCloud(student, actorId)
+    ]);
+    this.addAuditLog(
+      student.organizacaoId,
+      actorId,
+      'SALVAR_ALUNO',
+      'Aluno',
+      student.id,
+      `Salvo dados de ${student.nome} — CNH ${student.categoriaCnh} · Plano: ${student.pacoteNome || 'Padrão'} (Aulas: ${student.aulasCumpridas}/${student.totalAulasContratadas})`
+    );
   },
 
   transferStudent(params: {
@@ -2250,6 +2361,7 @@ export const db = {
     const list = readList<AccountReceivable>(STORAGE_KEYS.ACCOUNTS);
     list.push(account);
     writeList(STORAGE_KEYS.ACCOUNTS, list);
+    notifyDataChange();
     supabaseAdapter.saveAccountReceivable(account).catch(console.error);
     this.addAuditLog(account.organizacaoId, actorId, 'CRIAR_CONTA_RECEBER', 'ContaReceber', account.id, `${account.descricao} - Valor: R$ ${(account.valorTotalCentavos / 100).toFixed(2)}`);
   },
@@ -2260,9 +2372,24 @@ export const db = {
     if (index >= 0) {
       list[index] = account;
       writeList(STORAGE_KEYS.ACCOUNTS, list);
+      notifyDataChange();
       supabaseAdapter.saveAccountReceivable(account).catch(console.error);
       this.addAuditLog(account.organizacaoId, actorId, 'ATUALIZAR_CONTA_RECEBER', 'ContaReceber', account.id, `${account.descricao} - Saldo: R$ ${(account.saldoDevedorCentavos / 100).toFixed(2)} (${account.status})`);
     }
+  },
+
+  async updateAccountReceivableAsync(account: AccountReceivable, actorId: string): Promise<void> {
+    const list = readList<AccountReceivable>(STORAGE_KEYS.ACCOUNTS);
+    const index = list.findIndex((a) => a.id === account.id);
+    if (index >= 0) {
+      list[index] = account;
+    } else {
+      list.push(account);
+    }
+    writeList(STORAGE_KEYS.ACCOUNTS, list);
+    notifyDataChange();
+    await supabaseAdapter.saveAccountReceivable(account);
+    this.addAuditLog(account.organizacaoId, actorId, 'ATUALIZAR_CONTA_RECEBER', 'ContaReceber', account.id, `${account.descricao} - Saldo: R$ ${(account.saldoDevedorCentavos / 100).toFixed(2)} (${account.status})`);
   },
 
   // Payments & Amortization
