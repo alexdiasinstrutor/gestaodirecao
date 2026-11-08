@@ -419,9 +419,10 @@ export function buildEffectiveInstructorCoverage(params: {
   const pkgCategories = Array.from(
     new Set(packages.filter((p) => p.ativo).map((p) => p.categoriaCnh))
   );
+  // Se o instrutor já salvou suas categorias atendidas, respeita a escolha exata sem forçar merge
   const categoriasAtendidas: CnhCategory[] =
     savedCoverage?.categoriasAtendidas && savedCoverage.categoriasAtendidas.length > 0
-      ? Array.from(new Set([...savedCoverage.categoriasAtendidas, ...pkgCategories]))
+      ? savedCoverage.categoriasAtendidas
       : pkgCategories.length > 0
         ? pkgCategories
         : ['B'];
@@ -432,9 +433,11 @@ export function buildEffectiveInstructorCoverage(params: {
   );
   const vehicleFleetTypes = (instructorVehicles.length > 0 ? instructorVehicles : vehicles).map((v) => v.tipo);
   const inferredTypes = inferVehicleTypesFromCategories(categoriasAtendidas);
+  // Se o instrutor já configurou seus tipos de veículos atendidos, respeita estritamente o que foi salvo
+  // sem re-inserir veículos que o instrutor desmarcou explicitamente
   const tiposVeiculo: LocatorVehicleType[] =
     savedCoverage?.tiposVeiculo && savedCoverage.tiposVeiculo.length > 0
-      ? Array.from(new Set([...savedCoverage.tiposVeiculo, ...vehicleFleetTypes]))
+      ? savedCoverage.tiposVeiculo
       : Array.from(new Set([...vehicleFleetTypes, ...inferredTypes]));
 
   const hasManualVeh = instructorVehicles.some((v) => (v.cambio || 'MANUAL') === 'MANUAL');

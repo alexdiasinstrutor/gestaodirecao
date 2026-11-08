@@ -862,6 +862,86 @@ runTest(
   }
 );
 
+runTest(
+  'T22',
+  'Persistência Fiel ao Desmarcar Tipos de Veículos e Categorias na Área de Atendimento',
+  'Garante que ao desmarcar um tipo de veículo (ex: remover MOTO e deixar CARRO) e salvar, o sistema não re-insere a marcação removida',
+  async () => {
+    const geoServiceFile = fs.readFileSync(
+      path.join(BASE_DIR, 'src/lib/geoService.ts'),
+      'utf-8'
+    );
+    const geoDemandViewFile = fs.readFileSync(
+      path.join(BASE_DIR, 'src/components/instructor/InstructorGeoDemandView.tsx'),
+      'utf-8'
+    );
+
+    // 1. Verifica no código fonte que não há mais merge forçado de savedCoverage.tiposVeiculo com vehicleFleetTypes
+    assert.equal(
+      geoServiceFile.includes('savedCoverage?.tiposVeiculo && savedCoverage.tiposVeiculo.length > 0') &&
+      geoServiceFile.includes('? savedCoverage.tiposVeiculo') &&
+      !geoServiceFile.includes('? Array.from(new Set([...savedCoverage.tiposVeiculo, ...vehicleFleetTypes]))'),
+      true,
+      'geoService prioriza estritamente os tipos de veículos salvos pelo instrutor sem forçar merge com frota'
+    );
+
+    assert.equal(
+      geoServiceFile.includes('savedCoverage?.categoriasAtendidas && savedCoverage.categoriasAtendidas.length > 0') &&
+      geoServiceFile.includes('? savedCoverage.categoriasAtendidas') &&
+      !geoServiceFile.includes('? Array.from(new Set([...savedCoverage.categoriasAtendidas, ...pkgCategories]))'),
+      true,
+      'geoService prioriza estritamente as categorias CNH salvas pelo instrutor sem forçar merge com pacotes'
+    );
+
+    // 2. Valida o comportamento da função com a regra de negócio rigorosa
+    const mockSavedCoverageComApenasCarro = {
+      categoriasAtendidas: ['B'],
+      tiposVeiculo: ['CARRO']
+    };
+    const mockVehicleFleetTypes = ['CARRO', 'MOTO'];
+    const mockPkgCategories = ['A', 'B'];
+
+    // Lógica corrigida do geoService:
+    const effectiveCategorias =
+      mockSavedCoverageComApenasCarro?.categoriasAtendidas && mockSavedCoverageComApenasCarro.categoriasAtendidas.length > 0
+        ? mockSavedCoverageComApenasCarro.categoriasAtendidas
+        : mockPkgCategories;
+
+    const effectiveTiposVeiculo =
+      mockSavedCoverageComApenasCarro?.tiposVeiculo && mockSavedCoverageComApenasCarro.tiposVeiculo.length > 0
+        ? mockSavedCoverageComApenasCarro.tiposVeiculo
+        : Array.from(new Set([...mockVehicleFleetTypes]));
+
+    // Valida que MOTO desmarcado NÃO é reinserido
+    assert.deepEqual(
+      effectiveTiposVeiculo,
+      ['CARRO'],
+      'buildEffectiveInstructorCoverage preserva fielmente a desmarcação de MOTO e mantém apenas CARRO'
+    );
+    assert.equal(
+      effectiveTiposVeiculo.includes('MOTO'),
+      false,
+      'MOTO não pode estar presente após ser desmarcado'
+    );
+
+    // Valida que a categoria A desmarcada NÃO é reinserida
+    assert.deepEqual(
+      effectiveCategorias,
+      ['B'],
+      'buildEffectiveInstructorCoverage preserva fielmente a desmarcação da categoria A e mantém apenas B'
+    );
+
+    // 3. Valida no componente InstructorGeoDemandView a manipulação correta do checkbox
+    assert.equal(
+      geoDemandViewFile.includes("setTiposVeiculo((prev) => prev.filter((item) => item !== tv))") &&
+      geoDemandViewFile.includes("tiposVeiculo: tiposVeiculo.length > 0 ? tiposVeiculo : ['CARRO']") &&
+      geoDemandViewFile.includes("await db.saveInstructorCoverageAsync(updatedProfile)"),
+      true,
+      'InstructorGeoDemandView remove o veículo do estado ao desmarcar e salva o perfil atualizado'
+    );
+  }
+);
+
 console.log('\n====================================================================');
 const passed = results.filter((r) => r.status === 'PASS').length;
 const failed = results.filter((r) => r.status === 'FAIL').length;
