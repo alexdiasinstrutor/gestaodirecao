@@ -372,8 +372,10 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
         documento: currentUser.cpfCompleto || currentUser.cpfMascarado || 'Credencial Detran Ativa',
         telefone: currentUser.telefone,
         cidade: currentOrg.nome,
-        estado: 'BR'
+        estado: 'BR',
+        assinaturaUrl: currentUser.assinaturaUrl
       },
+      assinaturaUrl: currentUser.assinaturaUrl,
       observacoes: payment.observacao || 'Comprovante emitido com valor fiscal e registrado na gestão de direção.',
       codigoAutenticacao: payment.comprovanteNumero || `AUT-${Math.floor(100000 + Math.random() * 900000)}`
     };

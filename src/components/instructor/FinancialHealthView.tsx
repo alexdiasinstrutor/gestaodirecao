@@ -615,8 +615,16 @@ export const FinancialHealthView: React.FC<FinancialHealthViewProps> = ({
               </label>
               <input
                 type="number"
+                min={1}
+                max={500}
                 value={simAulasPorMes}
-                onChange={(e) => setSimAulasPorMes(parseInt(e.target.value) || 1)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setSimAulasPorMes(v === '' ? ('' as any) : Math.max(0, parseInt(v, 10) || 0));
+                }}
+                onBlur={() => {
+                  if (!simAulasPorMes || Number(simAulasPorMes) < 1) setSimAulasPorMes(40);
+                }}
                 className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-mono font-bold"
               />
               <span className="text-xs text-slate-500 mt-0.5 block">Ex: 80 aulas (4 por dia x 20 dias)</span>

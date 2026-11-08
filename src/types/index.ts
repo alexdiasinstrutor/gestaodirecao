@@ -86,6 +86,8 @@ export interface User {
   tipoChavePix?: PixKeyType;
   beneficiarioPix?: string;
   cidadePix?: string;
+  // Assinatura digital do instrutor para recibos (PNG/JPG base64 até 2MB)
+  assinaturaUrl?: string;
 }
 
 export type CnhCategory =

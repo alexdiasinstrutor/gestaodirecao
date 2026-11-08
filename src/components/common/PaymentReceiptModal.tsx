@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   X,
   FileText,
@@ -13,8 +13,13 @@ import {
   CreditCard,
   MessageCircle,
   Hash,
-  Clock
+  Clock,
+  Upload,
+  Trash2,
+  Save,
+  FileSignature
 } from 'lucide-react';
+import { db } from '../../lib/storage';
 import {
   generateReceiptPdf,
   downloadReceiptPdf,
@@ -44,6 +49,93 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
   const [receiptData, setReceiptData] = useState<PaymentReceiptData>(initialData);
   const [downloadSuccess, setDownloadSuccess] = useState<boolean>(false);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
+
+  // Assinatura digital do instrutor (PNG, JPG de no máximo 2MB)
+  const signatureFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [signatureImage, setSignatureImage] = useState<string>(() => {
+    return (
+      receiptData.assinaturaUrl ||
+      receiptData.instrutor?.assinaturaUrl ||
+      db.getCurrentUser()?.assinaturaUrl ||
+      ''
+    );
+  });
+  const [signatureFileError, setSignatureFileError] = useState<string>('');
+  const [signatureSavedToProfile, setSignatureSavedToProfile] = useState<boolean>(false);
+  const [isSavingSignature, setIsSavingSignature] = useState<boolean>(false);
+
+  // Sincroniza a assinatura no receiptData caso o perfil já a tenha carregado
+  React.useEffect(() => {
+    if (signatureImage && !receiptData.assinaturaUrl) {
+      setReceiptData((prev) => ({
+        ...prev,
+        assinaturaUrl: signatureImage,
+        instrutor: { ...prev.instrutor, assinaturaUrl: signatureImage }
+      }));
+    }
+  }, [signatureImage]);
+
+  const handleSignatureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const MAX_SIZE = 2 * 1024 * 1024; // 2MB
+    if (file.size > MAX_SIZE) {
+      setSignatureFileError(
+        `O arquivo de assinatura deve ter no máximo 2MB (o arquivo selecionado tem ${(file.size / (1024 * 1024)).toFixed(2)} MB).`
+      );
+      if (signatureFileInputRef.current) signatureFileInputRef.current.value = '';
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      setSignatureFileError('Por favor selecione um arquivo de imagem válido (PNG ou JPG).');
+      if (signatureFileInputRef.current) signatureFileInputRef.current.value = '';
+      return;
+    }
+
+    setSignatureFileError('');
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result as string;
+      setSignatureImage(base64);
+      setReceiptData((prev) => ({
+        ...prev,
+        assinaturaUrl: base64,
+        instrutor: { ...prev.instrutor, assinaturaUrl: base64 }
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveSignatureToProfile = async () => {
+    if (!signatureImage) return;
+    setIsSavingSignature(true);
+    try {
+      const current = db.getCurrentUser();
+      if (current) {
+        await db.saveUserSignature(current.id, signatureImage);
+        setSignatureSavedToProfile(true);
+        setTimeout(() => setSignatureSavedToProfile(false), 3500);
+      }
+    } catch (err) {
+      console.error('Erro ao salvar assinatura no perfil:', err);
+      alert('Não foi possível salvar a assinatura no perfil.');
+    } finally {
+      setIsSavingSignature(false);
+    }
+  };
+
+  const handleRemoveSignature = async () => {
+    setSignatureImage('');
+    setSignatureFileError('');
+    if (signatureFileInputRef.current) signatureFileInputRef.current.value = '';
+    setReceiptData((prev) => ({
+      ...prev,
+      assinaturaUrl: undefined,
+      instrutor: { ...prev.instrutor, assinaturaUrl: undefined }
+    }));
+  };
 
   const valorExtenso = numberToWordsBRL(receiptData.valorCentavos);
 
@@ -264,6 +356,76 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                 />
               </div>
             </div>
+
+            {/* Campo e Painel para Anexar Assinatura Digital do Instrutor (PNG, JPG máx 2MB) */}
+            <div className="pt-3 border-t border-slate-200 mt-2 space-y-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-white p-3 rounded-xl border border-blue-200">
+                <div className="space-y-0.5">
+                  <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <FileSignature className="w-4 h-4 text-blue-600" />
+                    Assinatura Digital do Instrutor
+                  </span>
+                  <p className="text-[11px] text-slate-500">
+                    Anexe uma foto ou imagem da sua assinatura (PNG ou JPG, máx 2MB).
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  <input
+                    type="file"
+                    ref={signatureFileInputRef}
+                    accept="image/png, image/jpeg, image/jpg, image/webp"
+                    onChange={handleSignatureUpload}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => signatureFileInputRef.current?.click()}
+                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>{signatureImage ? 'Substituir Assinatura' : 'Anexar Assinatura (PNG/JPG)'}</span>
+                  </button>
+
+                  {signatureImage && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={handleSaveSignatureToProfile}
+                        disabled={isSavingSignature}
+                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors disabled:opacity-50"
+                        title="Salva esta assinatura permanentemente no seu perfil de instrutor"
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        <span>{isSavingSignature ? 'Salvando...' : 'Salvar no Meu Perfil'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleRemoveSignature}
+                        className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                        title="Remover assinatura do recibo"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Remover</span>
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {signatureFileError && (
+                <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs font-medium flex items-center gap-2">
+                  <span>⚠️ {signatureFileError}</span>
+                </div>
+              )}
+
+              {signatureSavedToProfile && (
+                <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-medium flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Assinatura salva com sucesso no seu perfil de instrutor! Seus próximos recibos já a incluirão automaticamente.</span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* DOCUMENT PREVIEW CARD (VISUAL 2 VIAS) */}
@@ -353,6 +515,57 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                 <div>
                   <span className="text-xs uppercase font-bold font-bold text-slate-500 block">Autenticação</span>
                   <span className="font-mono font-bold text-emerald-700 text-xs">{receiptData.codigoAutenticacao}</span>
+                </div>
+              </div>
+
+              {/* Bloco Oficial com Posicionamento Visual da Assinatura no Documento */}
+              <div className="pt-4 border-t border-slate-200 mt-2 flex flex-col sm:flex-row justify-between items-end gap-4 bg-slate-50/70 p-4 rounded-xl border border-slate-200">
+                <div className="space-y-1 text-slate-500 text-xs text-left w-full sm:w-auto">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
+                    Comprovante Oficial de Instrução
+                  </span>
+                  <p className="font-semibold text-slate-800 text-xs">
+                    Auto Gestão de Direção · Recibo Válido
+                  </p>
+                  <p className="text-[11px] text-slate-500">
+                    Emitido em {formatDateBR(receiptData.dataEmissao)} · Quitado em {formatDateBR(receiptData.dataPagamento)}
+                  </p>
+                  <p className="text-[11px] font-mono font-bold text-emerald-700">
+                    Autenticação: {receiptData.codigoAutenticacao}
+                  </p>
+                </div>
+
+                {/* Área e Linha de Assinatura com Posicionamento Visual da Imagem */}
+                <div className="w-full sm:w-72 flex flex-col items-center text-center">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">
+                    Assinatura do Instrutor
+                  </span>
+
+                  {/* Espaço reservado e posicionado sobre a linha */}
+                  <div className="h-16 w-full flex items-center justify-center relative mb-1">
+                    {signatureImage ? (
+                      <div className="relative group flex items-center justify-center h-full">
+                        <img
+                          src={signatureImage}
+                          alt="Assinatura Digital do Instrutor"
+                          className="max-h-14 max-w-[240px] object-contain drop-shadow-xs"
+                        />
+                      </div>
+                    ) : (
+                      <div className="border border-dashed border-slate-300 rounded-lg w-full h-12 flex items-center justify-center text-[11px] text-slate-400 bg-white">
+                        (Nenhuma assinatura anexada)
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Linha de Assinatura do Instrutor */}
+                  <div className="w-full border-t-2 border-slate-800 pt-1.5">
+                    <p className="text-xs font-bold text-slate-900">{receiptData.instrutor.nome}</p>
+                    <p className="text-[10px] text-slate-500 font-medium">Instrutor Credenciado de Trânsito</p>
+                    {receiptData.instrutor.documento && (
+                      <p className="text-[10px] text-slate-400 font-mono">{receiptData.instrutor.documento}</p>
+                    )}
+                  </div>
                 </div>
               </div>
 

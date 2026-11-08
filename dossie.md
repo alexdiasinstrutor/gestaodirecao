@@ -1074,9 +1074,28 @@ Abaixo estão registradas todas as melhorias estruturais, correções de sincron
     - **Duplo Comando Credenciado**, **Adaptação PCD**, **Quilometragem Atual (km)** e **Próxima Revisão (km)**.
   - Sincroniza automaticamente os tipos de veículos e câmbio do instrutor com os filtros do **Mapa de Localização de Instrutores** e protege os dados com `VEHICLES_BACKUP` e Cloud Vault (`__agd_vault_vehicles`).
 
-### 14.9 Sanitização Global de Telefone / WhatsApp e Suite de 17 Testes Automatizados (`validation.ts` & `run_automated_tests.mjs`)
+### 14.9 Sanitização Global de Telefone / WhatsApp (`validation.ts`)
 - **Telefone Obrigatório e Proibição de Máscara como Número**: No convite de aluno e em todas as telas do sistema, o número de telefone é validado estritamente (10 ou 11 dígitos reais, rejeitando sequências repetidas ou caracteres de máscara `'() -'`).
-- **Validação Automatizada Contínua (`run_automated_tests.mjs`)**: Suite automatizada com **17 baterias de testes (`T01` a `T17`)** cobrindo confidencialidade de instrutores, exibição de pacotes, geolocalização Haversine 5–40 km, filtros do mapa, demanda reversa, sanitização de telefone, agenda por período com notificação ao aluno, persistência da ficha do aluno, blindagem de pacotes e gestão de veículos dos instrutores (**17/17 aprovados — 100% sem quebras**).
+
+### 14.10 Correção na Digitação Completa do Número de Aulas (`StudentsView.tsx`, `PackagesManager.tsx` & `FinancialHealthView.tsx`)
+- **Eliminação do Travamento ao Digitar**:
+  - Anteriormente, ao apagar o campo de número de aulas na Ficha do Aluno ou no Cadastro de Pacotes, a função `parseInt(e.target.value) || 1` forçava imediatamente o campo para `1` ou `0`, impedindo o usuário de limpar e dificultando a digitação completa de novos números (ex: ao tentar digitar `35` ficava `135` ou mantinha o dígito anterior).
+  - O sistema foi corrigido para aceitar estado limpo (`""`) durante a edição, permitindo digitar 1, 2 ou 3 dígitos livremente.
+  - No evento `onBlur` e no envio do formulário, o valor é devidamente validado e normalizado (`Math.max(1, Number(val) || 20)`), proporcionando uma experiência de digitação fluida e intuitiva.
+
+### 14.11 Anexação de Assinatura Digital do Instrutor para o Recibo de Pagamento (`PaymentReceiptModal.tsx`, `receiptPdfGenerator.ts`, `storage.ts` & `supabaseAdapter.ts`)
+- **Upload de Imagem da Assinatura (PNG, JPG/JPEG até 2MB)**:
+  - Na página/modal de emissão de recibo (`PaymentReceiptModal.tsx`), o instrutor conta com um painel dedicado para anexar a foto ou imagem de sua assinatura digital.
+  - O sistema valida com precisão o limite estrito de **2MB (máximo de 2.097.152 bytes)** e formato de imagem (`PNG`, `JPG`, `JPEG`, `WEBP`), rejeitando arquivos excedentes com alerta explicativo.
+- **Visualização do Posicionamento no Documento e no PDF**:
+  - No documento do recibo exibido em tela (prévia oficial em 2 vias), a assinatura digital do instrutor aparece posicionada com harmonia visual exatamente centralizada sobre a linha oficial de assinatura do instrutor credenciado.
+  - No gerador de PDF (`receiptPdfGenerator.ts`), a imagem é renderizada via jsPDF logo acima da linha de assinatura, preservando aspecto nítido e profissional tanto na tela quanto no arquivo `.pdf` baixado ou impresso.
+- **Salvamento Permanente Vinculado ao Perfil do Instrutor**:
+  - O modal disponibiliza o botão **"💾 Salvar no Meu Perfil"**. Ao clicar, a assinatura é persistida no cadastro do instrutor (`currentUser.assinaturaUrl`), sincronizada no banco de dados Supabase e registrada com cópia de segurança no cofre de auditoria (`InstructorSignatureMeta`).
+  - Uma vez salva no perfil, todos os próximos recibos emitidos pelo instrutor já carregam a sua assinatura digital automaticamente, com opções de substituir ou remover a qualquer momento.
+
+### 14.12 Suite de 19 Testes Automatizados Rigorosos (`run_automated_tests.mjs`)
+- Suite automatizada com **19 baterias de testes (`T01` a `T19`)** cobrindo confidencialidade de instrutores, exibição de pacotes, geolocalização Haversine 5–40 km, filtros do mapa, demanda reversa, sanitização de telefone, agenda por período com notificação ao aluno, persistência da ficha do aluno, blindagem de pacotes, gestão de veículos dos instrutores, digitação completa de número de aulas e upload/posicionamento/persistência de assinatura digital (**19/19 aprovados — 100% de conformidade e sem quebras**).
 
 ---
 
@@ -1086,7 +1105,7 @@ Este Dossiê constitui o registro definitivo e exaustivo de todas as funcionalid
 
 *Homologado para produção e operação contínua.*  
 *Administração Master: cassiordcosta@gmail.com*  
-*Versão do Sistema: v6.8 Estável, Com Mapa Geográfico (5–40 km), Blindagem Cloud Vault de Pacotes, Gestão de Veículos dos Instrutores, Auditada (17/17 Testes) e Sincronizada em Tempo Real no Supabase*
+*Versão do Sistema: v6.9 Estável, Com Assinatura Digital do Instrutor no Recibo (2MB), Digitação Completa de Aulas, Mapa Geográfico (5–40 km), Blindagem Cloud Vault de Pacotes, Gestão de Veículos dos Instrutores, Auditada (19/19 Testes) e Sincronizada em Tempo Real no Supabase*
 
 
 

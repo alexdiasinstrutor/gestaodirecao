@@ -109,6 +109,7 @@ function userToRow(u: User): Record<string, any> {
     two_factor_secret: u.twoFactorSecret || null,
     ultimo_acesso: u.ultimoAcesso || null,
     avatar_url: u.avatarUrl || null,
+    assinatura_url: u.assinaturaUrl || null,
     senha_temporaria: u.senhaTemporaria || null,
     chave_pix: u.chavePix || null,
     tipo_chave_pix: u.tipoChavePix || null,
@@ -140,6 +141,7 @@ function rowToUser(r: any): User {
     twoFactorSecret: r.two_factor_secret,
     ultimoAcesso: r.ultimo_acesso,
     avatarUrl: r.avatar_url,
+    assinaturaUrl: r.assinatura_url || (r.avatar_url && typeof r.avatar_url === 'string' && r.avatar_url.startsWith('data:image') ? r.avatar_url : undefined),
     senhaTemporaria: r.senha_temporaria,
     chavePix: r.chave_pix,
     tipoChavePix: r.tipo_chave_pix,
@@ -1096,6 +1098,10 @@ export const supabaseAdapter = {
   },
   async getStudentMetaAuditLogs(): Promise<AuditLog[]> {
     const list = await supabaseSelect('audit_logs', rowToAudit, { entidade: 'StudentFichaMeta' });
+    return list.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || '')).slice(0, 500);
+  },
+  async getSignatureMetaAuditLogs(): Promise<AuditLog[]> {
+    const list = await supabaseSelect('audit_logs', rowToAudit, { entidade: 'InstructorSignatureMeta' });
     return list.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || '')).slice(0, 500);
   },
   async addAuditLog(log: AuditLog): Promise<void> {

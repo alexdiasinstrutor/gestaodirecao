@@ -897,7 +897,13 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
     const localUsers = readList<User>(STORAGE_KEYS.USERS);
     const mergedUsersMap = new Map<string, User>();
     localUsers.forEach((u) => mergedUsersMap.set(u.id, u));
-    remoteUsers.forEach((u) => mergedUsersMap.set(u.id, u));
+    remoteUsers.forEach((u) => {
+      const existing = mergedUsersMap.get(u.id);
+      mergedUsersMap.set(u.id, {
+        ...u,
+        assinaturaUrl: u.assinaturaUrl || existing?.assinaturaUrl
+      });
+    });
     writeList(STORAGE_KEYS.USERS, Array.from(mergedUsersMap.values()));
 
     // Carrega todos os registros remotos do Supabase de todas as organizações
@@ -915,7 +921,8 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
       coverageLogs,
       studentLeadLogs,
       packageMetaLogs,
-      studentMetaLogs
+      studentMetaLogs,
+      signatureMetaLogs
     ] = await Promise.all([
       supabaseAdapter.getStudents(),
       supabaseAdapter.getVehicles(),
@@ -930,8 +937,30 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
       supabaseAdapter.getCoverageAuditLogs(),
       supabaseAdapter.getStudentLeadAuditLogs(),
       supabaseAdapter.getPackageMetaAuditLogs(),
-      supabaseAdapter.getStudentMetaAuditLogs()
+      supabaseAdapter.getStudentMetaAuditLogs(),
+      supabaseAdapter.getSignatureMetaAuditLogs()
     ]);
+
+    // Aplica backup de assinaturas digitais recuperadas do cofre de auditoria
+    if (signatureMetaLogs && signatureMetaLogs.length > 0) {
+      const sortedSig = [...signatureMetaLogs].sort((a, b) => (a.timestamp || '').localeCompare(b.timestamp || ''));
+      for (const log of sortedSig) {
+        if (log.detalhes) {
+          try {
+            const parsed = JSON.parse(log.detalhes);
+            if (parsed && parsed.userId && parsed.signatureUrl) {
+              const u = mergedUsersMap.get(parsed.userId);
+              if (u && !u.assinaturaUrl) {
+                u.assinaturaUrl = parsed.signatureUrl;
+              }
+            }
+          } catch {
+            // ignore
+          }
+        }
+      }
+      writeList(STORAGE_KEYS.USERS, Array.from(mergedUsersMap.values()));
+    }
 
     const studentMetaMap = new Map<string, Student>();
     if (studentMetaLogs && studentMetaLogs.length > 0) {
@@ -2048,6 +2077,64 @@ export const db = {
       }
       this.addAuditLog(user.organizacaoId, user.id, 'ATUALIZACAO_USUARIO', 'Usuario', user.id, `Atualizado perfil do usuário ${user.nome}`);
     }
+  },
+
+  /**
+   * Salva a assinatura digital do instrutor (imagem base64 PNG/JPG até 2MB)
+   * Vincula ao perfil do instrutor, atualiza sessão e grava no Supabase + audit logs
+   */
+  async saveUserSignature(userId: string, signatureBase64: string): Promise<User | null> {
+    const users = readList<User>(STORAGE_KEYS.USERS);
+    const index = users.findIndex((u) => u.id === userId);
+    if (index === -1) {
+      console.warn(`saveUserSignature: Usuário ${userId} não encontrado.`);
+      return null;
+    }
+
+    const updatedUser: User = {
+      ...users[index],
+      assinaturaUrl: signatureBase64 || undefined
+    };
+    users[index] = updatedUser;
+    writeList(STORAGE_KEYS.USERS, users);
+
+    const current = this.getCurrentUser();
+    if (current && current.id === userId) {
+      this.setCurrentUser(updatedUser);
+    }
+
+    try {
+      await supabaseAdapter.saveUser(updatedUser);
+    } catch (e) {
+      console.warn('Erro ao salvar assinatura no Supabase users:', e);
+    }
+
+    try {
+      await supabaseAdapter.addAuditLog({
+        id: `aud_sig_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        organizacaoId: updatedUser.organizacaoId,
+        usuarioId: userId,
+        acao: 'SALVAR_ASSINATURA_DIGITAL',
+        entidade: 'InstructorSignatureMeta',
+        registroId: userId,
+        detalhes: JSON.stringify({
+          userId,
+          hasSignature: !!signatureBase64,
+          signatureUrl: signatureBase64,
+          updatedAt: new Date().toISOString()
+        }),
+        timestamp: new Date().toISOString()
+      });
+    } catch (e) {
+      console.warn('Erro ao gravar audit log de assinatura:', e);
+    }
+
+    notifyDataChange();
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('agd:user-updated', { detail: updatedUser }));
+    }
+
+    return updatedUser;
   },
 
   getEffectivePixConfig(org?: Organization, user?: User): {

@@ -54,12 +54,22 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
   const [editingPackage, setEditingPackage] = useState<PackageOffer | null>(null);
   const [feedbackMsg, setFeedbackMsg] = useState<string>('');
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{
+    nome: string;
+    categoriaCnh: CnhCategory;
+    totalAulas: number | string;
+    valorReais: string;
+    formaPagamento: PackagePaymentType;
+    maxParcelas: number;
+    descontoAvistaPercentual: number;
+    descricao: string;
+    ativo: boolean;
+  }>({
     nome: '',
-    categoriaCnh: 'B' as CnhCategory,
+    categoriaCnh: 'B',
     totalAulas: 20,
     valorReais: '1800.00',
-    formaPagamento: 'TODAS' as PackagePaymentType,
+    formaPagamento: 'TODAS',
     maxParcelas: 12,
     descontoAvistaPercentual: 5,
     descricao: '',
@@ -404,7 +414,15 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
                     max="100"
                     required
                     value={form.totalAulas}
-                    onChange={(e) => setForm({ ...form, totalAulas: parseInt(e.target.value, 10) || 0 })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setForm({ ...form, totalAulas: val === '' ? '' : Math.max(0, parseInt(val, 10) || 0) });
+                    }}
+                    onBlur={() => {
+                      if (form.totalAulas === '' || Number(form.totalAulas) < 1) {
+                        setForm({ ...form, totalAulas: 20 });
+                      }
+                    }}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none font-mono"
                   />
                 </div>

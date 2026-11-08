@@ -76,7 +76,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   const [editingCategory, setEditingCategory] = useState<CnhCategory>('B');
   const [editingPackageId, setEditingPackageId] = useState<string>('');
   const [editingPackageName, setEditingPackageName] = useState<string>('');
-  const [editingTotalLessons, setEditingTotalLessons] = useState<number>(20);
+  const [editingTotalLessons, setEditingTotalLessons] = useState<number | string>(20);
   const [editingSkills, setEditingSkills] = useState<StudentSkills | null>(null);
   const [editingAddress, setEditingAddress] = useState<AddressFields>({
     estado: 'MG',
@@ -300,8 +300,10 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
         documento: currentUser.cpfCompleto || currentUser.cpfMascarado || 'Credencial Detran Ativa',
         telefone: currentUser.telefone,
         cidade: currentOrg.nome,
-        estado: 'BR'
+        estado: 'BR',
+        assinaturaUrl: currentUser.assinaturaUrl
       },
+      assinaturaUrl: currentUser.assinaturaUrl,
       observacoes: payment.observacao || 'Comprovante emitido com valor fiscal e registrado na gestão de direção.',
       codigoAutenticacao: payment.comprovanteNumero || `AUT-${Math.floor(100000 + Math.random() * 900000)}`
     };
@@ -342,8 +344,10 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
         documento: currentUser.cpfCompleto || currentUser.cpfMascarado || 'Credencial Detran Ativa',
         telefone: currentUser.telefone,
         cidade: currentOrg.nome,
-        estado: 'BR'
+        estado: 'BR',
+        assinaturaUrl: currentUser.assinaturaUrl
       },
+      assinaturaUrl: currentUser.assinaturaUrl,
       observacoes: 'Recibo referente à prestação de serviços de instrução prática de trânsito.',
       codigoAutenticacao: `AUT-${Math.floor(100000 + Math.random() * 900000)}`
     };
@@ -742,7 +746,15 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                           min={1}
                           max={200}
                           value={editingTotalLessons}
-                          onChange={(e) => setEditingTotalLessons(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setEditingTotalLessons(val === '' ? '' : Math.max(0, parseInt(val, 10) || 0));
+                          }}
+                          onBlur={() => {
+                            if (editingTotalLessons === '' || Number(editingTotalLessons) < 1) {
+                              setEditingTotalLessons(20);
+                            }
+                          }}
                           className="w-full px-3 py-2 bg-white border border-blue-300 rounded-xl text-xs font-bold font-mono text-slate-900 focus:outline-none focus:border-blue-600"
                         />
                       </div>

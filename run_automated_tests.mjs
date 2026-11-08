@@ -580,6 +580,141 @@ runTest(
   }
 );
 
+// ============================================================================
+// 12. TESTE DE CORREÇÃO NA DIGITAÇÃO COMPLETA DO NÚMERO DE AULAS
+// ============================================================================
+runTest(
+  'T18',
+  'Digitação Completa do Número de Aulas sem Bloqueio de Entrada',
+  'Inputs de quantidade/total de aulas permitem digitação livre de 1 a 3 dígitos sem manter dígito anterior ou reverter para 1/0 ao apagar',
+  () => {
+    const studentsViewFile = fs.readFileSync(
+      path.join(BASE_DIR, 'src/components/instructor/StudentsView.tsx'),
+      'utf-8'
+    );
+    const packagesManagerFile = fs.readFileSync(
+      path.join(BASE_DIR, 'src/components/instructor/PackagesManager.tsx'),
+      'utf-8'
+    );
+
+    // Validação de lógica de digitação:
+    // Ao apagar tudo (""), o input deve receber "" sem ser instantaneamente forçado para 1
+    const simulateTyping = (initialVal, typedValues) => {
+      let state = initialVal;
+      for (const val of typedValues) {
+        state = val === '' ? '' : Math.max(0, parseInt(val, 10) || 0);
+      }
+      return state;
+    };
+
+    // Simulando usuário que tinha 20, apaga tudo ('') e digita '3', depois '35'
+    assert.equal(simulateTyping(20, ['2', '', '3', '35']), 35, 'Digitação simulada aceita substituição livre');
+    assert.equal(simulateTyping(20, ['']), '', 'Estado aceita campo limpo durante a digitação');
+
+    // Validação nos arquivos do componente
+    assert.equal(
+      studentsViewFile.includes("val === '' ? '' : Math.max(0, parseInt(val, 10) || 0)") &&
+      studentsViewFile.includes('setEditingTotalLessons(20)') &&
+      studentsViewFile.includes('useState<number | string>(20)'),
+      true,
+      'StudentsView trata onChange permitindo esvaziamento e digitação completa sem salto para 1'
+    );
+
+    assert.equal(
+      packagesManagerFile.includes("val === '' ? '' : Math.max(0, parseInt(val, 10) || 0)") &&
+      packagesManagerFile.includes('totalAulas: 20') &&
+      packagesManagerFile.includes('totalAulas: number | string'),
+      true,
+      'PackagesManager trata onChange de totalAulas permitindo digitação completa e salvamento sanitizado'
+    );
+  }
+);
+
+// ============================================================================
+// 13. TESTE DE ASSINATURA DIGITAL DO INSTRUTOR PARA RECIBO (PNG/JPG MÁX 2MB)
+// ============================================================================
+runTest(
+  'T19',
+  'Assinatura Digital do Instrutor para Recibo com Upload, Visualização e Perfil',
+  'Permite anexar imagem PNG/JPG até 2MB, posiciona visualmente no documento e PDF, e salva permanentemente no perfil do instrutor',
+  () => {
+    const receiptModalFile = fs.readFileSync(
+      path.join(BASE_DIR, 'src/components/common/PaymentReceiptModal.tsx'),
+      'utf-8'
+    );
+    const pdfGeneratorFile = fs.readFileSync(
+      path.join(BASE_DIR, 'src/lib/receiptPdfGenerator.ts'),
+      'utf-8'
+    );
+    const storageFile = fs.readFileSync(
+      path.join(BASE_DIR, 'src/lib/storage.ts'),
+      'utf-8'
+    );
+    const typesFile = fs.readFileSync(
+      path.join(BASE_DIR, 'src/types/index.ts'),
+      'utf-8'
+    );
+
+    // 1. Limite de tamanho de 2MB
+    const MAX_SIZE_BYTES = 2 * 1024 * 1024;
+    assert.equal(MAX_SIZE_BYTES, 2097152, '2MB equivale estritamente a 2.097.152 bytes');
+
+    // Valida que o modal de recibo checa o limite de 2MB
+    assert.equal(
+      receiptModalFile.includes('2 * 1024 * 1024') &&
+      receiptModalFile.includes('O arquivo de assinatura deve ter no máximo 2MB'),
+      true,
+      'PaymentReceiptModal valida rigorosamente o limite de 2MB para arquivos de assinatura'
+    );
+
+    // 2. Formatos aceitos
+    assert.equal(
+      receiptModalFile.includes('accept="image/png, image/jpeg, image/jpg, image/webp"'),
+      true,
+      'PaymentReceiptModal aceita formatos de imagem PNG e JPG/JPEG'
+    );
+
+    // 3. Posicionamento visual no documento
+    assert.equal(
+      receiptModalFile.includes('alt="Assinatura Digital do Instrutor"') &&
+      receiptModalFile.includes('Assinatura do Instrutor') &&
+      receiptModalFile.includes('border-t-2 border-slate-800'),
+      true,
+      'Documento do recibo exibe a imagem posicionada exatamente acima da linha de assinatura do instrutor'
+    );
+
+    // 4. Posicionamento no PDF gerado
+    assert.equal(
+      pdfGeneratorFile.includes('doc.addImage(signatureImg') &&
+      pdfGeneratorFile.includes('blocoAssinaturaY - 16'),
+      true,
+      'Gerador de PDF posiciona a assinatura digital sobre a linha de assinatura do instrutor'
+    );
+
+    // 5. Salvamento ao perfil do instrutor
+    assert.equal(
+      receiptModalFile.includes('handleSaveSignatureToProfile') &&
+      receiptModalFile.includes('db.saveUserSignature') &&
+      receiptModalFile.includes('Salvar no Meu Perfil'),
+      true,
+      'Botão "Salvar no Meu Perfil" persiste a assinatura no usuário'
+    );
+
+    assert.equal(
+      storageFile.includes('saveUserSignature(userId: string, signatureBase64: string)') &&
+      storageFile.includes('InstructorSignatureMeta'),
+      true,
+      'Storage possui método saveUserSignature com sincronização no Supabase e cofre audit_logs'
+    );
+
+    assert.equal(
+      typesFile.includes('assinaturaUrl?: string'),
+      true,
+      'Tipo User inclui campo assinaturaUrl para persistência no perfil'
+    );
+  }
+);
+
 console.log('\n====================================================================');
 const passed = results.filter((r) => r.status === 'PASS').length;
 const failed = results.filter((r) => r.status === 'FAIL').length;

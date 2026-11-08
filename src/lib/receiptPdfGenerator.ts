@@ -26,7 +26,9 @@ export interface PaymentReceiptData {
     telefone?: string;
     cidade?: string;
     estado?: string;
+    assinaturaUrl?: string;
   };
+  assinaturaUrl?: string;
   observacoes?: string;
   codigoAutenticacao: string;
 }
@@ -259,18 +261,36 @@ export function generateReceiptPdf(data: PaymentReceiptData): jsPDF {
 
   // Lado Direito: Linha de Assinatura do Instrutor
   const signX = margin + metadeLargura + 10;
+  const signLineWidth = contentWidth - 12 - metadeLargura;
+  const centerSignX = signX + signLineWidth / 2;
+
+  // Imagem da Assinatura Digital do Instrutor (se anexada)
+  const signatureImg = data.assinaturaUrl || data.instrutor?.assinaturaUrl;
+  if (signatureImg && typeof signatureImg === 'string' && signatureImg.startsWith('data:image')) {
+    try {
+      const imgWidth = Math.min(46, signLineWidth - 8);
+      const imgHeight = 13.5;
+      const imgX = centerSignX - imgWidth / 2;
+      const imgY = blocoAssinaturaY - 16;
+      const format = signatureImg.includes('image/jpeg') || signatureImg.includes('image/jpg') ? 'JPEG' : 'PNG';
+      doc.addImage(signatureImg, format, imgX, imgY, imgWidth, imgHeight);
+    } catch (e) {
+      console.warn('Não foi possível renderizar imagem de assinatura no PDF:', e);
+    }
+  }
+
   doc.setDrawColor(...darkColor);
   doc.line(signX, blocoAssinaturaY - 2, margin + contentWidth - 6, blocoAssinaturaY - 2);
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.setTextColor(...darkColor);
-  doc.text(data.instrutor.nome, signX + (contentWidth - 12 - metadeLargura) / 2, blocoAssinaturaY + 3, { align: 'center' });
+  doc.text(data.instrutor.nome, centerSignX, blocoAssinaturaY + 3, { align: 'center' });
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
   doc.setTextColor(...slateColor);
-  doc.text('Instrutor Credenciado de Trânsito', signX + (contentWidth - 12 - metadeLargura) / 2, blocoAssinaturaY + 7.5, { align: 'center' });
+  doc.text('Instrutor Credenciado de Trânsito', centerSignX, blocoAssinaturaY + 7.5, { align: 'center' });
 
   // Rodapé do Recibo Digital: Autenticação Limpa
   const rodapeY = margin + cardHeight - 5;
