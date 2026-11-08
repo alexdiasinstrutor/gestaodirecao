@@ -424,3 +424,49 @@ export interface StudentNotification {
   lida: boolean;
   criadoEm: string;
 }
+
+export type VehicleTransmissionType = 'MANUAL' | 'AUTOMATICO' | 'AMBOS';
+
+export type LocatorVehicleType = 'MOTO' | 'CARRO' | 'CAMINHAO' | 'ONIBUS';
+
+export interface InstructorCoverageProfile {
+  instrutorId: string;
+  organizacaoId: string;
+  raioAtendimentoKm: number; // 5 a 40 km
+  cidadeBase: string;
+  estadoBase: string;
+  bairroBase?: string;
+  cepBase?: string;
+  cidadesAtendidas: string[];
+  bairrosAtendidos?: string[];
+  categoriasAtendidas: CnhCategory[];
+  tiposVeiculo: LocatorVehicleType[];
+  tipoCambio: VehicleTransmissionType;
+  latitude?: number;
+  longitude?: number;
+  atualizadoEm: string;
+}
+
+export interface StudentLeadRequest {
+  id: string;
+  nome: string;
+  telefone: string;
+  email?: string;
+  cep?: string;
+  estado: string;
+  cidade: string;
+  bairro?: string;
+  categoriaCnh: CnhCategory;
+  tipoVeiculo: LocatorVehicleType;
+  tipoCambio: VehicleTransmissionType;
+  raioDesejadoKm?: number;
+  observacoes?: string;
+  latitude?: number;
+  longitude?: number;
+  semInstrutorNaCidade: boolean;
+  status: 'AGUARDANDO_INSTRUTOR' | 'EM_CONTATO' | 'ATENDIDO';
+  atendidoPorInstrutorId?: string;
+  atendidoPorInstrutorNome?: string;
+  criadoEm: string;
+}
+

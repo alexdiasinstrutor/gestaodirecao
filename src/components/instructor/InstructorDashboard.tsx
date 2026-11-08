@@ -18,7 +18,9 @@ import {
   LayoutGrid,
   Ticket,
   ShieldCheck,
-  Sparkles
+  Sparkles,
+  MapPin,
+  Bell
 } from 'lucide-react';
 import { db } from '../../lib/storage';
 import { formatCurrencyBRL, formatDateBR } from '../../lib/validation';
@@ -56,6 +58,8 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
   const expenses = db.getExpenses(orgId);
   const investments = db.getInvestments(orgId);
   const vehicles = db.getVehicles(orgId);
+  const studentLeads = db.getStudentLeads();
+  const savedCoverage = db.getInstructorCoverage(currentUser.id);
 
   // SaaS Plan & Coupons Information
   const planDetails = getPlanDetails(currentOrg.plano);
@@ -204,6 +208,39 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Card de Acesso Rápido: Mapa de Alunos, Área de Atendimento (5–40 km) & Mensagens/Notificações */}
+      <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-blue-950 text-white rounded-2xl p-4 border border-emerald-800/50 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-start sm:items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+            <MapPin className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs sm:text-sm font-extrabold text-white">
+                Mapa de Alunos, Cidades Atendidas ({savedCoverage?.raioAtendimentoKm || 20} km) & Notificações
+              </span>
+              {studentLeads.length > 0 && (
+                <span className="px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 text-[10px] font-extrabold flex items-center gap-1">
+                  <Bell className="w-3 h-3" />
+                  <span>{studentLeads.length} aluno(s) procurando instrutor!</span>
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-300 mt-0.5">
+              Veja no mapa quantos alunos e instrutores existem por cidade e bairro, configure seu raio de 5 a 40 km e atenda novos alunos via WhatsApp.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => onNavigate('GEO_DEMAND')}
+          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer shrink-0"
+        >
+          <MapPin className="w-4 h-4" />
+          <span>Abrir Mapa & Notificações</span>
+        </button>
       </div>
 
       {/* Essential Mobile Quick-Action Grid (Shown in Simplified Mode) */}

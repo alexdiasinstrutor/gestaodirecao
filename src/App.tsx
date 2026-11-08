@@ -15,7 +15,8 @@ import {
   Tablet,
   Monitor,
   LayoutGrid,
-  Minimize2
+  Minimize2,
+  MapPin
 } from 'lucide-react';
 import { db, initDatabase, syncFromSupabase } from './lib/storage';
 import { User, Organization } from './types';
@@ -27,6 +28,7 @@ import { InstructorRegisterModal } from './components/auth/InstructorRegisterMod
 import { StudentInviteModal } from './components/auth/StudentInviteModal';
 import { StudentSelfRegisterModal } from './components/auth/StudentSelfRegisterModal';
 import { InstructorDashboard } from './components/instructor/InstructorDashboard';
+import { InstructorGeoDemandView } from './components/instructor/InstructorGeoDemandView';
 import { FinanceView } from './components/instructor/FinanceView';
 import { FinancialHealthView } from './components/instructor/FinancialHealthView';
 import { StudentsView } from './components/instructor/StudentsView';
@@ -255,7 +257,12 @@ export default function App() {
         <LoginScreen
           onLoginAttempt={handleLoginAttempt}
           onOpenInstructorRegister={() => setShowInstructorRegisterModal(true)}
-          onOpenStudentRegister={() => setShowStudentSelfRegisterModal(true)}
+          onOpenStudentRegister={(instructorId) => {
+            if (instructorId) {
+              setInviteParams((prev) => ({ ...prev, instrutorId: instructorId }));
+            }
+            setShowStudentSelfRegisterModal(true);
+          }}
         />
 
         {/* 2FA Verification Modal */}
@@ -312,6 +319,7 @@ export default function App() {
     { id: 'DASHBOARD', label: 'Painel Geral', shortLabel: 'Início', icon: LayoutDashboard, moduleId: 'DASHBOARD', essential: true },
     { id: 'SCHEDULE', label: 'Agenda & Horários', shortLabel: 'Agenda', icon: Calendar, moduleId: 'SCHEDULE', essential: true },
     { id: 'STUDENTS', label: 'Alunos & Progresso', shortLabel: 'Alunos', icon: Users, moduleId: 'STUDENTS', essential: true },
+    { id: 'GEO_DEMAND', label: 'Mapa & Notificações', shortLabel: 'Mapa/Avisos', icon: MapPin, moduleId: 'DASHBOARD', essential: true },
     { id: 'WHATSAPP', label: 'Cobrança & PIX', shortLabel: 'Cobrar/PIX', icon: MessageSquare, moduleId: 'WHATSAPP', essential: true },
     { id: 'FINANCE', label: 'Finanças & DRE', shortLabel: 'Finanças', icon: DollarSign, moduleId: 'FINANCE_RECEIVABLES', essential: false },
     { id: 'FINANCIAL_HEALTH', label: 'Saúde Financeira', shortLabel: 'Saúde', icon: HeartPulse, moduleId: 'FINANCIAL_HEALTH', essential: false },
@@ -494,6 +502,10 @@ export default function App() {
 
             {activeTab === 'SCHEDULE' && (
               <ScheduleView currentOrg={currentOrg!} currentUser={currentUser} />
+            )}
+
+            {activeTab === 'GEO_DEMAND' && (
+              <InstructorGeoDemandView currentOrg={currentOrg!} currentUser={currentUser} />
             )}
 
             {activeTab === 'WHATSAPP' && (

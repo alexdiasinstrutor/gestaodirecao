@@ -14,11 +14,13 @@ import {
   Info,
   ChevronDown,
   ChevronUp,
-  ExternalLink
+  ExternalLink,
+  MapPin
 } from 'lucide-react';
 import { db } from '../../lib/storage';
 import { User, Organization, Student } from '../../types';
 import { PasswordRecoveryModal } from './PasswordRecoveryModal';
+import { InstructorLocatorMapModal } from './InstructorLocatorMapModal';
 import { Logo } from '../common/Logo';
 import { signInWithGoogleOAuth } from '../../lib/supabaseClient';
 import { generateCPFFingerprint, maskCPF } from '../../lib/validation';
@@ -26,7 +28,7 @@ import { generateCPFFingerprint, maskCPF } from '../../lib/validation';
 interface LoginScreenProps {
   onLoginAttempt: (user: User) => void;
   onOpenInstructorRegister: () => void;
-  onOpenStudentRegister: () => void;
+  onOpenStudentRegister: (instructorId?: string) => void;
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({
@@ -47,6 +49,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [googleRole, setGoogleRole] = useState<'INSTRUTOR' | 'ALUNO'>('INSTRUTOR');
   const [googleActionError, setGoogleActionError] = useState<string>('');
   const [showGoogleOAuthHelp, setShowGoogleOAuthHelp] = useState<boolean>(false);
+  const [showLocatorMap, setShowLocatorMap] = useState<boolean>(false);
 
   const handleStartGoogleFlow = async () => {
     setError('');
@@ -391,23 +394,34 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           </form>
 
           {/* Registration Links */}
-          <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row gap-2">
+          <div className="pt-2 border-t border-slate-100 space-y-2">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                type="button"
+                onClick={onOpenInstructorRegister}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-semibold text-slate-700 transition-colors cursor-pointer"
+              >
+                <UserPlus className="w-3.5 h-3.5 text-blue-600" />
+                Novo Instrutor
+              </button>
+              <button
+                type="button"
+                onClick={() => onOpenStudentRegister()}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-semibold text-slate-700 transition-colors cursor-pointer"
+                title="Auto-cadastro condicionado ao código do instrutor"
+              >
+                <GraduationCap className="w-3.5 h-3.5 text-emerald-600" />
+                Portal do Aluno
+              </button>
+            </div>
             <button
               type="button"
-              onClick={onOpenInstructorRegister}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-semibold text-slate-700 transition-colors cursor-pointer"
+              onClick={() => setShowLocatorMap(true)}
+              className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-900 transition-colors cursor-pointer"
+              title="Localizar instrutores próximos por geolocalização (5 km a 40 km)"
             >
-              <UserPlus className="w-3.5 h-3.5 text-blue-600" />
-              Novo Instrutor
-            </button>
-            <button
-              type="button"
-              onClick={onOpenStudentRegister}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-semibold text-slate-700 transition-colors cursor-pointer"
-              title="Auto-cadastro condicionado à indicação de instrutor"
-            >
-              <GraduationCap className="w-3.5 h-3.5 text-emerald-600" />
-              Portal do Aluno
+              <MapPin className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Localizar Instrutor Próximo (Mapa 5 km a 40 km)</span>
             </button>
           </div>
         </div>
@@ -434,6 +448,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           onSuccessLogin={(user) => {
             setShowPasswordRecovery(false);
             onLoginAttempt(user);
+          }}
+        />
+      )}
+
+      {/* Mapa Público de Localização de Instrutores (5km a 40km) */}
+      {showLocatorMap && (
+        <InstructorLocatorMapModal
+          onClose={() => setShowLocatorMap(false)}
+          onSelectInstructor={(inst) => {
+            setShowLocatorMap(false);
+            onOpenStudentRegister(inst.id);
           }}
         />
       )}

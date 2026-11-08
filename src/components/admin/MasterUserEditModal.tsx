@@ -234,8 +234,8 @@ export const MasterUserEditModal: React.FC<MasterUserEditModalProps> = ({
                 {mode === 'NEW'
                   ? 'Cadastrar Novo Administrador Master'
                   : isSelf
-                  ? 'Editar Meus Dados Cadastrais (Master)'
-                  : 'Editar Dados do Administrador Master'}
+                    ? 'Editar Meus Dados Cadastrais (Master)'
+                    : 'Editar Dados do Administrador Master'}
               </h2>
               <p className="text-xs text-purple-200/80">
                 Acesso de Governança Global do Sistema Gestão AD

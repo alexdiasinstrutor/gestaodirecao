@@ -17,7 +17,9 @@ import {
   SaaSPlanType,
   DiscountCoupon,
   CouponRedemption,
-  StudentNotification
+  StudentNotification,
+  InstructorCoverageProfile,
+  StudentLeadRequest
 } from '../types';
 import { generateCPFFingerprint, maskCPF, formatDateBR } from './validation';
 import {
@@ -113,6 +115,8 @@ const STORAGE_KEYS = {
   DELETED_SLOTS: 'agd_deleted_slots',
   PENDING_NEW_SLOTS: 'agd_pending_new_slots',
   STUDENT_NOTIFICATIONS: 'agd_student_notifications',
+  INSTRUCTOR_COVERAGE: 'agd_instructor_coverage',
+  STUDENT_LEADS: 'agd_student_leads',
   SEEDED: 'agd_seeded_v5'
 };
 
@@ -843,19 +847,35 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
     writeList(STORAGE_KEYS.USERS, Array.from(mergedUsersMap.values()));
 
     // Carrega todos os registros remotos do Supabase de todas as organizações
-    const [students, vehicles, lessons, slots, accounts, payments, expenses, investments, packages, notificationLogs] =
-      await Promise.all([
-        supabaseAdapter.getStudents(),
-        supabaseAdapter.getVehicles(),
-        supabaseAdapter.getLessons(),
-        supabaseAdapter.getSlots(),
-        supabaseAdapter.getAccountsReceivable(),
-        supabaseAdapter.getPayments(),
-        supabaseAdapter.getExpenses(),
-        supabaseAdapter.getInvestments(),
-        supabaseAdapter.getPackages(),
-        supabaseAdapter.getNotificationAuditLogs()
-      ]);
+    const [
+      students,
+      vehicles,
+      lessons,
+      slots,
+      accounts,
+      payments,
+      expenses,
+      investments,
+      packages,
+      notificationLogs,
+      coverageLogs,
+      studentLeadLogs,
+      packageMetaLogs
+    ] = await Promise.all([
+      supabaseAdapter.getStudents(),
+      supabaseAdapter.getVehicles(),
+      supabaseAdapter.getLessons(),
+      supabaseAdapter.getSlots(),
+      supabaseAdapter.getAccountsReceivable(),
+      supabaseAdapter.getPayments(),
+      supabaseAdapter.getExpenses(),
+      supabaseAdapter.getInvestments(),
+      supabaseAdapter.getPackages(),
+      supabaseAdapter.getNotificationAuditLogs(),
+      supabaseAdapter.getCoverageAuditLogs(),
+      supabaseAdapter.getStudentLeadAuditLogs(),
+      supabaseAdapter.getPackageMetaAuditLogs()
+    ]);
 
     // Merge seguro de alunos: Supabase tem precedência, mas novos alunos locais são preservados
     if (students && students.length > 0) {
@@ -967,8 +987,81 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
     if (expenses && expenses.length > 0) writeList(STORAGE_KEYS.EXPENSES, expenses);
     if (investments && investments.length > 0) writeList(STORAGE_KEYS.INVESTMENTS, investments);
     if (packages && packages.length > 0) {
-      writeList(STORAGE_KEYS.PACKAGES, packages);
+      const localPkgs = readList<PackageOffer>(STORAGE_KEYS.PACKAGES);
+      const pkgMetaMap = new Map<string, Partial<PackageOffer>>();
+      if (packageMetaLogs && packageMetaLogs.length > 0) {
+        for (const log of packageMetaLogs) {
+          if (log.detalhes) {
+            try {
+              const parsed = JSON.parse(log.detalhes) as PackageOffer;
+              if (parsed && parsed.id) {
+                pkgMetaMap.set(parsed.id, parsed);
+              }
+            } catch {
+              // ignore
+            }
+          }
+        }
+      }
+      const mergedPkgsMap = new Map<string, PackageOffer>();
+      localPkgs.forEach((lp) => mergedPkgsMap.set(lp.id, lp));
+      packages.forEach((rp) => {
+        const localExisting = mergedPkgsMap.get(rp.id);
+        const metaExisting = pkgMetaMap.get(rp.id);
+        mergedPkgsMap.set(rp.id, {
+          ...rp,
+          instrutorId: rp.instrutorId || metaExisting?.instrutorId || localExisting?.instrutorId,
+          instrutorNome: rp.instrutorNome || metaExisting?.instrutorNome || localExisting?.instrutorNome
+        });
+      });
+      writeList(STORAGE_KEYS.PACKAGES, Array.from(mergedPkgsMap.values()));
       db.sanitizePackages();
+    }
+
+    // Sincroniza perfis de cobertura geográfica dos instrutores (Raio 5-40km, Cidades Atendidas, Câmbio e Veículos)
+    if (coverageLogs && coverageLogs.length > 0) {
+      const localCoverages = readList<InstructorCoverageProfile>(STORAGE_KEYS.INSTRUCTOR_COVERAGE);
+      const covMap = new Map<string, InstructorCoverageProfile>();
+      localCoverages.forEach((c) => covMap.set(c.instrutorId, c));
+      for (const log of coverageLogs) {
+        if (log.detalhes) {
+          try {
+            const parsed = JSON.parse(log.detalhes) as InstructorCoverageProfile;
+            if (parsed && parsed.instrutorId) {
+              const existing = covMap.get(parsed.instrutorId);
+              if (!existing || (parsed.atualizadoEm && parsed.atualizadoEm >= existing.atualizadoEm)) {
+                covMap.set(parsed.instrutorId, parsed);
+              }
+            }
+          } catch {
+            // ignore
+          }
+        }
+      }
+      writeList(STORAGE_KEYS.INSTRUCTOR_COVERAGE, Array.from(covMap.values()));
+    }
+
+    // Sincroniza solicitações de alunos à procura de instrutor (Demanda Reversa)
+    if (studentLeadLogs && studentLeadLogs.length > 0) {
+      const localLeads = readList<StudentLeadRequest>(STORAGE_KEYS.STUDENT_LEADS);
+      const leadsMap = new Map<string, StudentLeadRequest>();
+      localLeads.forEach((l) => leadsMap.set(l.id, l));
+      for (const log of studentLeadLogs) {
+        if (log.detalhes) {
+          try {
+            const parsed = JSON.parse(log.detalhes) as StudentLeadRequest;
+            if (parsed && parsed.id) {
+              leadsMap.set(parsed.id, parsed);
+            }
+          } catch {
+            // ignore
+          }
+        }
+      }
+      writeList(
+        STORAGE_KEYS.STUDENT_LEADS,
+        Array.from(leadsMap.values()).sort((a, b) => b.criadoEm.localeCompare(a.criadoEm))
+      );
     }
 
     // Cupons de desconto: só sobrescreve a base local se a tabela remota existir e tiver dados
@@ -1618,8 +1711,10 @@ export const db = {
   },
 
   // Students
-  getStudents(orgId: string): Student[] {
-    return readList<Student>(STORAGE_KEYS.STUDENTS).filter((s) => s.organizacaoId === orgId);
+  getStudents(orgId: string, instrutorId?: string): Student[] {
+    const list = readList<Student>(STORAGE_KEYS.STUDENTS).filter((s) => s.organizacaoId === orgId);
+    if (!instrutorId) return list;
+    return list.filter((s) => !s.instrutorId || s.instrutorId === instrutorId);
   },
 
   getStudentById(studentId: string): Student | undefined {
@@ -2272,19 +2367,39 @@ export const db = {
   // Package Offers (Estritamente os pacotes que o próprio instrutor cadastrou, sem criação aleatória de outros pacotes)
   getPackages(orgId: string, instrutorId?: string): PackageOffer[] {
     const all = readList<PackageOffer>(STORAGE_KEYS.PACKAGES);
-    const orgPackages = all.filter((p) => p.organizacaoId === orgId);
+    const instructorUser = instrutorId ? this.getUserById(instrutorId) : undefined;
+    const effectiveOrgId = instructorUser?.organizacaoId || orgId;
 
     if (instrutorId) {
-      const instructorSpecific = orgPackages.filter((p) => p.instrutorId === instrutorId);
-      // Se o instrutor tem pacotes próprios cadastrados, retorna estritamente os dele
+      // 1. Pacotes com instrutorId explícito deste instrutor (mesmo que em org diferente)
+      const instructorSpecific = all.filter((p) => p.instrutorId === instrutorId);
+      // 2. Pacotes da organização do instrutor que não pertençam exclusivamente a outro instrutor
+      const orgPackagesForInstructor = all.filter(
+        (p) =>
+          p.organizacaoId === effectiveOrgId &&
+          (!p.instrutorId || p.instrutorId === instrutorId || p.instrutorId === 'sistema' || p.instrutorId === '')
+      );
+
       if (instructorSpecific.length > 0) {
-        return instructorSpecific;
+        const merged = new Map<string, PackageOffer>();
+        instructorSpecific.forEach((p) => merged.set(p.id, p));
+        orgPackagesForInstructor.forEach((p) => merged.set(p.id, p));
+        return Array.from(merged.values());
       }
-      // Se ainda não cadastrou pacote próprio, retorna os pacotes gerais da organização
-      return orgPackages.filter((p) => !p.instrutorId || p.instrutorId === 'sistema' || p.instrutorId === '');
+
+      if (orgPackagesForInstructor.length > 0) {
+        return orgPackagesForInstructor;
+      }
+
+      // Fallback para pacotes na orgId informada sem outro instrutorId
+      return all.filter(
+        (p) =>
+          p.organizacaoId === orgId &&
+          (!p.instrutorId || p.instrutorId === instrutorId || p.instrutorId === 'sistema' || p.instrutorId === '')
+      );
     }
 
-    return orgPackages;
+    return all.filter((p) => p.organizacaoId === orgId);
   },
 
   // Remove pacotes auto-injetados de outras categorias pelo sistema anteriormente
@@ -2307,11 +2422,28 @@ export const db = {
     }
   },
 
+  persistPackageMetaToCloud(pkg: PackageOffer, actorId?: string): void {
+    const metaAudit: AuditLog = {
+      id: `pkgmeta_${pkg.id}`,
+      organizacaoId: pkg.organizacaoId,
+      usuarioId: pkg.instrutorId || actorId || 'sistema',
+      usuarioNome: pkg.instrutorNome || 'Instrutor',
+      acao: 'META_PACOTE_INSTRUTOR',
+      entidade: 'PackageOfferMeta',
+      entidadeId: pkg.id,
+      detalhes: JSON.stringify(pkg),
+      timestamp: new Date().toISOString()
+    };
+    supabaseAdapter.addAuditLog(metaAudit).catch(() => {});
+  },
+
   createPackage(pkg: PackageOffer, actorId: string): void {
     const list = readList<PackageOffer>(STORAGE_KEYS.PACKAGES);
     list.unshift(pkg);
     writeList(STORAGE_KEYS.PACKAGES, list);
+    notifyDataChange();
     supabaseAdapter.savePackage(pkg).catch(console.error);
+    this.persistPackageMetaToCloud(pkg, actorId);
     this.addAuditLog(pkg.organizacaoId, actorId, 'CRIAR_PACOTE', 'Pacote', pkg.id, `${pkg.nome} - R$ ${(pkg.valorCentavos / 100).toFixed(2)} (${pkg.formaPagamento})`);
   },
 
@@ -2319,12 +2451,20 @@ export const db = {
     const list = readList<PackageOffer>(STORAGE_KEYS.PACKAGES);
     const index = list.findIndex((p) => p.id === pkg.id);
     if (index >= 0) {
-      list[index] = pkg;
+      list[index] = {
+        ...pkg,
+        instrutorId: pkg.instrutorId || list[index].instrutorId,
+        instrutorNome: pkg.instrutorNome || list[index].instrutorNome
+      };
     } else {
       list.push(pkg);
     }
     writeList(STORAGE_KEYS.PACKAGES, list);
+    notifyDataChange();
     supabaseAdapter.savePackage(pkg).catch(console.error);
+    if (pkg.instrutorId) {
+      this.persistPackageMetaToCloud(pkg, pkg.instrutorId);
+    }
   },
 
   togglePackageStatus(packageId: string, actorId: string): void {
@@ -2333,7 +2473,9 @@ export const db = {
     if (pkg) {
       pkg.ativo = !pkg.ativo;
       writeList(STORAGE_KEYS.PACKAGES, list);
+      notifyDataChange();
       supabaseAdapter.savePackage(pkg).catch(console.error);
+      this.persistPackageMetaToCloud(pkg, actorId);
       this.addAuditLog(pkg.organizacaoId, actorId, 'ALTERAR_STATUS_PACOTE', 'Pacote', pkg.id, `Status alterado para ${pkg.ativo ? 'ATIVO' : 'INATIVO'}`);
     }
   },
@@ -2344,7 +2486,9 @@ export const db = {
     if (index >= 0) {
       list[index] = pkg;
       writeList(STORAGE_KEYS.PACKAGES, list);
+      notifyDataChange();
       supabaseAdapter.savePackage(pkg).catch(console.error);
+      this.persistPackageMetaToCloud(pkg, actorId);
       this.addAuditLog(pkg.organizacaoId, actorId, 'ATUALIZAR_PACOTE', 'Pacote', pkg.id, `Atualizado pacote ${pkg.nome} - R$ ${(pkg.valorCentavos / 100).toFixed(2)}`);
     }
   },
@@ -2355,9 +2499,138 @@ export const db = {
     if (pkg) {
       const filtered = list.filter((p) => p.id !== packageId);
       writeList(STORAGE_KEYS.PACKAGES, filtered);
+      notifyDataChange();
       supabaseAdapter.deletePackage(packageId).catch(console.error);
       this.addAuditLog(pkg.organizacaoId, actorId, 'EXCLUIR_PACOTE', 'Pacote', pkg.id, `Excluído pacote ${pkg.nome}`);
     }
+  },
+
+  // Cobertura Geográfica do Instrutor (Raio 5 a 40 km, Cidades Atendidas, Veículos e Câmbio)
+  getInstructorCoverage(instrutorId: string): InstructorCoverageProfile | undefined {
+    const list = readList<InstructorCoverageProfile>(STORAGE_KEYS.INSTRUCTOR_COVERAGE);
+    return list.find((c) => c.instrutorId === instrutorId);
+  },
+
+  getAllInstructorCoverages(): InstructorCoverageProfile[] {
+    return readList<InstructorCoverageProfile>(STORAGE_KEYS.INSTRUCTOR_COVERAGE);
+  },
+
+  async saveInstructorCoverageAsync(profile: InstructorCoverageProfile): Promise<void> {
+    const list = readList<InstructorCoverageProfile>(STORAGE_KEYS.INSTRUCTOR_COVERAGE);
+    const normalized: InstructorCoverageProfile = {
+      ...profile,
+      raioAtendimentoKm: Math.max(5, Math.min(40, Math.round(profile.raioAtendimentoKm || 20))),
+      atualizadoEm: new Date().toISOString()
+    };
+    const idx = list.findIndex((c) => c.instrutorId === normalized.instrutorId);
+    if (idx >= 0) {
+      list[idx] = normalized;
+    } else {
+      list.push(normalized);
+    }
+    writeList(STORAGE_KEYS.INSTRUCTOR_COVERAGE, list);
+
+    // Também atualiza cidade/estado/bairro base no cadastro do usuário se estiver vazio
+    const users = readList<User>(STORAGE_KEYS.USERS);
+    const uIdx = users.findIndex((u) => u.id === normalized.instrutorId);
+    if (uIdx >= 0) {
+      users[uIdx].cidade = normalized.cidadeBase || users[uIdx].cidade;
+      users[uIdx].estado = normalized.estadoBase || users[uIdx].estado;
+      users[uIdx].bairro = normalized.bairroBase || users[uIdx].bairro;
+      writeList(STORAGE_KEYS.USERS, users);
+      if (supabaseAdapter.enabled) {
+        supabaseAdapter.saveUser(users[uIdx]).catch(console.error);
+      }
+    }
+
+    const auditEntry: AuditLog = {
+      id: `cov_${normalized.instrutorId}`,
+      organizacaoId: normalized.organizacaoId,
+      usuarioId: normalized.instrutorId,
+      usuarioNome: users[uIdx]?.nome || 'Instrutor',
+      acao: 'CONFIGURAR_COBERTURA_GEOGRAFICA',
+      entidade: 'InstructorCoverage',
+      entidadeId: normalized.instrutorId,
+      detalhes: JSON.stringify(normalized),
+      timestamp: normalized.atualizadoEm
+    };
+
+    notifyDataChange();
+    if (supabaseAdapter.enabled) {
+      await supabaseAdapter.addAuditLog(auditEntry).catch(console.error);
+    }
+    notifyDataChange();
+  },
+
+  // Solicitações de Alunos à Procura de Instrutor (Demanda Reversa)
+  getStudentLeads(): StudentLeadRequest[] {
+    const list = readList<StudentLeadRequest>(STORAGE_KEYS.STUDENT_LEADS);
+    return list.sort((a, b) => b.criadoEm.localeCompare(a.criadoEm));
+  },
+
+  async createStudentLeadAsync(lead: StudentLeadRequest): Promise<void> {
+    const list = readList<StudentLeadRequest>(STORAGE_KEYS.STUDENT_LEADS);
+    const idx = list.findIndex((l) => l.id === lead.id);
+    if (idx >= 0) {
+      list[idx] = lead;
+    } else {
+      list.unshift(lead);
+    }
+    writeList(STORAGE_KEYS.STUDENT_LEADS, list);
+
+    const defaultOrgId = this.getOrganizations()[0]?.id || 'org_direcao_certa_01';
+    const auditEntry: AuditLog = {
+      id: lead.id,
+      organizacaoId: defaultOrgId,
+      usuarioId: lead.id,
+      usuarioNome: lead.nome,
+      acao: 'CADASTRO_PROCURA_INSTRUTOR',
+      entidade: 'StudentLeadRequest',
+      entidadeId: lead.id,
+      detalhes: JSON.stringify(lead),
+      timestamp: lead.criadoEm
+    };
+
+    notifyDataChange();
+    if (supabaseAdapter.enabled) {
+      await supabaseAdapter.addAuditLog(auditEntry).catch(console.error);
+    }
+    notifyDataChange();
+  },
+
+  async updateStudentLeadStatusAsync(
+    leadId: string,
+    status: StudentLeadRequest['status'],
+    instrutor?: User
+  ): Promise<void> {
+    const list = readList<StudentLeadRequest>(STORAGE_KEYS.STUDENT_LEADS);
+    const lead = list.find((l) => l.id === leadId);
+    if (!lead) return;
+    lead.status = status;
+    if (instrutor) {
+      lead.atendidoPorInstrutorId = instrutor.id;
+      lead.atendidoPorInstrutorNome = instrutor.nome;
+    }
+    writeList(STORAGE_KEYS.STUDENT_LEADS, list);
+
+    const defaultOrgId = instrutor?.organizacaoId || this.getOrganizations()[0]?.id || 'org_direcao_certa_01';
+    const auditEntry: AuditLog = {
+      id: lead.id,
+      organizacaoId: defaultOrgId,
+      usuarioId: instrutor?.id || lead.id,
+      usuarioNome: instrutor?.nome || lead.nome,
+      acao: 'ATUALIZAR_PROCURA_INSTRUTOR',
+      entidade: 'StudentLeadRequest',
+      entidadeId: lead.id,
+      detalhes: JSON.stringify(lead),
+      timestamp: new Date().toISOString()
+    };
+
+    notifyDataChange();
+    if (supabaseAdapter.enabled) {
+      await supabaseAdapter.addAuditLog(auditEntry).catch(console.error);
+    }
+    notifyDataChange();
   },
 
   // Discount Coupons (PLATAFORMA = Master → instrutores | ALUNO = instrutor → alunos)

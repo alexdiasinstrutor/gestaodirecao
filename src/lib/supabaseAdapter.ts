@@ -627,6 +627,9 @@ async function supabaseUpsert(table: string, row: Record<string, any>): Promise<
         delete fallbackRow.cidade;
         delete fallbackRow.estado;
       }
+      if (table === 'package_offers') {
+        delete fallbackRow.instrutor_id;
+      }
       const retry = await supabase.from(table).upsert(fallbackRow, { onConflict: 'id' });
       if (retry.error) {
         console.error(`[Supabase] Erro ao salvar em "${table}" (fallback):`, retry.error.message);
@@ -862,6 +865,45 @@ export const supabaseAdapter = {
       .from('audit_logs')
       .select('*')
       .eq('entidade', 'StudentNotification')
+      .order('timestamp', { ascending: false })
+      .limit(500);
+    if (error) {
+      return [];
+    }
+    return (data || []).map(rowToAudit);
+  },
+  async getCoverageAuditLogs(): Promise<AuditLog[]> {
+    if (!supabase) return [];
+    const { data, error } = await supabase
+      .from('audit_logs')
+      .select('*')
+      .eq('entidade', 'InstructorCoverage')
+      .order('timestamp', { ascending: false })
+      .limit(500);
+    if (error) {
+      return [];
+    }
+    return (data || []).map(rowToAudit);
+  },
+  async getStudentLeadAuditLogs(): Promise<AuditLog[]> {
+    if (!supabase) return [];
+    const { data, error } = await supabase
+      .from('audit_logs')
+      .select('*')
+      .eq('entidade', 'StudentLeadRequest')
+      .order('timestamp', { ascending: false })
+      .limit(500);
+    if (error) {
+      return [];
+    }
+    return (data || []).map(rowToAudit);
+  },
+  async getPackageMetaAuditLogs(): Promise<AuditLog[]> {
+    if (!supabase) return [];
+    const { data, error } = await supabase
+      .from('audit_logs')
+      .select('*')
+      .eq('entidade', 'PackageOfferMeta')
       .order('timestamp', { ascending: false })
       .limit(500);
     if (error) {

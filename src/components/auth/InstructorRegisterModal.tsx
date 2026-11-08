@@ -197,6 +197,7 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
     try {
       const orgId = `org_${Date.now()}`;
       const userId = `usr_${Date.now()}`;
+      const cleanPhone = formatPhone(cleanPhoneDigits(formData.telefone));
 
       // Configuração de Assinatura a partir do plano e do cupom (se houver)
       const subResult = buildPlatformSubscription({
