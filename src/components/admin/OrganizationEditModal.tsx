@@ -11,6 +11,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { ALL_SYSTEM_MODULES, SAAS_PLANS, getPlanDetails } from '../../lib/saasPlans';
+import { maskPhoneInput, cleanPhoneDigits, isValidPhone, formatPhone } from '../../lib/validation';
 import type { Organization, OrganizationStatus, SaaSPlanType, PixKeyType, AddressFields } from '../../types';
 import { AddressCepFields } from '../common/AddressCepFields';
 
@@ -54,6 +55,7 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
   const [tipoChavePix, setTipoChavePix] = useState<PixKeyType>(organization.tipoChavePix || 'CNPJ');
   const [beneficiarioPix, setBeneficiarioPix] = useState(organization.beneficiarioPix || organization.nome);
   const [cidadePix, setCidadePix] = useState(organization.cidadePix || organization.cidade || 'SAO PAULO');
+  const [error, setError] = useState('');
 
   // Módulos liberados (se já tinha customizado usa eles, se não usa os padrões do plano)
   const [selectedModules, setSelectedModules] = useState<string[]>(() => {
@@ -90,6 +92,18 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+
+    let cleanPhone = organization.telefone || '';
+    if (telefone.trim()) {
+      const phoneDigits = cleanPhoneDigits(telefone);
+      if (phoneDigits.length < 10 || !isValidPhone(phoneDigits)) {
+        setError('Telefone / WhatsApp inválido. Informe um número brasileiro com DDD válido (10 ou 11 dígitos).');
+        return;
+      }
+      cleanPhone = formatPhone(phoneDigits);
+    }
+
     const valorCentavos = Math.round(parseFloat(valorMensalReais || '0') * 100);
 
     const updated: Organization = {
@@ -97,7 +111,7 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
       nome: nome.trim(),
       tipo,
       cnpjCpf: cnpjCpf.trim(),
-      telefone: telefone.trim(),
+      telefone: cleanPhone,
       email: email.trim(),
       cep: address.cep?.trim(),
       logradouro: address.logradouro?.trim(),
@@ -141,6 +155,13 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
 
         {/* Formulário */}
         <form onSubmit={handleSubmit} className="p-5 sm:p-6 overflow-y-auto space-y-5 text-xs flex-1">
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0 text-red-600" />
+              <p className="font-semibold text-xs">{error}</p>
+            </div>
+          )}
+
           {/* Dados Gerais */}
           <div className="space-y-3">
             <span className="font-bold text-slate-900 uppercase text-xs font-bold text-slate-700 tracking-wider block">
@@ -182,9 +203,14 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
                 <label className="block font-semibold text-slate-700 mb-1">Telefone / WhatsApp</label>
                 <input
                   type="text"
+                  placeholder="(11) 98765-4321"
                   value={telefone}
-                  onChange={(e) => setTelefone(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono"
+                  onChange={(e) => {
+                    setTelefone(maskPhoneInput(e.target.value));
+                    if (error) setError('');
+                  }}
+                  maxLength={15}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono text-xs"
                 />
               </div>
               <div>

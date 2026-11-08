@@ -7,10 +7,11 @@ import {
   Calendar,
   Sparkles,
   UserCheck,
-  QrCode
+  QrCode,
+  AlertCircle
 } from 'lucide-react';
 import { SAAS_PLANS, getPlanDetails } from '../../lib/saasPlans';
-import { generateCPFFingerprint, maskCPF } from '../../lib/validation';
+import { generateCPFFingerprint, maskCPF, maskPhoneInput, cleanPhoneDigits, isValidPhone, formatPhone } from '../../lib/validation';
 import type { Organization, OrganizationType, SaaSPlanType, User, PixKeyType, AddressFields } from '../../types';
 import { AddressCepFields } from '../common/AddressCepFields';
 
@@ -52,9 +53,33 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
   const [userEmail, setUserEmail] = useState('');
   const [userTelefone, setUserTelefone] = useState('');
   const [userCpf, setUserCpf] = useState('');
+  const [error, setError] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+
+    const orgPhoneDigits = cleanPhoneDigits(telefone);
+    if (!orgPhoneDigits || orgPhoneDigits.length < 10) {
+      setError('O telefone WhatsApp da organização é obrigatório e deve conter DDD (mínimo 10 ou 11 dígitos).');
+      return;
+    }
+    if (!isValidPhone(orgPhoneDigits)) {
+      setError('DDD ou formato inválido no telefone da organização (DDD brasileiro entre 11 e 99).');
+      return;
+    }
+    const cleanOrgPhone = formatPhone(orgPhoneDigits);
+
+    let cleanUserPhone = cleanOrgPhone;
+    if (criarUsuarioInicial && userTelefone.trim()) {
+      const userPhoneDigits = cleanPhoneDigits(userTelefone);
+      if (userPhoneDigits.length < 10 || !isValidPhone(userPhoneDigits)) {
+        setError('Telefone do responsável inválido (mínimo 10 ou 11 dígitos com DDD válido entre 11 e 99).');
+        return;
+      }
+      cleanUserPhone = formatPhone(userPhoneDigits);
+    }
+
     const orgId = `org_${Date.now()}`;
     const planDef = getPlanDetails(plano);
     const randomHex = Math.floor(100000 + Math.random() * 900000);
@@ -66,7 +91,7 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
       nome: nome.trim(),
       tipo,
       cnpjCpf: cnpjCpf.trim(),
-      telefone: telefone.trim(),
+      telefone: cleanOrgPhone,
       email: email.trim(),
       cep: address.cep?.trim(),
       logradouro: address.logradouro?.trim(),
@@ -98,7 +123,7 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
         nome: userNome.trim(),
         email: userEmail.trim().toLowerCase(),
         papel: tipo === 'AUTOESCOLA_CFC' ? 'ADMIN_ORG' : 'INSTRUTOR',
-        telefone: userTelefone.trim() || telefone.trim(),
+        telefone: cleanUserPhone,
         cpfUltimos4: cleanCpf.slice(-4) || '0000',
         cpfFingerprint: generateCPFFingerprint(cleanCpf),
         cpfMascarado: cleanCpf.length === 11 ? maskCPF(cleanCpf) : '***.***.***-**',
@@ -140,6 +165,13 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
 
         {/* Formulário */}
         <form onSubmit={handleSubmit} className="p-5 sm:p-6 overflow-y-auto space-y-4 text-xs flex-1">
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+              <p className="font-semibold text-xs">{error}</p>
+            </div>
+          )}
+
           <div className="space-y-3">
             <span className="font-bold text-slate-900 uppercase text-xs font-bold text-slate-700 tracking-wider block">
               1. Dados da Instituição ou Instrutor
@@ -188,8 +220,12 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
                   required
                   placeholder="(11) 98888-7777"
                   value={telefone}
-                  onChange={(e) => setTelefone(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono"
+                  onChange={(e) => {
+                    setTelefone(maskPhoneInput(e.target.value));
+                    if (error) setError('');
+                  }}
+                  maxLength={15}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono text-xs"
                 />
               </div>
 
@@ -365,8 +401,12 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
                     type="text"
                     placeholder="(11) 98888-7777"
                     value={userTelefone}
-                    onChange={(e) => setUserTelefone(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-mono"
+                    onChange={(e) => {
+                      setUserTelefone(maskPhoneInput(e.target.value));
+                      if (error) setError('');
+                    }}
+                    maxLength={15}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-mono text-xs"
                   />
                 </div>
                 <div>

@@ -134,17 +134,50 @@ export function formatCurrencyBRL(centavos: number): string {
 }
 
 /**
- * Formatação de telefone para padrão brasileiro (11) 99999-9999
+ * Extrai estritamente os dígitos numéricos de um telefone (remove qualquer caractere de máscara)
  */
-export function formatPhone(phone: string): string {
-  const digits = (phone || '').replace(/\D/g, '');
+export function cleanPhoneDigits(phone: string | undefined | null): string {
+  return (phone || '').replace(/\D/g, '');
+}
+
+/**
+ * Validação rigorosa de número de telefone celular / fixo brasileiro com DDD
+ * Deve possuir 10 ou 11 dígitos numéricos com DDD válido entre 11 e 99
+ */
+export function isValidPhone(phone: string | undefined | null): boolean {
+  const digits = cleanPhoneDigits(phone);
+  if (digits.length !== 10 && digits.length !== 11) return false;
+  const ddd = parseInt(digits.slice(0, 2), 10);
+  if (ddd < 11 || ddd > 99) return false;
+  return true;
+}
+
+/**
+ * Aplica máscara de telefone dinamicamente enquanto o usuário digita
+ * Nunca retorna caracteres residuais de máscara (como "(" ou "( ) -") se o campo for apagado
+ */
+export function maskPhoneInput(value: string | undefined | null): string {
+  const digits = cleanPhoneDigits(value).slice(0, 11);
+  if (!digits) return '';
+  if (digits.length <= 2) return `(${digits}`;
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
+
+/**
+ * Formatação de telefone para padrão brasileiro (11) 99999-9999
+ * Se o número não contiver pelo menos 10 dígitos, retorna apenas os dígitos puros (nunca uma máscara incompleta quebrada)
+ */
+export function formatPhone(phone: string | undefined | null): string {
+  const digits = cleanPhoneDigits(phone);
   if (digits.length === 11) {
     return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
   }
   if (digits.length === 10) {
     return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
   }
-  return phone;
+  return digits;
 }
 
 /**

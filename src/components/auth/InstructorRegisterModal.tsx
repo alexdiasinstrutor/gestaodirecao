@@ -14,7 +14,7 @@ import {
   UserCheck
 } from 'lucide-react';
 import { db } from '../../lib/storage';
-import { isValidCPF, generateCPFFingerprint, getCPFLast4, maskCPF, formatCurrencyBRL } from '../../lib/validation';
+import { isValidCPF, generateCPFFingerprint, getCPFLast4, maskCPF, formatCurrencyBRL, maskPhoneInput, cleanPhoneDigits, isValidPhone, formatPhone } from '../../lib/validation';
 import { isValidCEPFormat } from '../../lib/cepService';
 import { User, Organization, AddressFields, SaaSPlanType } from '../../types';
 import { AddressCepFields } from '../common/AddressCepFields';
@@ -147,10 +147,18 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
       return;
     }
 
-    if (!formData.telefone.trim()) {
-      setError('Por favor, informe um número de telefone WhatsApp com DDD.');
+    const phoneDigits = cleanPhoneDigits(formData.telefone);
+    if (!phoneDigits || phoneDigits.length < 10) {
+      setError('Por favor, informe um número de telefone WhatsApp válido com DDD (mínimo 10 ou 11 dígitos).');
       return;
     }
+
+    if (!isValidPhone(phoneDigits)) {
+      setError('DDD ou formato inválido. Informe um número de telefone brasileiro válido com DDD (11 a 99).');
+      return;
+    }
+
+    const cleanPhone = formatPhone(phoneDigits);
 
     if (!isValidCEPFormat(address.cep || '')) {
       setError('Por favor, informe um CEP válido com 8 dígitos para localizar o endereço.');
@@ -202,7 +210,7 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
         nome: formData.nomeAutoescola.trim() || `${formData.nome.trim()} (Instrutor Autônomo)`,
         tipo: formData.tipo,
         cnpjCpf: formData.cpf,
-        telefone: formData.telefone,
+        telefone: cleanPhone,
         email: formData.email,
         cep: address.cep?.trim(),
         logradouro: address.logradouro?.trim(),
@@ -226,7 +234,7 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
         nome: formData.nome.trim(),
         email: formData.email.trim().toLowerCase(),
         papel: 'ADMIN_ORG',
-        telefone: formData.telefone,
+        telefone: cleanPhone,
         cpfUltimos4: getCPFLast4(formData.cpf),
         cpfFingerprint: generateCPFFingerprint(formData.cpf),
         cpfMascarado: maskCPF(formData.cpf),
@@ -595,9 +603,10 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
                     type="text"
                     required
                     value={formData.telefone}
-                    onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, telefone: maskPhoneInput(e.target.value) })}
                     placeholder="(11) 98765-4321"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none"
+                    maxLength={15}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none font-mono text-xs"
                   />
                 </div>
 

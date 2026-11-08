@@ -23,6 +23,7 @@ import {
 } from '../../lib/receiptPdfGenerator';
 import type { PaymentReceiptData } from '../../lib/receiptPdfGenerator';
 import { formatCurrencyBRL, formatDateBR } from '../../lib/validation';
+import { buildWhatsAppLink } from '../../lib/whatsapp';
 import type { PaymentMethod } from '../../types';
 
 interface PaymentReceiptModalProps {
@@ -56,10 +57,12 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
   };
 
   const handleSendWhatsApp = () => {
-    const rawPhone = (receiptData.aluno.telefone || '').replace(/\D/g, '');
-    const phone = rawPhone.length <= 11 ? `55${rawPhone}` : rawPhone;
     const msg = generateWhatsAppReceiptMessage(receiptData);
-    const url = `https://wa.me/${phone}?text=${msg}`;
+    const url = buildWhatsAppLink(receiptData.aluno.telefone, msg);
+    if (!url) {
+      alert('Telefone do aluno não informado ou inválido para envio via WhatsApp.');
+      return;
+    }
     window.open(url, '_blank');
   };
 

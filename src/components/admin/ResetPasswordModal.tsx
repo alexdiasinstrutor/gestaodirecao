@@ -11,6 +11,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { db } from '../../lib/storage';
+import { buildWhatsAppLink } from '../../lib/whatsapp';
 import type { User } from '../../types';
 
 interface ResetPasswordModalProps {
@@ -49,9 +50,11 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
   const mensagemWhatsApp = `Olá, ${targetUser.nome}! 🔑\n\nSua senha de acesso ao *Sistema de Gestão de Direção* foi redefinida pelo Administrador Master.\n\n📧 *Seu E-mail de Login:* ${targetUser.email}\n🔒 *Nova Senha Temporária:* *${newTempPass}*\n🔗 *Link do Sistema:* ${window.location.origin}\n\nRecomendamos alterar sua senha após o primeiro acesso!`;
 
   const handleSendWhatsApp = () => {
-    const cleanPhone = (targetUser.telefone || '').replace(/\D/g, '');
-    const phoneParam = cleanPhone.length >= 10 ? `55${cleanPhone}` : '';
-    const url = `https://wa.me/${phoneParam}?text=${encodeURIComponent(mensagemWhatsApp)}`;
+    const url = buildWhatsAppLink(targetUser.telefone, mensagemWhatsApp);
+    if (!url) {
+      alert('Telefone do usuário não informado ou inválido para envio via WhatsApp.');
+      return;
+    }
     window.open(url, '_blank');
   };
 

@@ -36,12 +36,22 @@ export function generateWhatsAppMessage(params: WhatsAppReminderParams): string 
   return `Olá, ${primeiroNome}! Aqui é da *${nomeInstrutorOuAutoescola}*.\n\nConsta em nosso sistema uma fatura em aberto referente às suas aulas de direção no valor de *${valorFormatado}*, com vencimento em *${vencimentoFormatado}*.\n\nVocê pode pagar de forma rápida via PIX:\n🔑 Chave PIX: *${chavePix}*\n\nCaso já tenha efetuado o pagamento, por gentileza desconsidere este aviso ou nos envie o comprovante. Obrigado! 🚗✨`;
 }
 
-export function buildWhatsAppLink(phoneRaw: string, message: string): string {
-  let cleanPhone = phoneRaw.replace(/\D/g, '');
-  if (!cleanPhone.startsWith('55') && cleanPhone.length <= 11) {
-    cleanPhone = `55${cleanPhone}`;
+export function buildWhatsAppLink(phoneRaw: string | undefined | null, message: string): string {
+  // Extrai estritamente os dígitos numéricos. NUNCA passa máscara ou caracteres não-dígitos.
+  const cleanDigits = (phoneRaw || '').replace(/\D/g, '');
+  if (!cleanDigits || cleanDigits.length < 10) {
+    return '';
   }
-  return `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(message)}`;
+
+  let finalNumber = cleanDigits;
+  // Se possui 10 ou 11 dígitos (DDD + número), adiciona o DDI 55
+  if (finalNumber.length === 10 || finalNumber.length === 11) {
+    finalNumber = `55${finalNumber}`;
+  } else if (!finalNumber.startsWith('55')) {
+    finalNumber = `55${finalNumber}`;
+  }
+
+  return `https://api.whatsapp.com/send?phone=${finalNumber}&text=${encodeURIComponent(message)}`;
 }
 
 /**
@@ -86,7 +96,16 @@ export function generatePixCopiaECola(
   txid: string = '***',
   cidade: string = 'SAO PAULO'
 ): string {
-  const cleanKey = (chavePix || '').trim();
+  let cleanKey = (chavePix || '').trim();
+  const digitsOnly = cleanKey.replace(/\D/g, '');
+  if (digitsOnly.length === 11 && (cleanKey.includes('.') || cleanKey.includes('-'))) {
+    cleanKey = digitsOnly;
+  } else if (digitsOnly.length === 14 && (cleanKey.includes('.') || cleanKey.includes('/') || cleanKey.includes('-'))) {
+    cleanKey = digitsOnly;
+  } else if ((cleanKey.includes('(') || cleanKey.includes(')') || cleanKey.includes('-')) && (digitsOnly.length === 10 || digitsOnly.length === 11)) {
+    cleanKey = digitsOnly.startsWith('55') ? `+${digitsOnly}` : `+55${digitsOnly}`;
+  }
+
   const cleanName = normalizeAscii(nomeRecebedor || 'RECEBEDOR', 25) || 'RECEBEDOR';
   const cleanCity = normalizeAscii(cidade || 'CIDADE', 15) || 'SAO PAULO';
   const cleanTxid = normalizeAscii((txid || 'PAGTO').replace(/[^a-zA-Z0-9]/g, ''), 25) || 'PAGTO';

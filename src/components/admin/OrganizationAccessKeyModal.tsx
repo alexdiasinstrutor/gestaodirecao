@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { db } from '../../lib/storage';
 import { formatDateBR } from '../../lib/validation';
+import { buildWhatsAppLink } from '../../lib/whatsapp';
 import type { Organization, User } from '../../types';
 
 interface OrganizationAccessKeyModalProps {
@@ -56,9 +57,11 @@ export const OrganizationAccessKeyModal: React.FC<OrganizationAccessKeyModalProp
   const mensagemWhatsApp = `Olá, ${organization.nome}! 🚗\n\nSeu acesso ao *Sistema de Gestão de Direção* foi liberado com sucesso pelo Administrador Master!\n\n📋 *Plano Contratado:* ${organization.plano}\n🔑 *Sua Chave de Acesso:* *${currentKey}*\n🔗 *Link de Acesso:* ${appUrl}\n\nCaso tenha dúvidas ou precise de suporte, estamos à disposição!`;
 
   const handleSendWhatsApp = () => {
-    const cleanPhone = (organization.telefone || '').replace(/\D/g, '');
-    const phoneParam = cleanPhone.length >= 10 ? `55${cleanPhone}` : '';
-    const url = `https://wa.me/${phoneParam}?text=${encodeURIComponent(mensagemWhatsApp)}`;
+    const url = buildWhatsAppLink(organization.telefone, mensagemWhatsApp);
+    if (!url) {
+      alert('Telefone do instrutor/autoescola não informado ou inválido para envio via WhatsApp.');
+      return;
+    }
     window.open(url, '_blank');
   };
 

@@ -23,6 +23,7 @@ import {
 import { db } from '../../lib/storage';
 import { formatCurrencyBRL, formatDateBR } from '../../lib/validation';
 import { getPlanDetails } from '../../lib/saasPlans';
+import { buildWhatsAppLink } from '../../lib/whatsapp';
 import { User, Organization } from '../../types';
 
 interface InstructorDashboardProps {
@@ -541,8 +542,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
             <div className="space-y-2.5 max-h-80 overflow-y-auto pr-0.5">
               {students.map((student) => {
                 const studentLessons = lessons.filter((l) => l.alunoId === student.id && l.status === 'CONCLUIDA');
-                const cleanPhone = (student.telefone || '').replace(/\D/g, '');
-                const whatsappUrl = cleanPhone ? `https://wa.me/55${cleanPhone}?text=Ol%C3%A1%20${encodeURIComponent(student.nome)},%20sou%20seu%20instrutor!` : null;
+                const whatsappUrl = buildWhatsAppLink(student.telefone, `Olá ${student.nome}, sou seu instrutor!`) || null;
 
                 return (
                   <div

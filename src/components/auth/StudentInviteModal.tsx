@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { X, Send, Copy, Check, MessageSquare, Link, Share2, Sparkles, Mail, Ticket } from 'lucide-react';
+import { X, Send, Copy, Check, MessageSquare, Link, Share2, Sparkles, Mail, Ticket, AlertCircle } from 'lucide-react';
 import { buildWhatsAppLink } from '../../lib/whatsapp';
 import { db } from '../../lib/storage';
 import { describeCoupon } from '../../lib/coupons';
+import { maskPhoneInput, cleanPhoneDigits, isValidPhone } from '../../lib/validation';
 import { User, Organization } from '../../types';
 
 interface StudentInviteModalProps {
@@ -20,6 +21,7 @@ export const StudentInviteModal: React.FC<StudentInviteModalProps> = ({
 }) => {
   const [copied, setCopied] = useState<boolean>(false);
   const [studentPhone, setStudentPhone] = useState<string>('');
+  const [phoneError, setPhoneError] = useState<string>('');
   const [studentEmail, setStudentEmail] = useState<string>('');
   const [studentName, setStudentName] = useState<string>('');
   const [emailSentNotice, setEmailSentNotice] = useState<boolean>(false);
@@ -50,7 +52,27 @@ export const StudentInviteModal: React.FC<StudentInviteModalProps> = ({
   };
 
   const handleSendWhatsApp = () => {
-    const link = buildWhatsAppLink(studentPhone || '11999999999', inviteMessage);
+    const digits = cleanPhoneDigits(studentPhone);
+    if (!digits) {
+      setPhoneError('O número de telefone WhatsApp é obrigatório para enviar o convite.');
+      return;
+    }
+    if (digits.length < 10) {
+      setPhoneError('Informe o telefone completo com DDD (mínimo 10 ou 11 dígitos, ex: (11) 98765-4321).');
+      return;
+    }
+    if (!isValidPhone(digits)) {
+      setPhoneError('DDD ou número inválido. Informe um telefone brasileiro válido com DDD (11 a 99).');
+      return;
+    }
+
+    setPhoneError('');
+    // Extrai estritamente os dígitos numéricos (nunca passa caracteres de máscara para o link)
+    const link = buildWhatsAppLink(digits, inviteMessage);
+    if (!link) {
+      setPhoneError('Não foi possível gerar o link do WhatsApp para este número.');
+      return;
+    }
     window.open(link, '_blank');
   };
 
@@ -142,18 +164,36 @@ export const StudentInviteModal: React.FC<StudentInviteModalProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Telefone / WhatsApp</label>
+                <label className="block font-bold text-slate-700 mb-1 flex items-center justify-between">
+                  <span>Telefone WhatsApp do Aluno *</span>
+                  <span className="text-[10px] uppercase font-bold text-red-600 bg-red-50 px-1.5 py-0.2 rounded">Obrigatório</span>
+                </label>
                 <input
                   type="text"
+                  required
                   placeholder="(11) 98765-4321"
                   value={studentPhone}
-                  onChange={(e) => setStudentPhone(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none"
+                  onChange={(e) => {
+                    setStudentPhone(maskPhoneInput(e.target.value));
+                    if (phoneError) setPhoneError('');
+                  }}
+                  maxLength={15}
+                  className={`w-full px-3 py-2 border rounded-xl focus:outline-none font-mono text-xs ${
+                    phoneError
+                      ? 'border-red-500 bg-red-50/40 focus:border-red-600 ring-2 ring-red-200'
+                      : 'border-slate-300 focus:border-blue-600'
+                  }`}
                 />
+                {phoneError && (
+                  <p className="text-[11px] font-semibold text-red-600 mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{phoneError}</span>
+                  </p>
+                )}
               </div>
 
               <div>
-                <label className="block font-medium text-slate-700 mb-1">E-mail do Aluno</label>
+                <label className="block font-medium text-slate-700 mb-1">E-mail do Aluno (Opcional)</label>
                 <input
                   type="email"
                   placeholder="aluno@email.com.br"

@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { db } from '../../lib/storage';
 import { supabaseAdapter } from '../../lib/supabaseAdapter';
-import { isValidCPF, generateCPFFingerprint, maskCPF, validateMinimumAge, formatCurrencyBRL } from '../../lib/validation';
+import { isValidCPF, generateCPFFingerprint, maskCPF, validateMinimumAge, formatCurrencyBRL, maskPhoneInput, cleanPhoneDigits, isValidPhone, formatPhone } from '../../lib/validation';
 import { isValidCEPFormat } from '../../lib/cepService';
 import { normalizeCouponCode, CouponDiscountResult } from '../../lib/coupons';
 import { Student, User, CnhCategory, CNH_CATEGORIES, AddressFields, DiscountCoupon, PackageOffer } from '../../types';
@@ -45,14 +45,6 @@ function maskCpfInput(value: string): string {
   if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
   if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
   return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
-}
-
-function maskPhoneInput(value: string): string {
-  const digits = value.replace(/\D/g, '').slice(0, 11);
-  if (digits.length <= 2) return digits.length ? `(${digits}` : '';
-  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
-  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 }
 
 export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> = ({
@@ -360,9 +352,13 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
       setError(enrollmentCheck.message || 'Este CPF já está condicionado a outro instrutor.');
       return;
     }
-    const phoneDigits = formData.telefone.replace(/\D/g, '');
-    if (phoneDigits.length < 10) {
-      setError('Informe um WhatsApp válido com DDD (ex: 11 98765-4321).');
+    const phoneDigits = cleanPhoneDigits(formData.telefone);
+    if (!phoneDigits || phoneDigits.length < 10) {
+      setError('Informe um WhatsApp válido com DDD (mínimo 10 ou 11 dígitos, ex: (11) 98765-4321).');
+      return;
+    }
+    if (!isValidPhone(phoneDigits)) {
+      setError('DDD ou formato inválido. Informe um número de telefone brasileiro com DDD entre 11 e 99.');
       return;
     }
     if (!address.cep || address.cep.replace(/\D/g, '').length !== 8) {
@@ -420,6 +416,8 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
       const userId = `usr_${Date.now()}`;
       const activeInstructorId = selectedInstructor.id;
       const contractedLessons = chosenPackage ? chosenPackage.totalAulas : 20;
+      const phoneDigits = cleanPhoneDigits(formData.telefone);
+      const cleanStudentPhone = formatPhone(phoneDigits);
 
       const newStudent: Student = {
         id: studentId,
@@ -427,7 +425,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
         instrutorId: activeInstructorId,
         nome: formData.nome.trim(),
         email: formData.email.trim().toLowerCase(),
-        telefone: formData.telefone,
+        telefone: cleanStudentPhone,
         cpfMascarado: maskCPF(formData.cpf),
         cpfFingerprint: generateCPFFingerprint(formData.cpf),
         dataNascimento: formData.dataNascimento,
@@ -465,7 +463,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
         nome: formData.nome.trim(),
         email: formData.email.trim().toLowerCase(),
         papel: 'ALUNO',
-        telefone: formData.telefone,
+        telefone: cleanStudentPhone,
         cpfUltimos4: formData.cpf.replace(/\D/g, '').slice(-4),
         cpfFingerprint: generateCPFFingerprint(formData.cpf),
         cpfMascarado: maskCPF(formData.cpf),

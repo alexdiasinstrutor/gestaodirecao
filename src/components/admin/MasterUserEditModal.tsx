@@ -15,7 +15,7 @@ import {
   ShieldAlert
 } from 'lucide-react';
 import { db } from '../../lib/storage';
-import { isValidCPF, maskCPF } from '../../lib/validation';
+import { isValidCPF, maskCPF, maskPhoneInput, cleanPhoneDigits, isValidPhone, formatPhone } from '../../lib/validation';
 import { User, AddressFields } from '../../types';
 import { AddressCepFields } from '../common/AddressCepFields';
 
@@ -101,16 +101,7 @@ export const MasterUserEditModal: React.FC<MasterUserEditModalProps> = ({
   };
 
   const handlePhoneChange = (val: string) => {
-    const clean = val.replace(/\D/g, '').slice(0, 11);
-    let formatted = clean;
-    if (clean.length > 10) {
-      formatted = `(${clean.slice(0, 2)}) ${clean.slice(2, 7)}-${clean.slice(7)}`;
-    } else if (clean.length > 6) {
-      formatted = `(${clean.slice(0, 2)}) ${clean.slice(2, 6)}-${clean.slice(6)}`;
-    } else if (clean.length > 2) {
-      formatted = `(${clean.slice(0, 2)}) ${clean.slice(2)}`;
-    }
-    setTelefone(formatted);
+    setTelefone(maskPhoneInput(val));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -138,6 +129,19 @@ export const MasterUserEditModal: React.FC<MasterUserEditModalProps> = ({
       return;
     }
 
+    const phoneDigits = cleanPhoneDigits(telefone);
+    if (!phoneDigits || phoneDigits.length < 10) {
+      setError('Por favor, informe um telefone WhatsApp válido com DDD (mínimo 10 ou 11 dígitos).');
+      return;
+    }
+
+    if (!isValidPhone(phoneDigits)) {
+      setError('DDD ou formato inválido. Informe um telefone brasileiro com DDD entre 11 e 99.');
+      return;
+    }
+
+    const cleanPhone = formatPhone(phoneDigits);
+
     if (mode === 'NEW') {
       if (!senha || senha.length < 6) {
         setError('A senha inicial do novo Administrador Master deve conter pelo menos 6 caracteres.');
@@ -157,7 +161,7 @@ export const MasterUserEditModal: React.FC<MasterUserEditModalProps> = ({
           {
             nome,
             email,
-            telefone,
+            telefone: cleanPhone,
             cpf: cleanCpfDigits,
             senha,
             cep: address.cep,
@@ -185,7 +189,7 @@ export const MasterUserEditModal: React.FC<MasterUserEditModalProps> = ({
           {
             nome,
             email,
-            telefone,
+            telefone: cleanPhone,
             cpf: cleanCpfDigits,
             cep: address.cep,
             estado: address.estado,
