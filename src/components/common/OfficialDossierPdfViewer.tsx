@@ -50,7 +50,7 @@ export const OfficialDossierPdfViewer: React.FC<OfficialDossierPdfViewerProps> =
             </span>
             <span className="px-2 py-0.5 rounded-full text-xs font-extrabold uppercase bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
               <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-              v6.2 Homologada
+              v6.8 Homologada (17/17 Testes)
             </span>
             <span className="px-2 py-0.5 rounded-full text-xs font-mono bg-slate-100 text-slate-700">
               PDF Real (jsPDF Engine)
@@ -160,13 +160,13 @@ export const OfficialDossierPdfViewer: React.FC<OfficialDossierPdfViewerProps> =
             Gestão AD (Auto Direção)
           </h1>
           <p className="text-sm text-slate-600">
-            Dossiê Técnico, Arquitetura Adaptativa (Mobile/Tablet/Desktop), Catálogo de Telas, Regras de Negócio e Dicionário de Dados
+            Dossiê Técnico, Mapa Geográfico (5–40 km), Blindagem Cloud Vault de Pacotes, Gestão de Veículos, Catálogo de 20 Telas e Dicionário de Dados (19 Coleções)
           </p>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs mt-3">
             <div>
               <span className="text-slate-500 block text-xs">Versão da Plataforma:</span>
-              <strong className="text-slate-900 font-mono">v6.2 Estável (CEP + MG)</strong>
+              <strong className="text-slate-900 font-mono">v6.8 Estável (17/17 Testes)</strong>
             </div>
             <div>
               <span className="text-slate-500 block text-xs">Administrador Master:</span>
@@ -176,11 +176,11 @@ export const OfficialDossierPdfViewer: React.FC<OfficialDossierPdfViewerProps> =
             </div>
             <div>
               <span className="text-slate-500 block text-xs">Banco de Dados:</span>
-              <strong className="text-emerald-700">Supabase SQL + Firestore</strong>
+              <strong className="text-emerald-700">Supabase + Cloud Vault</strong>
             </div>
             <div>
-              <span className="text-slate-500 block text-xs">Endereço & Interface:</span>
-              <strong className="text-slate-800">Busca CEP (MG) & Mobile</strong>
+              <span className="text-slate-500 block text-xs">Mapa, Frota & Pacotes:</span>
+              <strong className="text-slate-800">5–40 km, Veículos & Zero Perda</strong>
             </div>
           </div>
         </div>
@@ -189,18 +189,20 @@ export const OfficialDossierPdfViewer: React.FC<OfficialDossierPdfViewerProps> =
         <section className="space-y-2.5">
           <h2 className="text-base font-bold text-slate-900 border-b border-slate-200 pb-1 flex items-center gap-2">
             <span className="w-5 h-5 rounded bg-blue-600 text-white flex items-center justify-center text-xs font-bold">1</span>
-            Resumo Executivo, Identidade Visual e Novas Melhorias Homologadas
+            Resumo Executivo, Identidade Visual e Novas Melhorias Homologadas (v6.8)
           </h2>
           <p className="text-xs text-slate-700 leading-relaxed">
-            O <strong>Gestão AD (Auto Direção)</strong> é uma plataforma full-stack de gestão pedagógica, operacional e financeira desenvolvida para Centros de Formação de Condutores (CFCs / Autoescolas), Instrutores de Trânsito Autônomos e Candidatos à Habilitação.
+            O <strong>Gestão AD (Auto Direção)</strong> é uma plataforma full-stack de gestão pedagógica, operacional, geográfica e financeira desenvolvida para Centros de Formação de Condutores (CFCs / Autoescolas), Instrutores de Trânsito Autônomos e Candidatos à Habilitação.
           </p>
           <ul className="list-disc pl-5 text-xs text-slate-700 space-y-1">
-            <li><strong>Identidade Visual Oficial "Gestão AD (Auto Direção)"</strong>: Logomarca vetorial oficial (<code>Logo.tsx</code>) e tela de login redesenhada sem auto-login automático do Master (exige digitar e-mail cadastrado e senha).</li>
-            <li><strong>Gestão Pedagógica CONTRAN & 12 Categorias de CNH</strong>: Suporte às 12 categorias oficiais (ACC, A, B, AB, C, AC, D, AD, E, AE, PCD e OUTRA) e avaliação de 8 competências práticas de 0 a 10.</li>
-            <li><strong>Validação Automática de Endereço por CEP (Estado Padrão MG - Minas Gerais)</strong>: Em todos os cadastros (Instrutor, Aluno, CFC e Master), o estado inicia em <strong>MG - Minas Gerais</strong>; ao digitar o CEP, o sistema localiza automaticamente Logradouro, Bairro, Cidade e UF (ViaCEP + BrasilAPI), deixando Número e Complemento para preenchimento manual e salvando no Supabase.</li>
-            <li><strong>Modo Mobile Simplificado, Modo Normal & Menu Inteligente (SmartScrollNav)</strong>: Detecta automaticamente Mobile, Tablet ou Desktop. No Modo Normal Desktop, exibe todos os menus completos sem cortar e movimenta a barra suavemente conforme a posição do mouse nas extremidades (direita/esquerda). Fechamento automático do menu de perfil ao clicar fora.</li>
-            <li><strong>Governança Master Avançada (Multi-Master & Senhas)</strong>: Módulo Master com troca direta de senha, recuperação de senha por e-mail + CPF (LGPD), edição de dados cadastrais e endereço do Master e inclusão de novos usuários <code>SUPER_ADMIN</code>.</li>
-            <li><strong>Gestão Financeira em Centavos & PIX Editável</strong>: Contas a receber, carnês, baixa de parcelas e configuração dinâmica de Chave PIX + Beneficiário (até 50 caracteres) com geração automática de QR Code EMV.</li>
+            <li><strong>Cadastro de Aluno em 3 Etapas (Wizard) & Confidencialidade por Código</strong>: Processo otimizado em 3 telas claras. Por segurança e confidencialidade comercial, o sistema <strong>não lista os nomes dos instrutores</strong> no auto-cadastro público; o aluno informa o <strong>Código do Instrutor</strong> (ou utiliza o link do WhatsApp que já preenche o código automaticamente) para visualizar exclusivamente os planos daquele instrutor.</li>
+            <li><strong>Localizador Geográfico de Instrutores (Mapa 5 a 40 km), Estado Primeiro, CEP e Privacidade de Bairro</strong>: Mapa interativo (Leaflet/OpenStreetMap + Haversine) onde o aluno seleciona o <strong>Estado (UF) primeiro</strong> ou digita o <strong>CEP</strong> (com auto-preenchimento), filtra por raio de <strong>5 a 40 km</strong>, Cidade, Categoria CNH, Câmbio (Manual/Automático) e Tipo de Veículo (Carro, Moto, Caminhão, Ônibus). Exibe <strong>apenas as cidades atendidas</strong> pelo instrutor (ocultando o bairro do endereço residencial) e direciona o contato direto pelo botão <strong>"Chamar no WhatsApp"</strong>.</li>
+            <li><strong>Demanda Reversa (Alunos à Procura de Instrutor) & Mapa Interno Exclusivo para Instrutores Logados</strong>: Caso o aluno não localize instrutor na sua área, pode cadastrar sua solicitação com CEP; os instrutores logados recebem alertas na seção <strong>"Mapa & Notificações"</strong> e visualizam no mapa interno quantos alunos e instrutores existem por cidade, bairro e distância.</li>
+            <li><strong>Liberação/Remoção de Agenda por Período (Semanal, Mensal, Anual) & Notificação ao Aluno</strong>: O instrutor habilita ou remove períodos da agenda por semana, mês ou ano. Se houver aluno agendado no horário a ser removido, o sistema exibe alerta de confirmação e envia automaticamente uma <strong>Notificação na Tela do Aluno</strong> solicitando que ele remarque para um novo horário disponível.</li>
+            <li><strong>Edição e Persistência de Plano na Ficha do Aluno</strong>: O instrutor pode mudar o plano/pacote contratado, categoria CNH e evolução pedagógica diretamente na ficha do aluno (<code>StudentsView.tsx</code>), salvando de forma assíncrona no Supabase e atualizando a fatura em aberto.</li>
+            <li><strong>Blindagem Absoluta Contra Perda de Pacotes do Instrutor (Zero Data Loss)</strong>: O sistema <strong>jamais apaga, sobrescreve ou inventa pacotes aleatórios</strong>. Conta com cofre local redundante (<code>PACKAGES_BACKUP</code>), fila <code>PENDING_PACKAGES</code>, carimbo <code>atualizadoEm</code> e <strong>Cloud Sync Vault</strong> (<code>__agd_vault_package_offers</code>) no Supabase.</li>
+            <li><strong>Cadastro e Gestão de Carros / Veículos dos Instrutores (<code>VehiclesView.tsx</code>)</strong>: Aba dedicada <strong>"Meus Veículos"</strong> disponível em todos os planos para cadastrar carros, motos, caminhões e ônibus (placa Mercosul/antiga, ano, cor, câmbio manual/automático, duplo comando, adaptação PCD, km atual e próxima revisão), sincronizando automaticamente com os filtros do Mapa.</li>
+            <li><strong>Sanitização Global de Telefone e Validação Automatizada (17/17 Testes)</strong>: Telefone obrigatório no convite e cadastros sem jamais passar máscara vazia como número, auditado por 17 baterias de testes automatizados (<code>run_automated_tests.mjs</code>).</li>
           </ul>
         </section>
 
@@ -250,11 +252,11 @@ export const OfficialDossierPdfViewer: React.FC<OfficialDossierPdfViewerProps> =
           </div>
         </section>
 
-        {/* Section 3: Catálogo das 17 Telas */}
+        {/* Section 3: Catálogo das 20 Telas */}
         <section className="space-y-2.5">
           <h2 className="text-base font-bold text-slate-900 border-b border-slate-200 pb-1 flex items-center gap-2">
             <span className="w-5 h-5 rounded bg-blue-600 text-white flex items-center justify-center text-xs font-bold">3</span>
-            Catálogo Completo das 17 Telas do Sistema
+            Catálogo Completo das 20 Telas do Sistema
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
             <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
@@ -263,67 +265,79 @@ export const OfficialDossierPdfViewer: React.FC<OfficialDossierPdfViewerProps> =
             </div>
             <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
               <strong className="text-slate-900">2. Auto-Cadastro de Instrutores:</strong>
-              <p className="text-slate-600 text-xs">Validação de credencial de trânsito e criação de tenant.</p>
+              <p className="text-slate-600 text-xs">Validação de CPF, endereço por CEP e credencial DETRAN.</p>
             </div>
             <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
-              <strong className="text-slate-900">3. Auto-Matrícula Vinculada de Aluno:</strong>
-              <p className="text-slate-600 text-xs">Vínculo por link exclusivo com instrutor fixo e idade &ge; 18 anos.</p>
+              <strong className="text-slate-900">3. Auto-Matrícula de Aluno (Wizard 3 Telas):</strong>
+              <p className="text-slate-600 text-xs">Busca confidencial por código do instrutor (ou link WhatsApp) e pacotes reais.</p>
             </div>
             <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
-              <strong className="text-slate-900">4. Gerador de Convites WhatsApp:</strong>
-              <p className="text-slate-600 text-xs">Geração e disparo de links de convite via deep link nativo.</p>
+              <strong className="text-slate-900">4. Localizador Geográfico (Mapa 5–40 km):</strong>
+              <p className="text-slate-600 text-xs">UF primeiro, busca por CEP, filtros CNH/Câmbio/Veículo, sem bairro e contato WhatsApp.</p>
             </div>
             <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
-              <strong className="text-slate-900">5. Painel Geral (Dashboard):</strong>
-              <p className="text-slate-600 text-xs">KPIs de faturamento, taxa de aprovação e próximas aulas.</p>
+              <strong className="text-slate-900">5. Mapa Interno & Notificações do Instrutor:</strong>
+              <p className="text-slate-600 text-xs">Raio 5–40 km, cidades atendidas, mapa de mercado e alunos procurando instrutor.</p>
             </div>
             <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
-              <strong className="text-slate-900">6. Gestão de Alunos & Progresso:</strong>
-              <p className="text-slate-600 text-xs">Fichas cadastrais, reatribuição e emissão de ficha A4.</p>
+              <strong className="text-slate-900">6. Meus Veículos e Frota de Instrução:</strong>
+              <p className="text-slate-600 text-xs">Cadastro de carros/motos do instrutor (câmbio manual/automático, placa, duplo comando e km).</p>
             </div>
             <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
-              <strong className="text-slate-900">7. Radar e Avaliação de Habilidades:</strong>
-              <p className="text-slate-600 text-xs">8 competências práticas CONTRAN avaliadas de 0 a 10.</p>
+              <strong className="text-slate-900">7. Gerador de Convites WhatsApp:</strong>
+              <p className="text-slate-600 text-xs">Telefone obrigatório validado (anti-máscara vazia) e link com código do instrutor.</p>
             </div>
             <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
-              <strong className="text-slate-900">8. Agenda Prática Diurna e Noturna:</strong>
-              <p className="text-slate-600 text-xs">Operação das 06:00 às 00:00 com bloqueio e registro de faltas.</p>
+              <strong className="text-slate-900">8. Painel Geral (Dashboard):</strong>
+              <p className="text-slate-600 text-xs">KPIs financeiros, alerta de alunos na região, atalho Meus Veículos e próximas aulas.</p>
             </div>
             <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
-              <strong className="text-slate-900">9. Finanças & Contas a Receber:</strong>
-              <p className="text-slate-600 text-xs">Títulos em centavos, parcelamentos e comprovantes.</p>
+              <strong className="text-slate-900">9. Gestão de Alunos & Mudança de Plano:</strong>
+              <p className="text-slate-600 text-xs">Menu apenas com categorias com alunos, edição persistente de plano na ficha e transferência.</p>
             </div>
             <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
-              <strong className="text-slate-900">10. Gateway PIX Dinâmico:</strong>
-              <p className="text-slate-600 text-xs">Geração instantânea de EMV Copia e Cola e QR Code.</p>
+              <strong className="text-slate-900">10. Radar e Avaliação de Habilidades:</strong>
+              <p className="text-slate-600 text-xs">8 competências práticas CONTRAN avaliadas de 0 a 10 com salvamento imediato.</p>
             </div>
             <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
-              <strong className="text-slate-900">11. Despesas Operacionais e Frota:</strong>
-              <p className="text-slate-600 text-xs">Combustível, manutenção e custos categorizados por placa.</p>
+              <strong className="text-slate-900">11. Agenda por Período (Semanal/Mensal/Anual):</strong>
+              <p className="text-slate-600 text-xs">Liberação/remoção por período, visão mobile do aluno e notificação automática ao desmarcar.</p>
             </div>
             <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
-              <strong className="text-slate-900">12. Metas de Investimento e Reservas:</strong>
-              <p className="text-slate-600 text-xs">Projeções financeiras para novos veículos e reservas.</p>
+              <strong className="text-slate-900">12. Catálogo Blindado de Pacotes e Planos:</strong>
+              <p className="text-slate-600 text-xs">Proteção Zero Data Loss (PACKAGES_BACKUP + Cloud Vault) contra perda de pacotes.</p>
             </div>
             <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
-              <strong className="text-slate-900">13. Demonstrativo de Resultados (DRE):</strong>
-              <p className="text-slate-600 text-xs">Receita bruta, custos operacionais e apuração do Lucro Líquido.</p>
+              <strong className="text-slate-900">13. Finanças, Contas a Receber & PIX:</strong>
+              <p className="text-slate-600 text-xs">Títulos em centavos, parcelamentos, recibos digitais e QR Code PIX dinâmico.</p>
             </div>
             <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
-              <strong className="text-slate-900">14. Central de Notificações WhatsApp:</strong>
+              <strong className="text-slate-900">14. Despesas Operacionais e Frota:</strong>
+              <p className="text-slate-600 text-xs">Combustível, manutenção e custos categorizados por placa do veículo.</p>
+            </div>
+            <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
+              <strong className="text-slate-900">15. Metas de Investimento, DRE e IRPF:</strong>
+              <p className="text-slate-600 text-xs">Projeções para troca de frota, apuração do Lucro Líquido (DRE) e Carnê-Leão.</p>
+            </div>
+            <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
+              <strong className="text-slate-900">16. Saúde Financeira & Simulador DETRAN:</strong>
+              <p className="text-slate-600 text-xs">Score 0–100, Regra dos 4 Potes e calculadora do custo real da aula prática.</p>
+            </div>
+            <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
+              <strong className="text-slate-900">17. Central de Notificações WhatsApp:</strong>
               <p className="text-slate-600 text-xs">Modelos prontos de lembretes de aula e cobranças de débitos.</p>
             </div>
             <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
-              <strong className="text-slate-900">15. Portal do Aluno:</strong>
-              <p className="text-slate-600 text-xs">Acesso responsivo móvel para acompanhamento do candidato.</p>
+              <strong className="text-slate-900">18. Portal do Aluno (Com Alertas):</strong>
+              <p className="text-slate-600 text-xs">Avisos de aulas desmarcadas pelo instrutor para remarcação, notas e PIX.</p>
             </div>
             <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
-              <strong className="text-slate-900">16. Console Master e Verificador de Cadastros:</strong>
-              <p className="text-slate-600 text-xs">Varredura de integridade e reatribuição de carteiras.</p>
+              <strong className="text-slate-900">19. Console Master e Verificador de Cadastros:</strong>
+              <p className="text-slate-600 text-xs">Varredura de integridade, planos SaaS, cupons e reatribuição de carteiras.</p>
             </div>
-            <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg sm:col-span-2">
-              <strong className="text-slate-900">17. Painel de Agentes de Segurança e Banco de Dados:</strong>
-              <p className="text-slate-600 text-xs">Watchdog, Code Guard com snapshots e sincronização Firestore.</p>
+            <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
+              <strong className="text-slate-900">20. Painel de Agentes & Cloud Sync Vault:</strong>
+              <p className="text-slate-600 text-xs">Watchdog, Code Guard com snapshots e sincronização Supabase/Firestore.</p>
             </div>
           </div>
         </section>
@@ -332,7 +346,7 @@ export const OfficialDossierPdfViewer: React.FC<OfficialDossierPdfViewerProps> =
         <section className="space-y-2.5">
           <h2 className="text-base font-bold text-slate-900 border-b border-slate-200 pb-1 flex items-center gap-2">
             <span className="w-5 h-5 rounded bg-blue-600 text-white flex items-center justify-center text-xs font-bold">4</span>
-            Dicionário de Banco de Dados e Entidades (16 Coleções Homologadas)
+            Dicionário de Banco de Dados e Entidades (19 Coleções Homologadas)
           </h2>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border border-slate-200">
@@ -371,9 +385,9 @@ export const OfficialDossierPdfViewer: React.FC<OfficialDossierPdfViewerProps> =
                 </tr>
                 <tr>
                   <td className="p-2 font-bold border-r border-slate-200">vehicles</td>
-                  <td className="p-2 border-r border-slate-200">PK: <code>id</code><br />FK: <code>organizacaoId</code></td>
-                  <td className="p-2 border-r border-slate-200">modelo, placa, ano, tipo, kmAtual, proximaRevisaoKm</td>
-                  <td className="p-2">Controle de manutenção e hodômetro.</td>
+                  <td className="p-2 border-r border-slate-200">PK: <code>id</code><br />FKs: <code>organizacaoId, instrutorId</code></td>
+                  <td className="p-2 border-r border-slate-200">modelo, placa, ano, cor, tipo (CARRO|MOTO|CAMINHAO|ONIBUS), cambio (MANUAL|AUTOMATICO), duploComando, adaptadoPcd, kmAtual, proximaRevisaoKm</td>
+                  <td className="p-2">Frota do instrutor protegida por VEHICLES_BACKUP + Cloud Vault e integrada ao Mapa.</td>
                 </tr>
                 <tr>
                   <td className="p-2 font-bold border-r border-slate-200">lessons</td>
@@ -413,9 +427,27 @@ export const OfficialDossierPdfViewer: React.FC<OfficialDossierPdfViewerProps> =
                 </tr>
                 <tr>
                   <td className="p-2 font-bold border-r border-slate-200">packages</td>
+                  <td className="p-2 border-r border-slate-200">PK: <code>id</code><br />FK: <code>instrutorId</code></td>
+                  <td className="p-2 border-r border-slate-200">nome, totalAulas, categoriaCnh, valorCentavos, formaPagamento, maxParcelas, atualizadoEm</td>
+                  <td className="p-2">Planos do instrutor com proteção Zero Data Loss (PACKAGES_BACKUP + Cloud Vault).</td>
+                </tr>
+                <tr>
+                  <td className="p-2 font-bold border-r border-slate-200">instructorCoverage</td>
+                  <td className="p-2 border-r border-slate-200">PK: <code>instrutorId</code></td>
+                  <td className="p-2 border-r border-slate-200">raioAtendimentoKm (5–40), cidadeBase, estadoBase, cidadesAtendidas, categoriasAtendidas, tipoCambio</td>
+                  <td className="p-2">Perfil geográfico para o Mapa (exibe apenas cidades atendidas, ocultando bairro).</td>
+                </tr>
+                <tr>
+                  <td className="p-2 font-bold border-r border-slate-200">studentLeads</td>
                   <td className="p-2 border-r border-slate-200">PK: <code>id</code></td>
-                  <td className="p-2 border-r border-slate-200">nome, totalAulas, categoriaCnh, valorCentavos, maxParcelas</td>
-                  <td className="p-2">Planos comerciais configuráveis.</td>
+                  <td className="p-2 border-r border-slate-200">nome, telefone, cep, cidade, estado, categoriaCnh, tipoCambio, status</td>
+                  <td className="p-2">Demanda reversa de alunos à procura de instrutor na região.</td>
+                </tr>
+                <tr>
+                  <td className="p-2 font-bold border-r border-slate-200">studentNotifications</td>
+                  <td className="p-2 border-r border-slate-200">PK: <code>id</code><br />FK: <code>alunoId</code></td>
+                  <td className="p-2 border-r border-slate-200">dataAula, horaAula, tipo (AULA_DESMARCADA), titulo, mensagem, lida</td>
+                  <td className="p-2">Aviso automático na tela do aluno quando o instrutor desmarca horário.</td>
                 </tr>
                 <tr>
                   <td className="p-2 font-bold border-r border-slate-200">studentTransfers</td>
@@ -472,13 +504,13 @@ export const OfficialDossierPdfViewer: React.FC<OfficialDossierPdfViewerProps> =
         <section className="border-t-2 border-slate-300 pt-6 space-y-4">
           <div className="border-2 border-dashed border-emerald-600 bg-emerald-50/60 p-4 rounded-xl text-center space-y-1">
             <span className="inline-block bg-emerald-600 text-white text-xs font-bold px-3 py-1 rounded uppercase tracking-wider">
-              Termo Oficial de Homologação v6.2
+              Termo Oficial de Homologação v6.8 (17/17 Testes Aprovados)
             </span>
             <p className="text-xs text-emerald-950 font-medium pt-1">
-              Sistema integralmente auditado, com validação de endereço por CEP (padrão MG), sincronizado no Supabase e homologado para operação contínua.
+              Sistema integralmente auditado, com Mapa Geográfico (5–40 km), Blindagem Cloud Vault contra perda de pacotes, Gestão de Veículos dos Instrutores e sincronização em tempo real no Supabase.
             </p>
             <p className="text-xs text-emerald-800 font-mono">
-              Validação Criptográfica: SHA256-AGD-7F9A2B4C8E01-2026-STABLE
+              Validação Criptográfica: SHA256-AGD-V68-VAULT-GEO-VEHICLES-2026-STABLE
             </p>
           </div>
 
@@ -494,7 +526,7 @@ export const OfficialDossierPdfViewer: React.FC<OfficialDossierPdfViewerProps> =
               <div className="border-t border-slate-800 w-3/4 mx-auto pt-2" />
               <strong className="text-xs text-slate-950 block">Comitê de Auditoria & Governança</strong>
               <span className="text-xs text-slate-600 block">Segurança da Informação e LGPD</span>
-              <span className="text-xs text-slate-500 font-mono">Certificação v5.3 Estável</span>
+              <span className="text-xs text-slate-500 font-mono">Certificação v6.8 Estável</span>
             </div>
           </div>
         </section>

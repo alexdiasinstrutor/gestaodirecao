@@ -2,7 +2,7 @@
 
 export const DOSSIER_METADATA = {
   title: 'Dossiê Técnico Homologado - Gestão AD (Auto Direção)',
-  version: 'v6.2 Auditada, Responsiva (Modo Mobile & Normal), Busca Automática por CEP (Default MG) e Sincronizada no Supabase',
+  version: 'v6.8 Auditada, Com Mapa Geográfico (5–40 km), Blindagem Cloud Vault de Pacotes, Gestão de Veículos e Sincronização em Tempo Real no Supabase',
   date: 'Novembro de 2026',
   masterAdmin: 'cassiordcosta@gmail.com',
   regulations: 'CTB, CONTRAN e LGPD (Lei 13.709/2018)'
@@ -15,16 +15,16 @@ export function getOfficialDossierHtml(): string {
     <header class="doc-header">
       <div class="header-badges">
         <span class="badge primary">DOCUMENTO OFICIAL HOMOLOGADO</span>
-        <span class="badge success">SISTEMA AUDITADO & BLINDADO</span>
+        <span class="badge success">SISTEMA AUDITADO & BLINDADO (17/17 TESTES)</span>
         <span class="badge neutral">CONFORMIDADE CTB / CONTRAN / LGPD</span>
       </div>
       <h1 class="doc-title">Gestão AD (Auto Direção)</h1>
-      <p class="doc-subtitle">Dossiê Técnico, Arquitetura Responsiva (Mobile/Tablet/Desktop), Catálogo de Telas, Regras de Negócio e Dicionário de Dados</p>
+      <p class="doc-subtitle">Dossiê Técnico, Mapa Geográfico (5–40 km), Blindagem Cloud Vault de Pacotes, Gestão de Veículos, Catálogo de 20 Telas, Regras de Negócio e Dicionário de Dados (19 Coleções)</p>
       
       <div class="meta-grid">
         <div class="meta-item">
           <strong>Versão da Plataforma:</strong>
-          <span>v6.2 Estável, Homologada e Pronta para Produção (Modo Mobile/Normal + Busca por CEP com Default MG)</span>
+          <span>v6.8 Estável e Homologada (Mapa 5–40 km + Blindagem de Pacotes + Gestão de Veículos + 17/17 Testes)</span>
         </div>
         <div class="meta-item">
           <strong>Administrador Master:</strong>
@@ -36,23 +36,25 @@ export function getOfficialDossierHtml(): string {
         </div>
         <div class="meta-item">
           <strong>Tipo de Banco de Dados:</strong>
-          <span>Supabase PostgreSQL Dual-Write (Colunas de CEP e PIX ativas) + Cloud Firestore + Offline-First</span>
+          <span>Supabase PostgreSQL + Cloud Sync Vault (__agd_vault_*) + Cofre Local Redundante + Offline-First</span>
         </div>
       </div>
     </header>
 
     <!-- 1. Resumo Executivo -->
     <section class="doc-section">
-      <h2>1. Resumo Executivo e Identificação do Sistema (Gestão AD)</h2>
+      <h2>1. Resumo Executivo, Arquitetura e Melhorias Homologadas (v6.8)</h2>
       <p>O <strong>Gestão AD (Auto Direção)</strong> é uma plataforma tecnológica de nível corporativo e pedagógico desenvolvida para atender com máxima segurança, conformidade e rigor operacional:</p>
       <ul>
-        <li><strong>Identidade Visual Oficial "Gestão AD (Auto Direção)"</strong>: Logomarca vetorial oficial (<code>Logo.tsx</code>) e tela de login redesenhada exigindo autenticação explícita por e-mail e senha (sem entrada automática do Master).</li>
-        <li><strong>Instrutores de Trânsito Autônomos</strong>: Gestão individual de carteira de alunos nas 12 categorias oficiais de CNH (ACC, A, B, AB, C, AC, D, AD, E, AE, PCD e OUTRA), agendas diurnas/noturnas, PIX dinâmico editável (beneficiário de até 50 caracteres) e faturamento.</li>
-        <li><strong>Centros de Formação de Condutores (CFCs / Autoescolas)</strong>: Gestão unificada de múltiplos instrutores, frota de veículos, DRE consolidado e controle financeiro.</li>
-        <li><strong>Candidatos à Habilitação (Alunos)</strong>: Acompanhamento aula a aula do processo de aprendizagem, notas de habilidades, agendamentos e quitações via QR Code PIX.</li>
-        <li><strong>Validação e Preenchimento Automático de Endereço por CEP (Estado Padrão MG - Minas Gerais)</strong>: Em todos os cadastros de usuários (Instrutor, Aluno, CFC e Master), o estado inicia em <strong>MG - Minas Gerais</strong>; o usuário digita o CEP (<code>00000-000</code>), o sistema localiza automaticamente Logradouro, Bairro, Cidade e UF (ViaCEP + BrasilAPI), deixando Número e Complemento para o usuário preencher e persistindo todas as colunas no Supabase.</li>
-        <li><strong>Interface Adaptativa Inteligente & Barra Desktop Guiada pelo Mouse (SmartScrollNav)</strong>: Detecção automática do dispositivo (Mobile, Tablet, Desktop) com <strong>Modo Mobile Simplificado</strong> e <strong>Modo Normal (Completo)</strong>. No Desktop, o menu aparece inteiro sem cortar e desliza suavemente conforme a posição do mouse nas extremidades (direita/esquerda). Fechamento automático do dropdown de perfil ao clicar fora.</li>
-        <li><strong>Governança Master Avançada</strong>: Gestão completa da equipe de Administradores Master (<code>SUPER_ADMIN</code>), incluindo troca de senha direta no Módulo Master, recuperação de senha por e-mail + CPF (LGPD), edição cadastral completa (com endereço por CEP) e inclusão de novos usuários Master.</li>
+        <li><strong>Identidade Visual Oficial "Gestão AD (Auto Direção)"</strong>: Logomarca vetorial oficial (<code>Logo.tsx</code>) e tela de login exigindo autenticação explícita por e-mail e senha (sem entrada automática do Master).</li>
+        <li><strong>Cadastro de Aluno em 3 Etapas (Wizard) e Confidencialidade por Código</strong>: Auto-cadastro dividido em 3 telas claras. Por segurança e confidencialidade comercial, o sistema <strong>não lista nomes de instrutores em dropdown público</strong>; o aluno informa o código do instrutor (ou acessa via link do WhatsApp que preenche o código automaticamente) para visualizar exclusivamente os planos daquele instrutor.</li>
+        <li><strong>Localizador Geográfico de Instrutores (Mapa 5 a 40 km) & Contato via WhatsApp</strong>: Mapa interativo (Leaflet/OpenStreetMap + Haversine) onde o aluno seleciona o <strong>Estado (UF) primeiro</strong> ou digita o <strong>CEP</strong> (com auto-preenchimento), filtra por raio de <strong>5 a 40 km</strong>, Cidade, Categoria CNH, Câmbio (Manual/Automático) e Tipo de Veículo (Carro, Moto, Caminhão, Ônibus). Exibe <strong>apenas as cidades atendidas</strong> (ocultando o bairro residencial do instrutor) e direciona o contato para o botão <strong>"Chamar no WhatsApp"</strong>.</li>
+        <li><strong>Demanda Reversa (Alunos à Procura de Instrutor) & Mapa Interno do Instrutor</strong>: Alunos que não localizarem instrutor podem se cadastrar informando CEP e cidade; os instrutores logados recebem alertas na aba <strong>"Mapa & Notificações"</strong> e visualizam no mapa interno exclusivo quantos alunos e instrutores existem por cidade, bairro e distância.</li>
+        <li><strong>Agenda por Período (Semanal, Mensal, Anual) & Notificação Automática de Desmarcação</strong>: Instrutores liberam ou removem horários por período, semana, mês ou ano. Caso haja aluno agendado no horário removido, o sistema exige confirmação e envia automaticamente uma notificação na tela do aluno (<code>StudentPortal.tsx</code>) solicitando remarcação.</li>
+        <li><strong>Edição e Persistência de Plano na Ficha do Aluno</strong>: O instrutor pode alterar o plano contratado, categoria CNH e evolução pedagógica diretamente na ficha do aluno (<code>StudentsView.tsx</code>), atualizando automaticamente a fatura em aberto e persistindo no Supabase.</li>
+        <li><strong>Blindagem Absoluta Contra Perda de Pacotes do Instrutor (Zero Data Loss)</strong>: O sistema <strong>jamais apaga, sobrescreve ou inventa pacotes aleatórios</strong>. Conta com cofre local redundante (<code>PACKAGES_BACKUP</code>), fila de sincronização (<code>PENDING_PACKAGES</code>), timestamp <code>atualizadoEm</code> e <strong>Cloud Sync Vault</strong> (<code>__agd_vault_package_offers</code>) no Supabase.</li>
+        <li><strong>Cadastro e Gestão de Veículos / Carros dos Instrutores (<code>VehiclesView.tsx</code>)</strong>: Aba dedicada <strong>"Meus Veículos"</strong> disponível em todos os planos para o instrutor cadastrar e gerenciar seus carros, motos, caminhões ou ônibus (placa Mercosul/antiga, ano, cor, câmbio manual/automático, duplo comando, adaptação PCD, hodômetro e revisão), integrando automaticamente com os filtros do Mapa.</li>
+        <li><strong>Sanitização Global de Telefones e Validação Automatizada (17/17 Testes)</strong>: Telefone obrigatório no convite e cadastros sem jamais aceitar máscara vazia como número, validado por suite automatizada (<code>run_automated_tests.mjs</code>) com 100% de aprovação.</li>
       </ul>
     </section>
 
@@ -97,9 +99,9 @@ export function getOfficialDossierHtml(): string {
       </table>
     </section>
 
-    <!-- 3. Catálogo das 17 Telas -->
+    <!-- 3. Catálogo das 20 Telas -->
     <section class="doc-section page-break">
-      <h2>3. Catálogo Completo das 17 Telas e Fluxos Operacionais</h2>
+      <h2>3. Catálogo Completo das 20 Telas e Fluxos Operacionais</h2>
       <div class="screens-grid">
         <div class="screen-card">
           <h4>1. Autenticação e Login Multi-Método</h4>
@@ -107,80 +109,92 @@ export function getOfficialDossierHtml(): string {
         </div>
         <div class="screen-card">
           <h4>2. Auto-Cadastro de Instrutores</h4>
-          <p>Onboarding com validação de CPF, credencial DETRAN e criação automática de tenant.</p>
+          <p>Onboarding com validação de CPF, endereço por CEP, credencial DETRAN e criação automática de tenant.</p>
         </div>
         <div class="screen-card">
-          <h4>3. Auto-Matrícula de Aluno Vinculada</h4>
-          <p>Cadastro iniciado por convite exclusivo com instrutor pré-fixado, cálculo de idade (>= 18) e escolha de pacote.</p>
+          <h4>3. Auto-Matrícula de Aluno (Wizard 3 Telas)</h4>
+          <p>Fluxo em 3 etapas com confidencialidade por código do instrutor (ou link WhatsApp), exibição fiel de pacotes e busca por CEP.</p>
         </div>
         <div class="screen-card">
-          <h4>4. Gerador de Convites WhatsApp</h4>
-          <p>Disparo de link de matrícula direto com parâmetros de segurança e token do instrutor.</p>
+          <h4>4. Localizador Geográfico de Instrutores (Mapa 5–40 km)</h4>
+          <p>Mapa interativo com seleção de UF primeiro, auto-preenchimento por CEP, filtros de CNH/Câmbio/Veículo, privacidade de bairro e contato via WhatsApp.</p>
         </div>
         <div class="screen-card">
-          <h4>5. Painel Geral (Dashboard)</h4>
-          <p>Visão executiva com métricas financeiras, taxa de aprovação, próximas aulas e status de veículos.</p>
+          <h4>5. Mapa Interno de Demanda & Notificações do Instrutor</h4>
+          <p>Exclusivo para instrutores logados: configuração de raio (5–40 km), cidades atendidas, mapa de alunos/concorrentes e alertas de alunos procurando instrutor.</p>
         </div>
         <div class="screen-card">
-          <h4>6. Gestão de Alunos & Progresso</h4>
-          <p>Lista completa de alunos, filtros, status CNH, botão de transferência e emissão de ficha pedagógica.</p>
+          <h4>6. Meus Veículos e Frota de Instrução</h4>
+          <p>Cadastro e gestão de carros, motos, caminhões e ônibus do instrutor (câmbio manual/automático, placa, ano, duplo comando, PCD, km e revisões).</p>
         </div>
         <div class="screen-card">
-          <h4>7. Radar e Avaliação de Habilidades</h4>
-          <p>Matriz com as 8 notas práticas (0 a 10) preconizadas pelo CONTRAN e evolução aula a aula.</p>
+          <h4>7. Gerador de Convites WhatsApp</h4>
+          <p>Disparo de link de matrícula direto com telefone obrigatório validado (anti-máscara vazia) e código do instrutor embutido.</p>
         </div>
         <div class="screen-card">
-          <h4>8. Agenda Prática Diurna e Noturna</h4>
-          <p>Calendário adaptativo operando das 06:00 às 00:00, suporte a aulas noturnas e bloqueios de horários.</p>
+          <h4>8. Painel Geral (Dashboard)</h4>
+          <p>Visão executiva com métricas financeiras, alertas de novos alunos na região, atalhos para Meus Veículos e próximas aulas.</p>
         </div>
         <div class="screen-card">
-          <h4>9. Finanças & Contas a Receber</h4>
-          <p>Controle de títulos em centavos, parcelamentos, status PAGO/PENDENTE e baixa de faturas.</p>
+          <h4>9. Gestão de Alunos, Mudança de Plano & Ficha</h4>
+          <p>Filtro dinâmico apenas por categorias com alunos, edição e salvamento assíncrono de plano/pacote na ficha do aluno e transferência auditada.</p>
         </div>
         <div class="screen-card">
-          <h4>10. Gateway PIX Dinâmico</h4>
-          <p>Geração de payload EMV Copia e Cola e QR Code dinâmico para liquidação imediata de débitos.</p>
+          <h4>10. Radar e Avaliação de Habilidades</h4>
+          <p>Matriz com as 8 notas práticas (0 a 10) preconizadas pelo CONTRAN e evolução aula a aula salva no banco.</p>
         </div>
         <div class="screen-card">
-          <h4>11. Despesas Operacionais e Frota</h4>
-          <p>Controle de combustível, manutenção, seguro, alimentação e custos fixos associados a veículos.</p>
+          <h4>11. Agenda Prática por Período (Semanal/Mensal/Anual)</h4>
+          <p>Grade das 06:00 às 00:00 com liberação/remoção por período, visão mobile do aluno agendado e alerta de conflito com notificação automática ao aluno.</p>
         </div>
         <div class="screen-card">
-          <h4>12. Metas de Investimento e Reservas</h4>
-          <p>Programação de compra de veículos, simuladores e reserva de emergência com barra de progresso.</p>
+          <h4>12. Catálogo Blindado de Pacotes e Planos</h4>
+          <p>Criação e edição de planos pelo instrutor com proteção Cloud Vault e backup local contra perda ou criação aleatória.</p>
         </div>
         <div class="screen-card">
-          <h4>13. Demonstrativo de Resultados (DRE)</h4>
-          <p>Apuração automática da receita bruta, custos variáveis, deduções e lucro líquido contábil.</p>
+          <h4>13. Finanças, Contas a Receber & Gateway PIX</h4>
+          <p>Controle de títulos em centavos, baixa de parcelas, recibos digitais e geração de QR Code PIX Copia e Cola.</p>
         </div>
         <div class="screen-card">
-          <h4>14. Central de Notificações WhatsApp</h4>
-          <p>Templates automáticos para lembrete de aula (24h/2h antes), cobrança PIX e aprovação no exame.</p>
+          <h4>14. Despesas Operacionais e Custos de Frota</h4>
+          <p>Controle de combustível, manutenção, seguro, alimentação e custos fixos associados aos veículos cadastrados.</p>
         </div>
         <div class="screen-card">
-          <h4>15. Portal do Aluno</h4>
-          <p>Visão mobile-first para o candidato consultar aulas, gráfico de competências e extrato financeiro.</p>
+          <h4>15. Metas de Investimento, DRE e IRPF Carnê-Leão</h4>
+          <p>Programação de troca de frota, apuração automática do Lucro Líquido (DRE) e Livro-Caixa fiscal para IRPF.</p>
         </div>
         <div class="screen-card">
-          <h4>16. Console Master e Verificador de Cadastros</h4>
-          <p>Auditoria global, detecção de inconsistências, reatribuição de alunos e integridade do banco.</p>
+          <h4>16. Saúde Financeira & Simulador DETRAN</h4>
+          <p>Score 0–100, Regra dos 4 Potes, alerta de idade de frota DETRAN e calculadora do custo real da aula prática.</p>
         </div>
         <div class="screen-card">
-          <h4>17. Painel de Agentes de Segurança e BD</h4>
-          <p>Watchdog em tempo real, Code Guard com snapshots de restauração e motor de migração Firestore.</p>
+          <h4>17. Central de Notificações e Cobranças WhatsApp</h4>
+          <p>Templates automáticos para lembrete de aula, cobrança PIX e aprovação no exame prático.</p>
+        </div>
+        <div class="screen-card">
+          <h4>18. Portal do Aluno (Com Alertas de Remarcação)</h4>
+          <p>Visão mobile-first para o aluno agendar aulas, receber avisos de horários desmarcados pelo instrutor, ver notas e pagar via PIX.</p>
+        </div>
+        <div class="screen-card">
+          <h4>19. Console Master e Verificador de Cadastros</h4>
+          <p>Auditoria global, gestão de planos SaaS, cupons promocionais, detecção de inconsistências e reatribuição de alunos.</p>
+        </div>
+        <div class="screen-card">
+          <h4>20. Painel de Agentes de Segurança e Banco Cloud</h4>
+          <p>Watchdog em tempo real, Code Guard com snapshots de restauração, Dossiê Oficial A4 e sincronização Supabase/Firestore.</p>
         </div>
       </div>
     </section>
 
     <!-- 4. Regras de Negócio e Pedagógicas -->
     <section class="doc-section">
-      <h2>4. Regras Estruturantes de Negócio e Formação de Condutores</h2>
+      <h2>4. Regras Estruturantes de Negócio, Segurança e Formação de Condutores</h2>
       <div class="rules-box">
-        <p><strong>1. Regra Estrita 1 CPF = 1 Instrutor:</strong> O sistema impede qualquer duplicidade de cadastro de alunos. O candidato é indexado por hash SHA-256 e pertence a um único instrutor ativo.</p>
-        <p><strong>2. Indicação Obrigatória de Matrícula:</strong> Nenhum aluno acessa a plataforma de forma avulsa; o vínculo deve ser originado por convite de um instrutor credenciado.</p>
-        <p><strong>3. Maioridade Legal Obrigatória:</strong> Validação automática de <code>idade >= 18 anos</code> no ato do cadastro, de acordo com o Código de Trânsito Brasileiro.</p>
-        <p><strong>4. Histórico Perpétuo de Transferência:</strong> Em caso de remanejamento, todas as aulas cumpridas, notas de habilidades e observações são mantidas integralmente no prontuário do aluno.</p>
-        <p><strong>5. Precisão Financeira em Centavos:</strong> Proibição de uso de números float. Todos os campos utilizam inteiros (ex: R$ 1.500,00 = <code>150000</code> centavos).</p>
+        <p><strong>1. Regra Estrita 1 CPF = 1 Instrutor & Confidencialidade de Planos:</strong> O sistema impede duplicidade de CPF e nunca expõe a lista de instrutores no auto-cadastro público; o aluno acessa os pacotes exclusivamente via código do instrutor ou link de convite.</p>
+        <p><strong>2. Blindagem Absoluta dos Pacotes do Instrutor (Zero Data Loss):</strong> O sistema jamais apaga, sobrescreve ou inventa pacotes de outras categorias. Todo pacote criado pelo instrutor é protegido por <code>PACKAGES_BACKUP</code> e <code>__agd_vault_package_offers</code>.</p>
+        <p><strong>3. Agenda Inteligente com Notificação ao Aluno:</strong> Ao indisponibilizar um horário com aula marcada (semanal, mensal ou anual), o sistema alerta o instrutor e envia notificação automática para o aluno remarcar.</p>
+        <p><strong>4. Privacidade Geográfica no Mapa Público (5 a 40 km):</strong> O mapa exibe apenas as cidades atendidas pelo instrutor (nunca o bairro do seu endereço residencial) e prioriza o contato inicial via WhatsApp.</p>
+        <p><strong>5. Precisão Financeira em Centavos & Sanitização de Telefone:</strong> Todos os valores utilizam inteiros em centavos e nenhum campo de telefone aceita máscara vazia como número válido.</p>
       </div>
     </section>
 
@@ -231,9 +245,9 @@ export function getOfficialDossierHtml(): string {
           <tr>
             <td><strong>vehicles</strong></td>
             <td><code>id (string)</code></td>
-            <td><code>organizacaoId</code></td>
-            <td>modelo, placa, ano, tipo (CARRO | MOTO | CAMINHAO | ONIBUS), status, proximaRevisaoKm, kmAtual</td>
-            <td>Frota de veículos de treinamento, controle de quilometragem e revisões preventivas.</td>
+            <td><code>organizacaoId</code>,<br><code>instrutorId</code></td>
+            <td>modelo, placa, ano, cor, tipo (CARRO | MOTO | CAMINHAO | ONIBUS), cambio (MANUAL | AUTOMATICO), categoriaCnh, duploComando, adaptadoPcd, status, proximaRevisaoKm, kmAtual, atualizadoEm</td>
+            <td>Frota de veículos cadastrados pelos instrutores com backup local e Cloud Vault, integrada aos filtros do Mapa.</td>
           </tr>
           <tr>
             <td><strong>lessons</strong></td>
@@ -280,9 +294,30 @@ export function getOfficialDossierHtml(): string {
           <tr>
             <td><strong>packages</strong></td>
             <td><code>id (string)</code></td>
-            <td><code>organizacaoId</code>,<br><code>instrutorId (opc)</code></td>
-            <td>nome, totalAulas, categoriaCnh, valorCentavos, formaPagamento, maxParcelas, descontoAvistaPercentual, ativo</td>
-            <td>Tabela de pacotes e planos de aulas práticas com precificação customizada.</td>
+            <td><code>organizacaoId</code>,<br><code>instrutorId</code></td>
+            <td>nome, totalAulas, categoriaCnh, valorCentavos, formaPagamento, maxParcelas, descontoAvistaPercentual, ativo, criadoEm, atualizadoEm</td>
+            <td>Planos criados pelo instrutor com blindagem absoluta contra perda (PACKAGES_BACKUP + Cloud Vault).</td>
+          </tr>
+          <tr>
+            <td><strong>instructorCoverage</strong></td>
+            <td><code>instrutorId (string)</code></td>
+            <td><code>organizacaoId</code></td>
+            <td>raioAtendimentoKm (5–40), cidadeBase, estadoBase, cidadesAtendidas, categoriasAtendidas, tiposVeiculo, tipoCambio, latitude, longitude</td>
+            <td>Perfil geográfico do instrutor para busca no Mapa (exibe apenas cidades atendidas, ocultando bairro).</td>
+          </tr>
+          <tr>
+            <td><strong>studentLeads</strong></td>
+            <td><code>id (string)</code></td>
+            <td><code>atendidoPorInstrutorId (opc)</code></td>
+            <td>nome, telefone, cep, cidade, estado, bairro, categoriaCnh, tipoCambio, status (AGUARDANDO | EM_CONTATO | MATRICULADO)</td>
+            <td>Demanda reversa de alunos à procura de instrutor em sua região, notificando instrutores logados.</td>
+          </tr>
+          <tr>
+            <td><strong>studentNotifications</strong></td>
+            <td><code>id (string)</code></td>
+            <td><code>alunoId</code>,<br><code>instrutorId</code>,<br><code>aulaId</code></td>
+            <td>dataAula, horaAula, tipo (AULA_DESMARCADA), titulo, mensagem, lida, criadoEm</td>
+            <td>Notificações automáticas na tela do aluno quando o instrutor remove horário com aula marcada.</td>
           </tr>
           <tr>
             <td><strong>studentTransfers</strong></td>
@@ -334,11 +369,11 @@ export function getOfficialDossierHtml(): string {
     <!-- 7. Termo de Homologação e Assinaturas -->
     <section class="doc-section avoid-break">
       <h2>7. Termo de Homologação Oficial e Validação de Integridade</h2>
-      <p>Declara-se para os devidos fins legais, pedagógicos e operacionais que o <strong>Sistema de Administração de Gestão de Direção</strong> encontra-se em estado estável, plenamente funcional, auditado contra quebras de código e com todas as 17 telas e 16 coleções de dados homologadas.</p>
+      <p>Declara-se para os devidos fins legais, pedagógicos e operacionais que o <strong>Gestão AD (Auto Direção)</strong> encontra-se em estado estável, plenamente funcional, auditado por 17 baterias de testes automatizados (100% aprovados) e com todas as 20 telas e 19 coleções de dados homologadas.</p>
       
       <div class="homologation-stamp">
-        <div class="stamp-badge">HOMOLOGAÇÃO OFICIAL v5.3</div>
-        <p><strong>Hash de Validação do Dossiê:</strong> <code>SHA256-AGD-7F9A2B4C8E01-2026-STABLE</code></p>
+        <div class="stamp-badge">HOMOLOGAÇÃO OFICIAL v6.8</div>
+        <p><strong>Hash de Validação do Dossiê:</strong> <code>SHA256-AGD-V68-VAULT-GEO-VEHICLES-2026-STABLE</code></p>
         <p><strong>Responsável Master:</strong> Cássio R. D. Costa (cassiordcosta@gmail.com)</p>
       </div>
 
@@ -353,7 +388,7 @@ export function getOfficialDossierHtml(): string {
           <div class="sign-line"></div>
           <strong>Auditor de Governança & TI</strong>
           <span>Comitê de Segurança e Proteção LGPD</span>
-          <small>Certificação Digital de Integridade v5.3</small>
+          <small>Certificação Digital de Integridade v6.8</small>
         </div>
       </div>
     </section>
@@ -653,9 +688,20 @@ export function printOfficialDossier(): boolean {
 
 export function downloadDossierMarkdownFile(): void {
   const markdownContent = `# DOSSIÊ COMPLETO DO SISTEMA — GESTÃO AD (AUTO DIREÇÃO)
-Versão: v6.2 Estável e Homologada (Modo Mobile/Normal + Busca por CEP Default MG + Supabase) | Novembro de 2026
+Versão: v6.8 Estável e Homologada (Mapa 5–40 km + Blindagem Cloud Vault de Pacotes + Gestão de Veículos + 17/17 Testes) | Novembro de 2026
 Administrador Master: cassiordcosta@gmail.com
 Normativas: CTB, CONTRAN e LGPD
+
+## Melhorias Homologadas na v6.8
+1. Cadastro de Aluno em 3 Etapas (Wizard) com exibição fiel de todos os pacotes do instrutor.
+2. Confidencialidade de Instrutores no Auto-Cadastro (busca exclusiva por Código do Instrutor ou link do WhatsApp).
+3. Localizador Geográfico de Instrutores (Mapa 5 a 40 km) com seleção de Estado (UF) primeiro, auto-preenchimento por CEP, ocultação de bairro residencial (exibindo apenas cidades atendidas) e contato direto via WhatsApp.
+4. Demanda Reversa (Alunos à Procura de Instrutor) e Mapa Interno exclusivo para instrutores logados com notificações.
+5. Liberação e remoção de agenda por período (Semanal, Mensal, Anual) com alerta de conflito e notificação automática na tela do aluno para remarcação.
+6. Edição e persistência imediata de mudança de plano e evolução na Ficha do Aluno.
+7. Blindagem absoluta contra perda de pacotes criados pelos instrutores (PACKAGES_BACKUP + Cloud Sync Vault __agd_vault_package_offers).
+8. Nova tela "Meus Veículos" (VehiclesView.tsx) para cadastro de carros/motos dos instrutores (câmbio manual/automático, placa, ano, duplo comando, PCD, km e revisão).
+9. Sanitização global de telefone (proibindo máscara como número) e validação com 17/17 testes automatizados aprovados.
 
 Documento completo disponível na raiz do repositório em DOSSIE.md.`;
 
@@ -663,7 +709,7 @@ Documento completo disponível na raiz do repositório em DOSSIE.md.`;
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'DOSSIE_GESTAO_AD_v6.2.md';
+  a.download = 'DOSSIE_GESTAO_AD_v6.8.md';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -676,7 +722,7 @@ export function downloadDossierHtmlFile(): void {
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Dossiê Oficial - Sistema de Gestão de Direção v5.3</title>
+  <title>Dossiê Oficial - Gestão AD (Auto Direção) v6.8</title>
   <style>
     body { font-family: system-ui, -apple-system, sans-serif; padding: 20px; max-width: 900px; margin: 0 auto; color: #1e293b; line-height: 1.5; }
     h1, h2, h3 { color: #0f172a; }
@@ -704,7 +750,7 @@ export function downloadDossierHtmlFile(): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'DOSSIE_OFICIAL_GESTAO_DIRECAO_v5.3.html';
+  a.download = 'DOSSIE_OFICIAL_GESTAO_AD_v6.8.html';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

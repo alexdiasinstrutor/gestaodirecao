@@ -170,12 +170,12 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
 
   const handleDownloadPdf = () => {
     setIsPrinting(true);
-    setPrintSuccessFeedback('Compilando e gerando arquivo PDF oficial com 16 coleções e 17 telas...');
+    setPrintSuccessFeedback('Compilando e gerando arquivo PDF oficial v6.8 com 19 coleções e 20 telas...');
     setTimeout(() => {
-      const ok = downloadOfficialDossierPdf('DOSSIE_OFICIAL_GESTAO_AD_v6.2.pdf');
+      const ok = downloadOfficialDossierPdf('DOSSIE_OFICIAL_GESTAO_AD_v6.8.pdf');
       setIsPrinting(false);
       if (ok) {
-        setPrintSuccessFeedback('Arquivo PDF oficial gerado e baixado com sucesso no seu dispositivo!');
+        setPrintSuccessFeedback('Arquivo PDF oficial v6.8 gerado e baixado com sucesso no seu dispositivo!');
       } else {
         setPrintSuccessFeedback('Erro ao compilar o PDF.');
       }
@@ -420,7 +420,7 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                     Gestão AD (Auto Direção)
                   </h1>
                   <p className="text-xs text-slate-500 mt-1">
-                    Versão 6.2 Estável, Responsiva (Modo Mobile & Normal), Com Busca por CEP (Default MG) e Sincronizada no Supabase · Novembro de 2026
+                    Versão 6.8 Estável, Com Mapa Geográfico (5–40 km), Blindagem Cloud Vault de Pacotes, Gestão de Veículos, Auditada (17/17 Testes) e Sincronizada no Supabase · Novembro de 2026
                   </p>
                 </div>
 
@@ -644,10 +644,27 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                       <ul className="list-disc pl-4 space-y-0.5">
                         <li><strong>Precisão em Centavos</strong>: Todos os campos monetários utilizam inteiros (`valorTotalCentavos`, etc.), eliminando falhas de ponto flutuante.</li>
                         <li><strong>Unicidade por SHA-256</strong>: Validação criptográfica impedindo que o mesmo candidato seja duplicado entre instrutores.</li>
-                        <li><strong>Auditoria LGPD</strong>: Registros de auditoria e transferências são blindados contra alteração ou exclusão física.</li>
+                        <li><strong>Auditoria LGPD & Cloud Sync Vault</strong>: Registros de auditoria, transferências, pacotes e veículos são blindados contra perda ou exclusão acidental (`__agd_vault_*`).</li>
                       </ul>
                     </div>
                   </div>
+                </div>
+
+                {/* Section 12 - Novas Melhorias Homologadas v6.8 */}
+                <div className="space-y-3 pt-2 border-t border-slate-100">
+                  <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs">12</span>
+                    Melhorias Homologadas na Versão v6.8 (Mapa Geográfico 5–40 km, Blindagem de Pacotes, Agenda e Meus Veículos)
+                  </h2>
+                  <ul className="text-xs text-slate-600 list-disc pl-12 space-y-1.5">
+                    <li><strong>Cadastro de Aluno em 3 Telas (Wizard) & Confidencialidade por Código</strong>: Auto-cadastro dividido em 3 etapas enxutas. Nenhum nome de instrutor é listado em dropdown público; o aluno informa o <strong>Código do Instrutor</strong> (ou acessa pelo link do WhatsApp que já preenche o código automaticamente) para visualizar exclusivamente os planos daquele instrutor.</li>
+                    <li><strong>Localizador Geográfico de Instrutores (Mapa 5 a 40 km), UF Primeiro, CEP e Privacidade de Bairro</strong>: Mapa interativo (Leaflet/OpenStreetMap + Haversine) com seleção de <strong>Estado (UF) primeiro</strong>, auto-preenchimento por CEP, filtro de cidades com instrutores quando em outro estado, filtros de Categoria CNH, Câmbio (Manual/Automático) e Tipo de Veículo (Carro, Moto, Caminhão, Ônibus). Exibe <strong>apenas as cidades atendidas</strong> (ocultando o bairro residencial do instrutor) e direciona o contato para o botão <strong>"Chamar no WhatsApp"</strong>.</li>
+                    <li><strong>Demanda Reversa (Alunos à Procura de Instrutor) & Mapa Interno do Instrutor</strong>: Alunos sem instrutor na região podem se cadastrar com CEP; os instrutores logados recebem alertas em <strong>"Mapa & Notificações"</strong> e visualizam no mapa interno exclusivo quantos alunos e instrutores existem por cidade, área e distância.</li>
+                    <li><strong>Agenda por Período (Semanal, Mensal, Anual) & Notificação de Desmarcação</strong>: Liberação e remoção de horários por período, semana, mês ou ano com visão mobile do aluno agendado e alerta de conflito que envia notificação automática na tela do aluno solicitando remarcação.</li>
+                    <li><strong>Edição Persistente de Plano na Ficha do Aluno</strong>: Permite alterar o pacote/plano contratado, categoria CNH e evolução pedagógica diretamente na ficha do aluno com atualização automática da conta a receber.</li>
+                    <li><strong>Blindagem Absoluta Contra Perda de Pacotes (Zero Data Loss)</strong>: Cofre local redundante (<code>PACKAGES_BACKUP</code>) + <strong>Cloud Sync Vault</strong> (<code>__agd_vault_package_offers</code>) garantindo que nenhum pacote criado pelo instrutor seja apagado ou substituído e proibindo a criação aleatória de pacotes.</li>
+                    <li><strong>Cadastro e Gestão de Carros / Veículos dos Instrutores (<code>VehiclesView.tsx</code>)</strong>: Aba dedicada <strong>"Meus Veículos"</strong> disponível em todos os planos para cadastrar carros, motos, caminhões e ônibus (câmbio manual/automático, placa, ano, cor, duplo comando, adaptação PCD, km atual e próxima revisão), sincronizada com o Mapa e validada por <strong>17/17 testes automatizados</strong>.</li>
+                  </ul>
                 </div>
               </div>
             </div>
