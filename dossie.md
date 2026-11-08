@@ -1,6 +1,6 @@
 # DOSSIÊ COMPLETO DO SISTEMA — GESTÃO AD (AUTO DIREÇÃO)
-**Documento Oficial de Registro Técnico, Arquitetura de Software, Interface Adaptativa (Mobile/Tablet/Desktop), Validação de Endereço por CEP, Catálogo de Telas, Regras de Negócio e Agentes de Segurança**  
-*Data de Homologação: Novembro de 2026 | Versão da Plataforma: v6.2 Auditada, Responsiva (Modo Mobile & Normal), Validação por CEP (Default MG) e Sincronizada no Supabase*
+**Documento Oficial de Registro Técnico, Arquitetura de Software, Interface Adaptativa, Mapa Geográfico (5–40 km), Blindagem Cloud Vault, Frota de Veículos, Regras de Negócio e Agentes de Segurança**  
+*Data de Homologação: Novembro de 2026 | Versão da Plataforma: v6.8 Auditada, Com Geolocalização (5–40 km), Blindagem de Pacotes, Gestão de Veículos e Sincronização em Tempo Real no Supabase*
 
 ---
 
@@ -1008,12 +1008,85 @@ Controla a fila transacional armazenada localmente no cliente, transmitida ao Fi
 
 ---
 
-## 14. TERMO DE HOMOLOGAÇÃO E DECLARAÇÃO DE INTEGRIDADE
+## 14. EVOLUÇÃO v6.8: CADASTRO DE ALUNO EM 3 ETAPAS, CONFIDENCIALIDADE POR CÓDIGO, MAPA GEOGRÁFICO (5–40 KM), DEMANDA REVERSA, AGENDA POR PERÍODO, BLINDAGEM CLOUD VAULT E GESTÃO DE VEÍCULOS DOS INSTRUTORES
+
+Abaixo estão registradas todas as melhorias estruturais, correções de sincronização em tempo real e blindagens de segurança implementadas desde a versão v6.2 até a homologação **v6.8 (17/17 testes automatizados aprovados)**:
+
+### 14.1 Otimização do Cadastro do Aluno em 3 Etapas (Wizard) e Exibição Fiel de Todos os Pacotes (`StudentSelfRegisterModal.tsx` & `StudentsView.tsx`)
+- **Fluxo Dividido em 3 Telas Claras**:
+  1. **Etapa 1 — Instrutor, Categoria CNH & Plano/Pacote**: Localização do instrutor por código (ou preenchimento automático via link do WhatsApp), seleção das categorias efetivamente oferecidas pelo instrutor, escolha do pacote de aulas práticas e aplicação opcional de cupom de desconto.
+  2. **Etapa 2 — Dados Pessoais & Credenciais**: Nome completo, CPF validado (dígitos verificadores + anti-duplicidade), Data de Nascimento (`idade >= 18 anos`), Telefone/WhatsApp obrigatório (bloqueando máscaras vazias) e E-mail/Senha.
+  3. **Etapa 3 — Endereço (Busca Automática por CEP) & Revisão Final**: Preenchimento automático de Logradouro, Bairro, Cidade e Estado (UF) via CEP e confirmação da matrícula.
+- **Exibição Completa dos Pacotes do Instrutor**: Todos os pacotes ativos criados pelo instrutor selecionado são listados sem limite ou corte, com sincronização em tempo real a partir do Supabase e do **Cloud Sync Vault**.
+
+### 14.2 Confidencialidade de Instrutores no Auto-Cadastro e Vínculo Automático via WhatsApp (`StudentSelfRegisterModal.tsx`)
+- **Proteção de Confidencialidade Comercial**: O sistema **não exibe nenhuma lista ou dropdown com o nome dos instrutores cadastrados** na tela pública de auto-cadastro, protegendo os planos e preços de cada profissional contra concorrentes.
+- **Busca Exclusiva por Código do Instrutor ou Link Direto**:
+  - Quando o aluno acessa pelo **link de convite enviado pelo WhatsApp**, o código do instrutor é preenchido e validado automaticamente, carregando imediatamente os planos daquele instrutor.
+  - Quando o aluno acessa diretamente pela página principal, ele deve informar o **Código do Instrutor** para que o sistema localize o profissional e apresente exclusivamente os planos dele.
+  - Caso o aluno ainda não possua o código de um instrutor, a tela oferece o botão **"Localizar Instrutor Próximo (Mapa)"**.
+
+### 14.3 Localizador Geográfico de Instrutores (Mapa 5 a 40 km), Seleção de Estado Primeiro, Auto-Preenchimento por CEP e Privacidade de Bairro (`InstructorLocatorMapModal.tsx` & `geoService.ts`)
+- **Mapa Interativo de Alta Performance (Leaflet / OpenStreetMap + Fórmula de Haversine)**:
+  - Permite ao aluno localizar instrutores próximos via geolocalização GPS do navegador, seleção de Estado/Cidade ou digitação do CEP, com barra deslizante de raio ajustável entre **5 km e 40 km**.
+- **Seleção de Estado (UF) em Primeiro Lugar & Inteligência por CEP**:
+  - O usuário seleciona o **Estado (UF)** primeiro ou digita seu **CEP** para preenchimento automático da cidade e coordenadas.
+  - Se o usuário estiver pesquisando em **outro estado diferente da sua localização**, o seletor passa a listar automaticamente **apenas as cidades daquele estado que possuem instrutores cadastrados**.
+- **Filtros Completos para o Aluno**:
+  - Filtro por **Categoria CNH** (`A`, `B`, `AB`, `C`, `D`, `E`, `ACC`, `PCD`), **Tipo de Câmbio** (`MANUAL`, `AUTOMATICO`, `AMBOS`), **Tipo de Veículo** (`MOTO`, `CARRO`, `CAMINHAO`, `ONIBUS`), **Cidade** e **Distância (5 a 40 km)**.
+- **Privacidade do Endereço do Instrutor e Contato Direto via WhatsApp**:
+  - Os cards e marcadores do mapa exibem **apenas a(s) cidade(s) que o instrutor cadastrou que atende**, **nunca exibindo o bairro do endereço residencial do instrutor**.
+  - O botão *"Ver Planos / Matricular"* foi removido do mapa público para que o primeiro contato do aluno com o instrutor ocorra diretamente pelo botão **"Chamar no WhatsApp"**.
+
+### 14.4 Demanda Reversa (Alunos à Procura de Instrutor) e Mapa Interno Exclusivo para Instrutores Logados (`InstructorGeoDemandView.tsx`)
+- **Cadastro de Alunos à Procura de Instrutor (`StudentLeadRequest`)**:
+  - Caso o aluno não encontre instrutor na sua região ou cidade, ele pode preencher seu Nome, WhatsApp, CEP (com auto-preenchimento de cidade/UF e bairro), Categoria CNH e Câmbio desejado, ficando salvo na lista de alunos em busca de instrutor.
+- **Seção "Mapa & Notificações" Exclusiva para Instrutores Logados**:
+  - Dentro do painel autenticado do instrutor, a aba **Mapa & Notificações** notifica os instrutores sobre novos alunos procurando atendimento em cada cidade, permitindo chamá-los com 1 clique via WhatsApp.
+  - O **Mapa Interno de Mercado** (acessível somente para instrutores logados) exibe quantos alunos ativos, quantos alunos procurando instrutor e quantos instrutores existem por cidade, área, bairro e distância até o instrutor.
+  - O instrutor configura na própria tela seu **Raio de Atendimento (5 a 40 km)** e cadastra/remove todas as **Cidades que Atende**.
+
+### 14.5 Liberação e Remoção de Agenda por Período (Semanal, Mensal, Anual) com Alerta de Conflito e Notificação ao Aluno (`ScheduleView.tsx` & `StudentPortal.tsx`)
+- **Liberação de Horários por Escopo**: O instrutor pode liberar horários na agenda escolhendo entre **Período Personalizado**, **Semanal**, **Mensal** ou **Anual**, com sincronização imediata no banco de dados.
+- **Confirmação ao Remover Horários & Proteção de Aulas Marcadas**:
+  - Ao remover um horário ou período, o sistema pergunta se deseja remover **somente no dia**, **na semana**, **no mês** ou **no ano**.
+  - Se houver qualquer aluno com aula agendada no(s) horário(s) que o instrutor está indisponibilizando, o sistema exibe um alerta detalhando o nome do aluno, a data e o horário, perguntando: *"Deseja remover o horário e notificar o aluno sobre a mudança?"*.
+  - Ao confirmar, a aula é desmarcada e o sistema envia automaticamente uma **Notificação na Tela do Aluno** (`StudentPortal.tsx`) informando que o horário `X` da data `X` foi desmarcado pelo instrutor e solicitando que o aluno remarque para uma nova data e horário disponível na agenda.
+- **Visibilidade Mobile Completa**: No modo mobile da agenda do instrutor, cada horário ocupado exibe claramente o nome do aluno cadastrado, categoria CNH e telefone/WhatsApp.
+
+### 14.6 Edição e Persistência de Mudança de Plano na Ficha do Aluno (`StudentsView.tsx`)
+- Ao abrir a **Ficha Pedagógica e Cadastral do Aluno**, o instrutor pode alterar a **Categoria CNH**, mudar o **Plano / Pacote Contratado**, ajustar a carga horária total e atualizar as notas das 8 competências práticas.
+- Ao clicar em **"Salvar Evolução e Alterações da Ficha"**, o sistema grava de forma assíncrona (`saveStudentAsync` + `StudentFichaMeta` + `updateAccountReceivableAsync`), atualizando automaticamente a fatura em aberto do aluno e garantindo persistência perpétua no banco local e no Supabase.
+
+### 14.7 Blindagem Absoluta Contra Perda de Pacotes Criados pelo Instrutor e Cloud Sync Vault (`storage.ts`, `supabaseAdapter.ts` & `PackagesManager.tsx`)
+- **Proibição Estrita de Apagar ou Inventar Pacotes**:
+  - O sistema **jamais apaga, sobrescreve ou substitui** pacotes criados ou editados pelos instrutores, e **jamais inventa pacotes aleatórios** de categorias que o instrutor não cadastrou.
+  - Na tela de **Alunos**, a barra de filtro exibe **apenas as categorias CNH em que realmente há aluno cadastrado**, evitando poluição visual no menu.
+- **Arquitetura Cloud Sync Vault (`__agd_vault_*`) + Cofre Local Redundante (`PACKAGES_BACKUP`)**:
+  - Implementado motor de persistência resiliente em duas camadas (`localStorage` + Cloud Vault no Supabase PostgreSQL) com controle de carimbo temporal (`atualizadoEm`), fila de alterações pendentes (`PENDING_PACKAGES`) e registro explícito de exclusão (`DELETED_PACKAGES`), assegurando que nenhuma atualização de código ou sincronização perca cadastros feitos pelos instrutores.
+
+### 14.8 Cadastro e Gestão Completa de Veículos / Carros dos Instrutores (`VehiclesView.tsx`)
+- **Nova Tela e Menu Dedicado "Meus Veículos"**:
+  - Disponível na barra de navegação principal, no menu mobile inferior e nos atalhos rápidos do Painel Geral para todos os planos (`DEMO`, `BASICO`, `AVANCADO`, `MASTER`).
+  - Permite a cada instrutor cadastrar, editar, alternar status operacional (`DISPONÍVEL`, `EM AULA`, `MANUTENÇÃO`) e remover seus veículos de instrução:
+    - **Marca e Modelo**, **Placa** (Mercosul ou padrão antigo com máscara automática), **Ano** e **Cor**;
+    - **Tipo de Veículo** (`CARRO`, `MOTO`, `CAMINHAO`, `ONIBUS`), **Tipo de Câmbio** (`MANUAL` ou `AUTOMATICO`) e **Categoria CNH** (`A`, `B`, `AB`, `C`, `D`, `E`);
+    - **Duplo Comando Credenciado**, **Adaptação PCD**, **Quilometragem Atual (km)** e **Próxima Revisão (km)**.
+  - Sincroniza automaticamente os tipos de veículos e câmbio do instrutor com os filtros do **Mapa de Localização de Instrutores** e protege os dados com `VEHICLES_BACKUP` e Cloud Vault (`__agd_vault_vehicles`).
+
+### 14.9 Sanitização Global de Telefone / WhatsApp e Suite de 17 Testes Automatizados (`validation.ts` & `run_automated_tests.mjs`)
+- **Telefone Obrigatório e Proibição de Máscara como Número**: No convite de aluno e em todas as telas do sistema, o número de telefone é validado estritamente (10 ou 11 dígitos reais, rejeitando sequências repetidas ou caracteres de máscara `'() -'`).
+- **Validação Automatizada Contínua (`run_automated_tests.mjs`)**: Suite automatizada com **17 baterias de testes (`T01` a `T17`)** cobrindo confidencialidade de instrutores, exibição de pacotes, geolocalização Haversine 5–40 km, filtros do mapa, demanda reversa, sanitização de telefone, agenda por período com notificação ao aluno, persistência da ficha do aluno, blindagem de pacotes e gestão de veículos dos instrutores (**17/17 aprovados — 100% sem quebras**).
+
+---
+
+## 15. TERMO DE HOMOLOGAÇÃO E DECLARAÇÃO DE INTEGRIDADE
 
 Este Dossiê constitui o registro definitivo e exaustivo de todas as funcionalidades, interfaces, modelos de dados, tabelas, relacionamentos e salvaguardas tecnológicas implementadas no **Gestão AD (Auto Direção)**.
 
 *Homologado para produção e operação contínua.*  
 *Administração Master: cassiordcosta@gmail.com*  
-*Versão do Sistema: v6.2 Estável, Responsiva (Modo Mobile & Normal), Com Busca Automática por CEP (Default MG), Auditada e Sincronizada no Supabase*
+*Versão do Sistema: v6.8 Estável, Com Mapa Geográfico (5–40 km), Blindagem Cloud Vault de Pacotes, Gestão de Veículos dos Instrutores, Auditada (17/17 Testes) e Sincronizada em Tempo Real no Supabase*
+
 
 
