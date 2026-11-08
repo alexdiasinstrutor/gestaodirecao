@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Car,
   Calendar,
@@ -8,6 +8,9 @@ import {
   QrCode,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
+  BellRing,
+  RefreshCw,
   Copy,
   Check,
   ChevronRight,
@@ -20,7 +23,7 @@ import {
   Tag,
   Sparkles
 } from 'lucide-react';
-import { db } from '../../lib/storage';
+import { db, syncFromSupabase } from '../../lib/storage';
 import { formatCurrencyBRL, formatDateBR } from '../../lib/validation';
 import { generatePixCopiaECola, getPixQrCodeImageUrl } from '../../lib/whatsapp';
 import {
@@ -29,7 +32,8 @@ import {
   Organization,
   Lesson,
   AvailableSlot,
-  AccountReceivable
+  AccountReceivable,
+  StudentNotification
 } from '../../types';
 import type { CouponValidationContext } from '../../lib/coupons';
 
@@ -48,19 +52,83 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
 }) => {
   const orgId = currentOrg.id;
   const [studentMobileTab, setStudentMobileTab] = useState<'BOOK' | 'PIX' | 'PROGRESS'>('BOOK');
+  const [portalVersion, setPortalVersion] = useState<number>(0);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const bookingSectionRef = useRef<HTMLDivElement | null>(null);
+
+  // Sincronização automática em tempo real para receber atualizações da agenda e notificações do instrutor
+  useEffect(() => {
+    const refreshFromCloud = () => {
+      syncFromSupabase()
+        .then(() => setPortalVersion((v) => v + 1))
+        .catch(() => {});
+    };
+
+    refreshFromCloud();
+
+    const intervalId = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        refreshFromCloud();
+      }
+    }, 8000);
+
+    const handleLocalUpdate = () => setPortalVersion((v) => v + 1);
+
+    window.addEventListener('agd:data-synced', handleLocalUpdate);
+    window.addEventListener('storage', handleLocalUpdate);
+    window.addEventListener('focus', refreshFromCloud);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('agd:data-synced', handleLocalUpdate);
+      window.removeEventListener('storage', handleLocalUpdate);
+      window.removeEventListener('focus', refreshFromCloud);
+    };
+  }, []);
+
+  const handleManualSync = async () => {
+    setIsSyncing(true);
+    try {
+      await syncFromSupabase();
+      setPortalVersion((v) => v + 1);
+    } finally {
+      setTimeout(() => setIsSyncing(false), 400);
+    }
+  };
 
   // Find student entity matching this user (by email or id)
-  const students = db.getStudents(orgId);
-  const student = students.find((s) => s.email.toLowerCase() === currentUser.email.toLowerCase()) || students[0];
+  const students = useMemo(() => db.getStudents(orgId), [orgId, portalVersion]);
+  const student = useMemo(
+    () =>
+      students.find((s) => s.email.toLowerCase() === currentUser.email.toLowerCase()) ||
+      students.find((s) => s.id === currentUser.id) ||
+      students[0],
+    [students, currentUser.email, currentUser.id]
+  );
 
-  const instructor = db.getUsers(orgId).find((u) => u.id === student?.instrutorId) || db.getUsers(orgId)[1];
+  const instructor = useMemo(
+    () => db.getUsers(orgId).find((u) => u.id === student?.instrutorId) || db.getUsers(orgId)[1],
+    [orgId, student?.instrutorId, portalVersion]
+  );
   const pixConfig = db.getEffectivePixConfig(currentOrg, instructor);
-  const vehicles = db.getVehicles(orgId);
-  const lessons = db.getLessonsByStudent(student?.id || '');
-  const [portalVersion, setPortalVersion] = useState<number>(0);
+  const vehicles = useMemo(() => db.getVehicles(orgId), [orgId, portalVersion]);
+  const lessons = useMemo(
+    () => db.getLessonsByStudent(student?.id || ''),
+    [student?.id, portalVersion]
+  );
   const accounts = useMemo(() => {
     return db.getAccountsReceivable(orgId).filter((a) => a.alunoId === student?.id);
   }, [orgId, student?.id, portalVersion]);
+
+  // Notificações de aulas desmarcadas pelo instrutor
+  const studentNotifications = useMemo(
+    () => (student ? db.getStudentNotifications(student.id) : []),
+    [student?.id, portalVersion]
+  );
+  const unreadNotifications = useMemo(
+    () => studentNotifications.filter((n) => !n.lida),
+    [studentNotifications]
+  );
 
   // Coupon states for Student
   const [couponCodeInput, setCouponCodeInput] = useState<string>('');
@@ -83,20 +151,77 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
   const [pixCopied, setPixCopied] = useState<boolean>(false);
   const [chaveCopied, setChaveCopied] = useState<boolean>(false);
 
-  // Available slots for selected date
-  const allSlots = db.getSlots(orgId);
-  const allOrgLessons = db.getLessons(orgId);
+  // Available slots for selected date (filtrados estritamente pelo instrutor vinculado ao aluno)
+  const allSlots = useMemo(
+    () => db.getSlots(orgId, student?.instrutorId),
+    [orgId, student?.instrutorId, portalVersion]
+  );
+  const allOrgLessons = useMemo(
+    () => db.getLessons(orgId),
+    [orgId, portalVersion]
+  );
 
-  const availableSlotsOnDate = allSlots.filter((slot) => {
-    if (slot.data !== scheduleDate) return false;
-    if (slot.bloqueado) return false;
+  const availableSlotsOnDate = useMemo(
+    () =>
+      allSlots.filter((slot) => {
+        if (slot.data !== scheduleDate) return false;
+        if (slot.bloqueado) return false;
 
-    // Check if slot already has an active lesson booked by anyone
-    const isBooked = allOrgLessons.some(
-      (l) => l.data === scheduleDate && l.horaInicio === slot.horaInicio && l.status !== 'CANCELADA'
-    );
-    return !isBooked;
-  });
+        // Verifica se já existe aula ativa agendada para este instrutor neste horário
+        const isBooked = allOrgLessons.some(
+          (l) =>
+            l.data === scheduleDate &&
+            l.horaInicio === slot.horaInicio &&
+            l.status !== 'CANCELADA' &&
+            (!l.instrutorId || !student?.instrutorId || l.instrutorId === student.instrutorId)
+        );
+        return !isBooked;
+      }),
+    [allSlots, allOrgLessons, scheduleDate, student?.instrutorId]
+  );
+
+  // Próximas datas com horários livres liberados pelo instrutor (para facilitar o reagendamento)
+  const upcomingDatesWithFreeSlots = useMemo(() => {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const dateCounts = new Map<string, number>();
+
+    for (const slot of allSlots) {
+      if (slot.data < todayStr || slot.bloqueado) continue;
+      const isBooked = allOrgLessons.some(
+        (l) =>
+          l.data === slot.data &&
+          l.horaInicio === slot.horaInicio &&
+          l.status !== 'CANCELADA' &&
+          (!l.instrutorId || !student?.instrutorId || l.instrutorId === student.instrutorId)
+      );
+      if (!isBooked) {
+        dateCounts.set(slot.data, (dateCounts.get(slot.data) || 0) + 1);
+      }
+    }
+
+    return Array.from(dateCounts.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .slice(0, 10)
+      .map(([dt, count]) => ({ date: dt, count }));
+  }, [allSlots, allOrgLessons, student?.instrutorId]);
+
+  const handleMarkNotificationRead = async (notifId: string) => {
+    await db.markStudentNotificationReadAsync(notifId);
+    setPortalVersion((v) => v + 1);
+  };
+
+  const handleRescheduleFromNotification = async (notif: StudentNotification) => {
+    setStudentMobileTab('BOOK');
+    if (upcomingDatesWithFreeSlots.length > 0) {
+      setScheduleDate(upcomingDatesWithFreeSlots[0].date);
+    }
+    setSelectedSlot(null);
+    await db.markStudentNotificationReadAsync(notif.id);
+    setPortalVersion((v) => v + 1);
+    setTimeout(() => {
+      bookingSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
 
   const progressPercent = student
     ? Math.min(100, Math.round((student.aulasCumpridas / student.totalAulasContratadas) * 100))
@@ -139,6 +264,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
     }
 
     setSelectedSlot(null);
+    setPortalVersion((v) => v + 1);
     setScheduleSuccess(`Aula prática agendada com sucesso para ${formatDateBR(scheduleDate)} às ${selectedSlot}!`);
     setTimeout(() => setScheduleSuccess(''), 4000);
   };
@@ -301,6 +427,70 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
         </div>
       )}
 
+      {/* PAINEL DE NOTIFICAÇÕES DE AULAS DESMARCADAS PELO INSTRUTOR */}
+      {unreadNotifications.length > 0 && (
+        <div className="p-4 sm:p-5 bg-rose-50 border-2 border-rose-300 rounded-2xl shadow-sm space-y-3 animate-in fade-in">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-rose-600 text-white shrink-0">
+                <BellRing className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="px-2 py-0.5 rounded bg-rose-200 text-rose-950 font-extrabold text-[10px] uppercase tracking-wider">
+                  Aviso Importante do Instrutor
+                </span>
+                <h3 className="text-sm sm:text-base font-extrabold text-rose-950 mt-0.5">
+                  Horário de Aula Desmarcado — Solicitação de Reagendamento ({unreadNotifications.length})
+                </h3>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2.5">
+            {unreadNotifications.map((notif) => (
+              <div
+                key={notif.id}
+                className="p-3.5 bg-white rounded-xl border border-rose-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+              >
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-md bg-rose-100 text-rose-900 font-mono font-bold">
+                      📅 Data: {formatDateBR(notif.dataAula)} às {notif.horaAula}
+                    </span>
+                    <span className="text-slate-500 font-medium">
+                      Instrutor: <strong className="text-slate-800">{notif.instrutorNome}</strong>
+                    </span>
+                  </div>
+                  <p className="text-slate-800 font-medium leading-relaxed">
+                    O horário das <strong>{notif.horaAula}</strong> da data <strong>{formatDateBR(notif.dataAula)}</strong> foi desmarcado pelo instrutor{' '}
+                    <strong>{notif.instrutorNome}</strong>. Por favor, escolha e remarque para uma nova data e horário disponível na agenda abaixo.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => handleRescheduleFromNotification(notif)}
+                    className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs cursor-pointer shadow-xs transition-colors flex items-center gap-1.5"
+                  >
+                    <Calendar className="w-3.5 h-3.5 shrink-0" />
+                    <span>Remarcar na Agenda</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleMarkNotificationRead(notif.id)}
+                    className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs cursor-pointer transition-colors"
+                    title="Confirmar leitura deste aviso"
+                  >
+                    Ciente
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Barra de Navegação Simplificada do Aluno (Modo Mobile Simplificado) */}
       {isSimplified && (
         <div className="bg-white p-1.5 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-1 overflow-x-auto no-scrollbar">
@@ -361,21 +551,68 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
       <div className={`grid grid-cols-1 ${isSimplified ? '' : 'lg:grid-cols-2'} gap-5 sm:gap-6`}>
         {/* SECTION: AGENDAR NOVA AULA PRÁTICA */}
         {(!isSimplified || studentMobileTab === 'BOOK') && (
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-1 pb-2 border-b border-slate-100">
+          <div
+            ref={bookingSectionRef}
+            className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs space-y-4"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-100">
               <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-blue-600 shrink-0" />
                 <span>Agendar Nova Aula Prática</span>
               </h2>
-              <span className="text-xs text-slate-600 font-medium">
-                Apenas horários liberados
-              </span>
+              <button
+                type="button"
+                onClick={handleManualSync}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
+                title="Sincronizar horários liberados pelo instrutor"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 text-blue-600 ${isSyncing ? 'animate-spin' : ''}`} />
+                <span>{isSyncing ? 'Sincronizando...' : 'Atualizar Agenda'}</span>
+              </button>
             </div>
 
             {scheduleError && (
               <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
                 <span>{scheduleError}</span>
+              </div>
+            )}
+
+            {/* Atalho rápido de próximas datas com horários liberados pelo instrutor */}
+            {upcomingDatesWithFreeSlots.length > 0 && (
+              <div className="space-y-1.5">
+                <span className="text-xs font-semibold text-slate-700 block">
+                  Próximas Datas Liberadas pelo Instrutor:
+                </span>
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                  {upcomingDatesWithFreeSlots.map((item) => {
+                    const active = item.date === scheduleDate;
+                    return (
+                      <button
+                        key={item.date}
+                        type="button"
+                        onClick={() => {
+                          setScheduleDate(item.date);
+                          setSelectedSlot(null);
+                        }}
+                        className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold whitespace-nowrap transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                          active
+                            ? 'bg-indigo-600 border-indigo-600 text-white shadow-xs'
+                            : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-indigo-50 hover:border-indigo-300'
+                        }`}
+                      >
+                        <span>{formatDateBR(item.date)}</span>
+                        <span
+                          className={`px-1.5 py-0.2 rounded text-[10px] font-mono ${
+                            active ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800'
+                          }`}
+                        >
+                          {item.count} vaga(s)
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
@@ -542,28 +779,42 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
             </h2>
 
             <div className="space-y-2 max-h-60 overflow-y-auto">
-              {lessons.map((lsn) => (
-                <div
-                  key={lsn.id}
-                  className="p-3 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-between gap-2 text-xs"
-                >
-                  <div className="min-w-0">
-                    <p className="font-bold text-slate-900 truncate">
-                      {formatDateBR(lsn.data)} às {lsn.horaInicio} - {lsn.horaFim}
-                    </p>
-                    <p className="text-slate-600 text-xs font-medium truncate">{lsn.topico}</p>
-                  </div>
-                  <span
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold shrink-0 ${
-                      lsn.status === 'CONCLUIDA'
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : 'bg-blue-100 text-blue-800'
+              {lessons.map((lsn) => {
+                const isCancelled = lsn.status === 'CANCELADA';
+                return (
+                  <div
+                    key={lsn.id}
+                    className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs ${
+                      isCancelled
+                        ? 'border-rose-200 bg-rose-50/70'
+                        : 'border-slate-100 bg-slate-50'
                     }`}
                   >
-                    {lsn.status}
-                  </span>
-                </div>
-              ))}
+                    <div className="min-w-0 space-y-0.5">
+                      <p className={`font-bold truncate ${isCancelled ? 'text-rose-900 line-through' : 'text-slate-900'}`}>
+                        {formatDateBR(lsn.data)} às {lsn.horaInicio} - {lsn.horaFim}
+                      </p>
+                      <p className="text-slate-600 text-xs font-medium truncate">{lsn.topico}</p>
+                      {isCancelled && (
+                        <p className="text-rose-700 font-semibold text-[11px]">
+                          Horário desmarcado pelo instrutor — escolha uma nova data e horário disponível na agenda.
+                        </p>
+                      )}
+                    </div>
+                    <span
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold shrink-0 self-start sm:self-center ${
+                        lsn.status === 'CONCLUIDA'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : isCancelled
+                          ? 'bg-rose-600 text-white'
+                          : 'bg-blue-100 text-blue-800'
+                      }`}
+                    >
+                      {isCancelled ? 'DESMARCADA — REMARCAR' : lsn.status}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

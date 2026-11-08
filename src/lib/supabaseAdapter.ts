@@ -731,13 +731,58 @@ export const supabaseAdapter = {
 
   // Slots de Agenda
   async getSlots(orgId?: string): Promise<AvailableSlot[]> {
-    return supabaseSelect('available_slots', rowToSlot, orgId ? { organizacao_id: orgId } : undefined);
+    if (!supabase) return [];
+    const pageSize = 1000;
+    let allRows: any[] = [];
+    let from = 0;
+    while (true) {
+      let q = supabase
+        .from('available_slots')
+        .select('*')
+        .range(from, from + pageSize - 1);
+      if (orgId) {
+        q = q.eq('organizacao_id', orgId);
+      }
+      const { data, error } = await q;
+      if (error) {
+        console.error('[Supabase] Erro ao ler "available_slots":', error.message);
+        break;
+      }
+      if (!data || data.length === 0) break;
+      allRows = allRows.concat(data);
+      if (data.length < pageSize) break;
+      from += pageSize;
+      if (from >= 15000) break; // safety cap
+    }
+    return allRows.map(rowToSlot);
   },
   async saveSlot(slot: AvailableSlot): Promise<void> {
     await supabaseUpsert('available_slots', slotToRow(slot));
   },
+  async saveSlotsBatch(slots: AvailableSlot[]): Promise<void> {
+    if (!supabase || slots.length === 0) return;
+    const chunkSize = 400;
+    for (let i = 0; i < slots.length; i += chunkSize) {
+      const chunk = slots.slice(i, i + chunkSize).map(slotToRow);
+      const { error } = await supabase.from('available_slots').upsert(chunk, { onConflict: 'id' });
+      if (error) {
+        console.error('[Supabase] Erro em saveSlotsBatch:', error.message);
+      }
+    }
+  },
   async deleteSlot(id: string): Promise<void> {
     await supabaseDelete('available_slots', id);
+  },
+  async deleteSlotsBatch(ids: string[]): Promise<void> {
+    if (!supabase || ids.length === 0) return;
+    const chunkSize = 200;
+    for (let i = 0; i < ids.length; i += chunkSize) {
+      const chunk = ids.slice(i, i + chunkSize);
+      const { error } = await supabase.from('available_slots').delete().in('id', chunk);
+      if (error) {
+        console.error('[Supabase] Erro em deleteSlotsBatch:', error.message);
+      }
+    }
   },
 
   // Aulas
@@ -809,6 +854,19 @@ export const supabaseAdapter = {
       .eq('organizacao_id', orgId)
       .order('timestamp', { ascending: false })
       .limit(500);
+    return (data || []).map(rowToAudit);
+  },
+  async getNotificationAuditLogs(): Promise<AuditLog[]> {
+    if (!supabase) return [];
+    const { data, error } = await supabase
+      .from('audit_logs')
+      .select('*')
+      .eq('entidade', 'StudentNotification')
+      .order('timestamp', { ascending: false })
+      .limit(500);
+    if (error) {
+      return [];
+    }
     return (data || []).map(rowToAudit);
   },
   async addAuditLog(log: AuditLog): Promise<void> {

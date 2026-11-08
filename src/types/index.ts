@@ -405,3 +405,22 @@ export interface SyncQueueItem {
   payload: any;
   retryCount: number;
 }
+
+export type SchedulePeriodScope = 'DIA' | 'SEMANAL' | 'MENSAL' | 'ANUAL' | 'PERIODO';
+
+export interface StudentNotification {
+  id: string;
+  organizacaoId: string;
+  alunoId: string;
+  alunoNome?: string;
+  instrutorId: string;
+  instrutorNome: string;
+  aulaId?: string;
+  dataAula: string; // YYYY-MM-DD
+  horaAula: string; // HH:mm
+  tipo: 'AULA_DESMARCADA' | 'AVISO_AGENDA';
+  titulo: string;
+  mensagem: string;
+  lida: boolean;
+  criadoEm: string;
+}

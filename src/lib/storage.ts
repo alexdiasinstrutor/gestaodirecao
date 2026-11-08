@@ -16,9 +16,10 @@ import {
   SyncQueueItem,
   SaaSPlanType,
   DiscountCoupon,
-  CouponRedemption
+  CouponRedemption,
+  StudentNotification
 } from '../types';
-import { generateCPFFingerprint, maskCPF } from './validation';
+import { generateCPFFingerprint, maskCPF, formatDateBR } from './validation';
 import {
   db as firestoreDb,
   auth,
@@ -110,8 +111,16 @@ const STORAGE_KEYS = {
   CURRENT_USER: 'agd_current_user',
   SESSION_EXPIRY: 'agd_session_expiry',
   DELETED_SLOTS: 'agd_deleted_slots',
+  PENDING_NEW_SLOTS: 'agd_pending_new_slots',
+  STUDENT_NOTIFICATIONS: 'agd_student_notifications',
   SEEDED: 'agd_seeded_v5'
 };
+
+function notifyDataChange() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('agd:data-synced'));
+  }
+}
 
 // Duração padrão da sessão ativa do usuário (60 minutos)
 export const SESSION_DURATION_MS = 60 * 60 * 1000;
@@ -834,7 +843,7 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
     writeList(STORAGE_KEYS.USERS, Array.from(mergedUsersMap.values()));
 
     // Carrega todos os registros remotos do Supabase de todas as organizações
-    const [students, vehicles, lessons, slots, accounts, payments, expenses, investments, packages] =
+    const [students, vehicles, lessons, slots, accounts, payments, expenses, investments, packages, notificationLogs] =
       await Promise.all([
         supabaseAdapter.getStudents(),
         supabaseAdapter.getVehicles(),
@@ -844,7 +853,8 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
         supabaseAdapter.getPayments(),
         supabaseAdapter.getExpenses(),
         supabaseAdapter.getInvestments(),
-        supabaseAdapter.getPackages()
+        supabaseAdapter.getPackages(),
+        supabaseAdapter.getNotificationAuditLogs()
       ]);
 
     // Merge seguro de alunos: Supabase tem precedência, mas novos alunos locais são preservados
@@ -862,29 +872,95 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
     // Gestão segura e bidirecional de slots (agenda de horários disponíveis)
     const deletedSlotIds = new Set(readList<string>(STORAGE_KEYS.DELETED_SLOTS));
     if (deletedSlotIds.size > 0) {
-      for (const dId of deletedSlotIds) {
-        supabaseAdapter.deleteSlot(dId).catch(() => {});
-      }
+      supabaseAdapter.deleteSlotsBatch(Array.from(deletedSlotIds)).catch(() => {});
     }
 
     if (slots) {
       const localSlots = readList<AvailableSlot>(STORAGE_KEYS.SLOTS);
+      const pendingNewIds = new Set(readList<string>(STORAGE_KEYS.PENDING_NEW_SLOTS));
       const cleanRemote = slots.filter((s) => !deletedSlotIds.has(s.id));
-      const cleanLocal = localSlots.filter((s) => !deletedSlotIds.has(s.id));
 
+      // Se o Supabase já possui slots (ou se não há slots pendentes de criação), o Supabase é a fonte da verdade
+      // (para garantir que horários removidos pelo instrutor desapareçam imediatamente da tela de todos os alunos).
       const mergedSlotsMap = new Map<string, AvailableSlot>();
-      cleanLocal.forEach((s) => mergedSlotsMap.set(s.id, s));
-      cleanRemote.forEach((s) => mergedSlotsMap.set(s.id, s));
+      if (cleanRemote.length === 0 && deletedSlotIds.size === 0 && localSlots.length > 0) {
+        // Caso o banco remoto ainda não tenha recebido a carga inicial de slots
+        localSlots.forEach((s) => mergedSlotsMap.set(s.id, s));
+        supabaseAdapter.saveSlotsBatch(localSlots).catch(console.error);
+      } else {
+        // Preserva apenas slots recém-criados localmente que ainda estão em trânsito (PENDING_NEW_SLOTS)
+        localSlots
+          .filter((s) => pendingNewIds.has(s.id) && !deletedSlotIds.has(s.id))
+          .forEach((s) => mergedSlotsMap.set(s.id, s));
+        // Aplica todos os slots ativos do Supabase
+        cleanRemote.forEach((s) => mergedSlotsMap.set(s.id, s));
+      }
+
       const mergedSlots = Array.from(mergedSlotsMap.values());
       writeList(STORAGE_KEYS.SLOTS, mergedSlots);
 
-      // Envia slots locais que ainda não estão no Supabase
-      const remoteIds = new Set(cleanRemote.map((s) => s.id));
-      const localOnly = cleanLocal.filter((s) => !remoteIds.has(s.id));
-      for (const s of localOnly) {
-        supabaseAdapter.saveSlot(s).catch(console.error);
+      // Limpa DELETED_SLOTS que já não constam mais no Supabase
+      const remoteRawIds = new Set(slots.map((s) => s.id));
+      const remainingDeleted = Array.from(deletedSlotIds).filter((id) => remoteRawIds.has(id));
+      writeList(STORAGE_KEYS.DELETED_SLOTS, remainingDeleted);
+    }
+
+    // Sincroniza notificações de aulas desmarcadas para os alunos
+    const localNotifs = readList<StudentNotification>(STORAGE_KEYS.STUDENT_NOTIFICATIONS);
+    const notifMap = new Map<string, StudentNotification>();
+    localNotifs.forEach((n) => notifMap.set(n.id, n));
+
+    if (notificationLogs && notificationLogs.length > 0) {
+      for (const log of notificationLogs) {
+        if (log.detalhes) {
+          try {
+            const parsed = JSON.parse(log.detalhes) as StudentNotification;
+            if (parsed && parsed.id && parsed.alunoId) {
+              const existing = notifMap.get(parsed.id);
+              notifMap.set(parsed.id, {
+                ...parsed,
+                lida: Boolean(existing?.lida || parsed.lida)
+              });
+            }
+          } catch {
+            // Ignora log que não seja JSON de StudentNotification
+          }
+        }
       }
     }
+
+    // Fallback adicional a partir de aulas canceladas pelo instrutor com marcador de notificação
+    const activeLessonsList = lessons && lessons.length > 0 ? lessons : readList<Lesson>(STORAGE_KEYS.LESSONS);
+    const allUsersList = readList<User>(STORAGE_KEYS.USERS);
+    for (const lsn of activeLessonsList) {
+      if (lsn.status === 'CANCELADA' && lsn.observacaoInstrutor?.includes('[DESMARCADA_PELO_INSTRUTOR]')) {
+        const notifId = `notif_lsn_${lsn.id}`;
+        if (!notifMap.has(notifId)) {
+          const inst = allUsersList.find((u) => u.id === lsn.instrutorId);
+          const instrutorNome = inst?.nome || 'Instrutor';
+          notifMap.set(notifId, {
+            id: notifId,
+            organizacaoId: lsn.organizacaoId,
+            alunoId: lsn.alunoId,
+            instrutorId: lsn.instrutorId,
+            instrutorNome,
+            aulaId: lsn.id,
+            dataAula: lsn.data,
+            horaAula: lsn.horaInicio,
+            tipo: 'AULA_DESMARCADA',
+            titulo: 'Horário de Aula Desmarcado pelo Instrutor',
+            mensagem: `O horário das ${lsn.horaInicio} da data ${formatDateBR(lsn.data)} foi desmarcado pelo instrutor ${instrutorNome}. Por favor, remarque sua aula para uma data e horário disponível na agenda.`,
+            lida: false,
+            criadoEm: lsn.criadoEm || new Date().toISOString()
+          });
+        }
+      }
+    }
+
+    writeList(
+      STORAGE_KEYS.STUDENT_NOTIFICATIONS,
+      Array.from(notifMap.values()).sort((a, b) => b.criadoEm.localeCompare(a.criadoEm))
+    );
 
     if (accounts && accounts.length > 0) writeList(STORAGE_KEYS.ACCOUNTS, accounts);
     if (payments && payments.length > 0) writeList(STORAGE_KEYS.PAYMENTS, payments);
@@ -908,6 +984,7 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
       console.warn('[Cupons] Hidratação a partir do Supabase ignorada:', couponErr);
     }
 
+    notifyDataChange();
     return { synced: true, source: 'supabase' };
   } catch (err) {
     console.error('Erro na sincronização com Supabase:', err);
@@ -1680,7 +1757,22 @@ export const db = {
     if (deletedSlots.includes(slot.id)) {
       writeList(STORAGE_KEYS.DELETED_SLOTS, deletedSlots.filter((id) => id !== slot.id));
     }
-    supabaseAdapter.saveSlot(slot).catch(console.error);
+    const pendingNew = readList<string>(STORAGE_KEYS.PENDING_NEW_SLOTS);
+    if (!pendingNew.includes(slot.id)) {
+      pendingNew.push(slot.id);
+      writeList(STORAGE_KEYS.PENDING_NEW_SLOTS, pendingNew);
+    }
+    notifyDataChange();
+    supabaseAdapter
+      .saveSlot(slot)
+      .then(() => {
+        const currentPending = readList<string>(STORAGE_KEYS.PENDING_NEW_SLOTS);
+        writeList(
+          STORAGE_KEYS.PENDING_NEW_SLOTS,
+          currentPending.filter((id) => id !== slot.id)
+        );
+      })
+      .catch(console.error);
   },
 
   async saveSlotAsync(slot: AvailableSlot): Promise<void> {
@@ -1696,9 +1788,63 @@ export const db = {
     if (deletedSlots.includes(slot.id)) {
       writeList(STORAGE_KEYS.DELETED_SLOTS, deletedSlots.filter((id) => id !== slot.id));
     }
+    const pendingNew = readList<string>(STORAGE_KEYS.PENDING_NEW_SLOTS);
+    if (!pendingNew.includes(slot.id)) {
+      pendingNew.push(slot.id);
+      writeList(STORAGE_KEYS.PENDING_NEW_SLOTS, pendingNew);
+    }
+    notifyDataChange();
     if (supabaseAdapter.enabled) {
       await supabaseAdapter.saveSlot(slot).catch(console.error);
+      const currentPending = readList<string>(STORAGE_KEYS.PENDING_NEW_SLOTS);
+      writeList(
+        STORAGE_KEYS.PENDING_NEW_SLOTS,
+        currentPending.filter((id) => id !== slot.id)
+      );
     }
+    notifyDataChange();
+  },
+
+  async saveSlotsBatchAsync(slotsToSave: AvailableSlot[], actorId?: string): Promise<void> {
+    if (slotsToSave.length === 0) return;
+    const list = readList<AvailableSlot>(STORAGE_KEYS.SLOTS);
+    const slotMap = new Map<string, AvailableSlot>();
+    list.forEach((s) => slotMap.set(s.id, s));
+    slotsToSave.forEach((s) => slotMap.set(s.id, s));
+    writeList(STORAGE_KEYS.SLOTS, Array.from(slotMap.values()));
+
+    const saveIdsSet = new Set(slotsToSave.map((s) => s.id));
+    const deletedSlots = readList<string>(STORAGE_KEYS.DELETED_SLOTS);
+    if (deletedSlots.some((id) => saveIdsSet.has(id))) {
+      writeList(
+        STORAGE_KEYS.DELETED_SLOTS,
+        deletedSlots.filter((id) => !saveIdsSet.has(id))
+      );
+    }
+
+    const pendingNew = new Set(readList<string>(STORAGE_KEYS.PENDING_NEW_SLOTS));
+    slotsToSave.forEach((s) => pendingNew.add(s.id));
+    writeList(STORAGE_KEYS.PENDING_NEW_SLOTS, Array.from(pendingNew));
+    notifyDataChange();
+
+    if (supabaseAdapter.enabled) {
+      await supabaseAdapter.saveSlotsBatch(slotsToSave).catch(console.error);
+      const afterPending = readList<string>(STORAGE_KEYS.PENDING_NEW_SLOTS).filter((id) => !saveIdsSet.has(id));
+      writeList(STORAGE_KEYS.PENDING_NEW_SLOTS, afterPending);
+    }
+
+    const first = slotsToSave[0];
+    if (first) {
+      this.addAuditLog(
+        first.organizacaoId,
+        actorId || first.instrutorId || 'sistema',
+        'LIBERAR_HORARIOS_LOTE',
+        'HorarioAgenda',
+        first.id,
+        `${slotsToSave.length} horário(s) liberado(s) na agenda do instrutor.`
+      );
+    }
+    notifyDataChange();
   },
 
   deleteSlot(slotId: string, actorId?: string): void {
@@ -1706,11 +1852,16 @@ export const db = {
     const removed = list.find((s) => s.id === slotId);
     const filtered = list.filter((s) => s.id !== slotId);
     writeList(STORAGE_KEYS.SLOTS, filtered);
+    const pendingNew = readList<string>(STORAGE_KEYS.PENDING_NEW_SLOTS);
+    if (pendingNew.includes(slotId)) {
+      writeList(STORAGE_KEYS.PENDING_NEW_SLOTS, pendingNew.filter((id) => id !== slotId));
+    }
     const deletedSlots = readList<string>(STORAGE_KEYS.DELETED_SLOTS);
     if (!deletedSlots.includes(slotId)) {
       deletedSlots.push(slotId);
       writeList(STORAGE_KEYS.DELETED_SLOTS, deletedSlots);
     }
+    notifyDataChange();
     supabaseAdapter.deleteSlot(slotId).catch(console.error);
     if (removed) {
       this.addAuditLog(
@@ -1729,11 +1880,16 @@ export const db = {
     const removed = list.find((s) => s.id === slotId);
     const filtered = list.filter((s) => s.id !== slotId);
     writeList(STORAGE_KEYS.SLOTS, filtered);
+    const pendingNew = readList<string>(STORAGE_KEYS.PENDING_NEW_SLOTS);
+    if (pendingNew.includes(slotId)) {
+      writeList(STORAGE_KEYS.PENDING_NEW_SLOTS, pendingNew.filter((id) => id !== slotId));
+    }
     const deletedSlots = readList<string>(STORAGE_KEYS.DELETED_SLOTS);
     if (!deletedSlots.includes(slotId)) {
       deletedSlots.push(slotId);
       writeList(STORAGE_KEYS.DELETED_SLOTS, deletedSlots);
     }
+    notifyDataChange();
     if (supabaseAdapter.enabled) {
       await supabaseAdapter.deleteSlot(slotId).catch(console.error);
     }
@@ -1747,6 +1903,39 @@ export const db = {
         `Horário ${removed.horaInicio}-${removed.horaFim} de ${removed.data} excluído da grade.`
       );
     }
+    notifyDataChange();
+  },
+
+  async deleteSlotsBatchAsync(slotIds: string[], actorId?: string, orgId?: string): Promise<void> {
+    if (slotIds.length === 0) return;
+    const removeSet = new Set(slotIds);
+    const list = readList<AvailableSlot>(STORAGE_KEYS.SLOTS);
+    const firstRemoved = list.find((s) => removeSet.has(s.id));
+    const filtered = list.filter((s) => !removeSet.has(s.id));
+    writeList(STORAGE_KEYS.SLOTS, filtered);
+
+    const pendingNew = readList<string>(STORAGE_KEYS.PENDING_NEW_SLOTS).filter((id) => !removeSet.has(id));
+    writeList(STORAGE_KEYS.PENDING_NEW_SLOTS, pendingNew);
+
+    const deletedSet = new Set(readList<string>(STORAGE_KEYS.DELETED_SLOTS));
+    slotIds.forEach((id) => deletedSet.add(id));
+    writeList(STORAGE_KEYS.DELETED_SLOTS, Array.from(deletedSet));
+    notifyDataChange();
+
+    if (supabaseAdapter.enabled) {
+      await supabaseAdapter.deleteSlotsBatch(slotIds).catch(console.error);
+    }
+
+    const targetOrgId = orgId || firstRemoved?.organizacaoId || 'org_direcao_certa_01';
+    this.addAuditLog(
+      targetOrgId,
+      actorId || firstRemoved?.instrutorId || 'sistema',
+      'EXCLUIR_HORARIOS_LOTE',
+      'HorarioAgenda',
+      slotIds[0],
+      `${slotIds.length} horário(s) removido(s) da agenda pelo instrutor.`
+    );
+    notifyDataChange();
   },
 
   toggleSlotBlock(slotId: string, motivo?: string): void {
@@ -1756,8 +1945,125 @@ export const db = {
       slot.bloqueado = !slot.bloqueado;
       slot.motivoBloqueio = slot.bloqueado ? (motivo || 'Horário Indisponível') : undefined;
       writeList(STORAGE_KEYS.SLOTS, list);
+      notifyDataChange();
       supabaseAdapter.saveSlot(slot).catch(console.error);
     }
+  },
+
+  // Notificações de Aulas Desmarcadas (Tela do Aluno)
+  getStudentNotifications(alunoId: string): StudentNotification[] {
+    const list = readList<StudentNotification>(STORAGE_KEYS.STUDENT_NOTIFICATIONS);
+    return list
+      .filter((n) => n.alunoId === alunoId)
+      .sort((a, b) => b.criadoEm.localeCompare(a.criadoEm));
+  },
+
+  async createStudentNotificationAsync(notification: StudentNotification): Promise<void> {
+    const list = readList<StudentNotification>(STORAGE_KEYS.STUDENT_NOTIFICATIONS);
+    const idx = list.findIndex((n) => n.id === notification.id);
+    if (idx >= 0) {
+      list[idx] = notification;
+    } else {
+      list.unshift(notification);
+    }
+    writeList(STORAGE_KEYS.STUDENT_NOTIFICATIONS, list);
+
+    const auditEntry: AuditLog = {
+      id: notification.id,
+      organizacaoId: notification.organizacaoId,
+      usuarioId: notification.instrutorId,
+      usuarioNome: notification.instrutorNome,
+      acao: 'NOTIFICACAO_ALUNO_DESMARCACAO',
+      entidade: 'StudentNotification',
+      entidadeId: notification.alunoId,
+      detalhes: JSON.stringify(notification),
+      timestamp: notification.criadoEm
+    };
+
+    const auditList = readList<AuditLog>(STORAGE_KEYS.AUDIT);
+    const auditIdx = auditList.findIndex((a) => a.id === auditEntry.id);
+    if (auditIdx >= 0) {
+      auditList[auditIdx] = auditEntry;
+    } else {
+      auditList.unshift(auditEntry);
+    }
+    writeList(STORAGE_KEYS.AUDIT, auditList.slice(0, 500));
+    notifyDataChange();
+
+    if (supabaseAdapter.enabled) {
+      await supabaseAdapter.addAuditLog(auditEntry).catch(console.error);
+    }
+    notifyDataChange();
+  },
+
+  async markStudentNotificationReadAsync(notificationId: string): Promise<void> {
+    const list = readList<StudentNotification>(STORAGE_KEYS.STUDENT_NOTIFICATIONS);
+    const target = list.find((n) => n.id === notificationId);
+    if (!target) return;
+    target.lida = true;
+    writeList(STORAGE_KEYS.STUDENT_NOTIFICATIONS, list);
+    notifyDataChange();
+
+    const auditEntry: AuditLog = {
+      id: target.id,
+      organizacaoId: target.organizacaoId,
+      usuarioId: target.instrutorId,
+      usuarioNome: target.instrutorNome,
+      acao: 'NOTIFICACAO_ALUNO_DESMARCACAO',
+      entidade: 'StudentNotification',
+      entidadeId: target.alunoId,
+      detalhes: JSON.stringify(target),
+      timestamp: target.criadoEm
+    };
+
+    if (supabaseAdapter.enabled) {
+      await supabaseAdapter.addAuditLog(auditEntry).catch(console.error);
+    }
+    notifyDataChange();
+  },
+
+  async cancelLessonByInstructorWithNotificationAsync(
+    lesson: Lesson,
+    instrutor: User,
+    alunoNome?: string
+  ): Promise<StudentNotification> {
+    const list = readList<Lesson>(STORAGE_KEYS.LESSONS);
+    const idx = list.findIndex((l) => l.id === lesson.id);
+    const updatedLesson: Lesson = {
+      ...lesson,
+      status: 'CANCELADA',
+      observacaoInstrutor: `[DESMARCADA_PELO_INSTRUTOR] O horário das ${lesson.horaInicio} do dia ${formatDateBR(lesson.data)} foi desmarcado pelo instrutor ${instrutor.nome}.`
+    };
+    if (idx >= 0) {
+      list[idx] = updatedLesson;
+    } else {
+      list.push(updatedLesson);
+    }
+    writeList(STORAGE_KEYS.LESSONS, list);
+
+    if (supabaseAdapter.enabled) {
+      await supabaseAdapter.saveLesson(updatedLesson).catch(console.error);
+    }
+
+    const notif: StudentNotification = {
+      id: `notif_lsn_${lesson.id}`,
+      organizacaoId: lesson.organizacaoId,
+      alunoId: lesson.alunoId,
+      alunoNome,
+      instrutorId: instrutor.id,
+      instrutorNome: instrutor.nome,
+      aulaId: lesson.id,
+      dataAula: lesson.data,
+      horaAula: lesson.horaInicio,
+      tipo: 'AULA_DESMARCADA',
+      titulo: 'Aula Desmarcada pelo Instrutor — Remarque seu Horário',
+      mensagem: `O horário das ${lesson.horaInicio} da data ${formatDateBR(lesson.data)} foi desmarcado pelo instrutor ${instrutor.nome}. Solicita-se que você escolha e remarque para uma nova data e horário disponível na agenda.`,
+      lida: false,
+      criadoEm: new Date().toISOString()
+    };
+
+    await this.createStudentNotificationAsync(notif);
+    return notif;
   },
 
   // Lessons
@@ -1821,7 +2127,8 @@ export const db = {
     const list = readList<Lesson>(STORAGE_KEYS.LESSONS);
     list.push(lesson);
     writeList(STORAGE_KEYS.LESSONS, list);
-    supabaseAdapter.saveLesson(lesson).catch(console.error);
+    notifyDataChange();
+    supabaseAdapter.saveLesson(lesson).then(() => notifyDataChange()).catch(console.error);
 
     this.addAuditLog(lesson.organizacaoId, actorId, 'AGENDAR_AULA', 'Aula', lesson.id, `Agendada aula em ${lesson.data} às ${lesson.horaInicio}`);
     return { success: true };
@@ -1833,7 +2140,8 @@ export const db = {
     if (index >= 0) {
       list[index] = lesson;
       writeList(STORAGE_KEYS.LESSONS, list);
-      supabaseAdapter.saveLesson(lesson).catch(console.error);
+      notifyDataChange();
+      supabaseAdapter.saveLesson(lesson).then(() => notifyDataChange()).catch(console.error);
       this.addAuditLog(lesson.organizacaoId, actorId, 'ATUALIZAR_AULA', 'Aula', lesson.id, `Status: ${lesson.status}`);
     }
   },
