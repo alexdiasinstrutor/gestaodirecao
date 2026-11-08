@@ -100,11 +100,11 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
     setReceiptData((prev) => ({
       ...prev,
       assinaturaUrl: signatureImage || undefined,
-      assinaturaConfig,
+      assinaturaConfig: signatureConfig,
       instrutor: {
         ...prev.instrutor,
         assinaturaUrl: signatureImage || undefined,
-        assinaturaConfig
+        assinaturaConfig: signatureConfig
       }
     }));
   }, [signatureImage, signatureConfig]);

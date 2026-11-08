@@ -1127,7 +1127,7 @@ Abaixo estão registradas todas as melhorias estruturais, correções de sincron
   - O mecanismo foi corrigido em `geoService.ts` (`buildEffectiveInstructorCoverage`): quando o instrutor possui preferências salvas de tipos de veículo (`savedCoverage.tiposVeiculo`) ou de categorias CNH (`savedCoverage.categoriasAtendidas`), o sistema prioriza estritamente os itens salvos pelo usuário, sem reinserir tipos removidos. A frota e os pacotes agora atuam exclusivamente como valor padrão inicial para novos perfis não configurados.
 
 ### 14.15 Suite de 22 Testes Automatizados Rigorosos (`run_automated_tests.mjs`)
-- Suite automatizada com **22 baterias de testes (`T01` a `T22`)** cobrindo confidencialidade de instrutores, exibição de pacotes, geolocalização Haversine 5–40 km, filtros do mapa, demanda reversa, sanitização de telefone, agenda por período com notificação ao aluno, persistência da ficha do aluno, blindagem de pacotes, gestão de veículos dos instrutores, digitação completa de número de aulas, upload de assinatura digital, redimensionamento/posicionamento interativo da assinatura no recibo, validação com autocompletar de cidades por estado (IBGE) e persistência fiel ao desmarcar tipos de veículos na área de atendimento (**22/22 aprovados — 100% de conformidade e sem quebras**).
+- Suite automatizada com **22 baterias de testes (`T01` a `T22`)** cobrindo confidencialidade de instrutores, exibição de pacotes, geolocalização Haversine 5–40 km, filtros do mapa, demanda reversa, sanitização de telefone, agenda por período com notificação ao aluno, persistência da ficha do aluno, blindagem de pacotes, gestão de veículos dos instrutores, digitação completa de número de aulas, upload de assinatura digital, redimensionamento/posicionamento interativo da assinatura no recibo com blindagem contra ReferenceError, validação com autocompletar de cidades por estado (IBGE) e persistência fiel ao desmarcar tipos de veículos na área de atendimento (**22/22 aprovados — 100% de conformidade e sem quebras**).
 
 ---
 
@@ -1137,7 +1137,7 @@ Este Dossiê constitui o registro definitivo e exaustivo de todas as funcionalid
 
 *Homologado para produção e operação contínua.*  
 *Administração Master: cassiordcosta@gmail.com*  
-*Versão do Sistema: v7.2 Estável, Com Correção de Desmarcação de Veículos, Validação e Autocompletar de Cidades por Estado (IBGE), Posicionamento e Redimensionamento da Assinatura no Recibo, Assinatura Digital do Instrutor (2MB), Digitação Completa de Aulas, Mapa Geográfico (5–40 km), Blindagem Cloud Vault de Pacotes, Gestão de Veículos dos Instrutores, Auditada (22/22 Testes) e Sincronizada em Tempo Real no Supabase*
+*Versão do Sistema: v7.3 Estável, Com Correção no Modal de Recibos, Correção de Desmarcação de Veículos, Validação e Autocompletar de Cidades por Estado (IBGE), Posicionamento e Redimensionamento da Assinatura no Recibo, Assinatura Digital do Instrutor (2MB), Digitação Completa de Aulas, Mapa Geográfico (5–40 km), Blindagem Cloud Vault de Pacotes, Gestão de Veículos dos Instrutores, Auditada (22/22 Testes) e Sincronizada em Tempo Real no Supabase*
 
 
 

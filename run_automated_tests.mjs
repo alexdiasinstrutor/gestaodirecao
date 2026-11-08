@@ -796,6 +796,13 @@ runTest(
       true,
       'Gerador de PDF aplica as configurações de escala e deslocamento na imagem final'
     );
+
+    // 6. Prevenção de ReferenceError em PaymentReceiptModal
+    assert.equal(
+      receiptModalFile.includes('assinaturaConfig: signatureConfig'),
+      true,
+      'PaymentReceiptModal referencia corretamente a variável de estado signatureConfig sem ReferenceError'
+    );
   }
 );
 
