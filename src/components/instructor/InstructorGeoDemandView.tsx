@@ -17,7 +17,9 @@ import {
   Save,
   Building2,
   Search,
-  RefreshCw
+  RefreshCw,
+  X,
+  Check
 } from 'lucide-react';
 import {
   CNH_CATEGORIES,
@@ -39,6 +41,8 @@ import {
   normalizeTextKey,
   resolveCoordinatesForLocation
 } from '../../lib/geoService';
+import { ESTADOS_BRASIL } from '../../lib/cepService';
+import { searchAndValidateCity, CitySearchResult } from '../../lib/cityValidationService';
 import { InteractiveGeoMap, GeoMapPin } from '../common/InteractiveGeoMap';
 import { buildWhatsAppLink } from '../../lib/whatsapp';
 
@@ -76,6 +80,21 @@ export const InstructorGeoDemandView: React.FC<InstructorGeoDemandViewProps> = (
   const [bairroBase, setBairroBase] = useState<string>(initialCoverage.bairroBase || 'Centro');
   const [cidadesAtendidas, setCidadesAtendidas] = useState<string[]>(initialCoverage.cidadesAtendidas);
   const [novaCidadeInput, setNovaCidadeInput] = useState<string>('');
+
+  // Validação e Autocompletar de Cidades por Estado
+  const [estadoPesquisaCidade, setEstadoPesquisaCidade] = useState<string>(() =>
+    (initialCoverage.estadoBase || 'MG').toUpperCase()
+  );
+  const [cidadeValidation, setCidadeValidation] = useState<CitySearchResult>({
+    query: '',
+    uf: initialCoverage.estadoBase || 'MG',
+    matches: [],
+    isValidExact: false,
+    totalMatches: 0
+  });
+  const [cidadeError, setCidadeError] = useState<string>('');
+  const [showCitySuggestions, setShowCitySuggestions] = useState<boolean>(false);
+  const [isValidatingCity, setIsValidatingCity] = useState<boolean>(false);
   const [categoriasAtendidas, setCategoriasAtendidas] = useState<CnhCategory[]>(
     initialCoverage.categoriasAtendidas
   );
@@ -122,12 +141,49 @@ export const InstructorGeoDemandView: React.FC<InstructorGeoDemandViewProps> = (
     setRaioKm(initialCoverage.raioAtendimentoKm);
     setCidadeBase(initialCoverage.cidadeBase);
     setEstadoBase(initialCoverage.estadoBase);
+    setEstadoPesquisaCidade((initialCoverage.estadoBase || 'MG').toUpperCase());
     setBairroBase(initialCoverage.bairroBase || 'Centro');
     setCidadesAtendidas(initialCoverage.cidadesAtendidas);
     setCategoriasAtendidas(initialCoverage.categoriasAtendidas);
     setTiposVeiculo(initialCoverage.tiposVeiculo);
     setTipoCambio(initialCoverage.tipoCambio);
   }, [initialCoverage.atualizadoEm]);
+
+  // Efeito de validação e autocompletar em tempo real ao digitar a cidade
+  useEffect(() => {
+    let active = true;
+    const clean = novaCidadeInput.trim();
+    if (!clean) {
+      setCidadeValidation({
+        query: '',
+        uf: estadoPesquisaCidade,
+        matches: [],
+        isValidExact: false,
+        totalMatches: 0
+      });
+      setCidadeError('');
+      setIsValidatingCity(false);
+      return;
+    }
+
+    setIsValidatingCity(true);
+    searchAndValidateCity(clean, estadoPesquisaCidade)
+      .then((result) => {
+        if (active) {
+          setCidadeValidation(result);
+          if (result.isValidExact) {
+            setCidadeError('');
+          }
+        }
+      })
+      .finally(() => {
+        if (active) setIsValidatingCity(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [novaCidadeInput, estadoPesquisaCidade]);
 
   // Panorama completo de Alunos (Matriculados + Procurando Instrutor) e Instrutores
   const marketOverview = useMemo(() => {
@@ -282,17 +338,39 @@ export const InstructorGeoDemandView: React.FC<InstructorGeoDemandViewProps> = (
     }
   };
 
-  const handleAddCityToCoverage = async (cityToAdd: string) => {
+  const handleAddCityToCoverage = async (cityToAdd: string, targetUf?: string) => {
     const clean = cityToAdd.trim();
     if (!clean) return;
-    const exists = cidadesAtendidas.some((c) => normalizeTextKey(c) === normalizeTextKey(clean));
-    if (exists) {
-      setNovaCidadeInput('');
+
+    const ufToUse = (targetUf || estadoPesquisaCidade || 'MG').toUpperCase();
+    const validation = await searchAndValidateCity(clean, ufToUse);
+    const targetCity =
+      validation.exactCityName ||
+      validation.matches.find((m) => normalizeTextKey(m) === normalizeTextKey(clean)) ||
+      (validation.matches.length === 1 && normalizeTextKey(validation.matches[0]).startsWith(normalizeTextKey(clean))
+        ? validation.matches[0]
+        : targetUf ? clean : null);
+
+    if (!targetCity) {
+      setCidadeError(
+        `A cidade "${clean}" não foi encontrada no estado ${ufToUse}. Por favor, verifique a digitação ou selecione uma cidade válida da lista.`
+      );
       return;
     }
-    const nextCities = [...cidadesAtendidas, clean];
+
+    const exists = cidadesAtendidas.some((c) => normalizeTextKey(c) === normalizeTextKey(targetCity));
+    if (exists) {
+      setCidadeError(`A cidade "${targetCity}" já está cadastrada na sua área de atendimento.`);
+      setNovaCidadeInput('');
+      setShowCitySuggestions(false);
+      return;
+    }
+
+    setCidadeError('');
+    const nextCities = [...cidadesAtendidas, targetCity];
     setCidadesAtendidas(nextCities);
     setNovaCidadeInput('');
+    setShowCitySuggestions(false);
     await handleSaveCoverage(undefined, nextCities);
   };
 
@@ -798,18 +876,23 @@ export const InstructorGeoDemandView: React.FC<InstructorGeoDemandViewProps> = (
 
             <div>
               <label className="block font-bold text-slate-700 mb-1">Estado (UF) *</label>
-              <input
-                type="text"
+              <select
                 required
-                maxLength={2}
                 value={estadoBase}
                 onChange={(e) => {
-                  setEstadoBase(e.target.value.toUpperCase());
+                  const newUf = e.target.value.toUpperCase();
+                  setEstadoBase(newUf);
+                  setEstadoPesquisaCidade(newUf);
                   setCustomCoords({});
                 }}
-                placeholder="MG"
-                className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono uppercase focus:border-blue-600 focus:outline-none"
-              />
+                className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono uppercase focus:border-blue-600 focus:outline-none bg-white text-xs font-bold"
+              >
+                {ESTADOS_BRASIL.map((st) => (
+                  <option key={st.uf} value={st.uf}>
+                    {st.uf} - {st.nome}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
@@ -852,54 +935,214 @@ export const InstructorGeoDemandView: React.FC<InstructorGeoDemandViewProps> = (
             </div>
           </div>
 
-          {/* Cidades que o Instrutor Atende */}
+          {/* Cidades que o Instrutor Atende com Validação e Autocompletar */}
           <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
-            <label className="block font-extrabold text-slate-900">
-              Cidades que Você Atende (aparecerão na busca por cidade e no mapa dos alunos)
-            </label>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <label className="block font-extrabold text-slate-900 text-xs sm:text-sm">
+                  Cidades que Você Atende (aparecerão na busca por cidade e no mapa dos alunos)
+                </label>
+                <p className="text-[11px] text-slate-500">
+                  Ao digitar, o sistema valida se a cidade existe e lista as cidades correspondentes no estado selecionado.
+                </p>
+              </div>
 
-            <div className="flex flex-col sm:flex-row gap-2">
-              <input
-                type="text"
-                value={novaCidadeInput}
-                onChange={(e) => setNovaCidadeInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAddCityToCoverage(novaCidadeInput);
-                  }
-                }}
-                placeholder="Digite o nome de uma cidade que você deseja atender (Ex: Contagem, Betim, Guarulhos...)"
-                className="flex-1 px-3 py-2 border border-slate-300 rounded-xl bg-white focus:border-blue-600 focus:outline-none"
-              />
-              <button
-                type="button"
-                onClick={() => handleAddCityToCoverage(novaCidadeInput)}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Adicionar Cidade</span>
-              </button>
+              {/* Seletor do Estado de Pesquisa */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="text-[11px] font-bold text-slate-600">Estado de Pesquisa:</span>
+                <select
+                  value={estadoPesquisaCidade}
+                  onChange={(e) => {
+                    setEstadoPesquisaCidade(e.target.value);
+                    setCidadeError('');
+                  }}
+                  className="px-2.5 py-1.5 border border-blue-300 rounded-xl bg-white text-xs font-extrabold text-blue-700 focus:border-blue-600 focus:outline-none cursor-pointer shadow-2xs"
+                >
+                  {ESTADOS_BRASIL.map((st) => (
+                    <option key={st.uf} value={st.uf}>
+                      {st.uf} - {st.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            <div className="flex flex-wrap gap-2 pt-1">
-              {cidadesAtendidas.map((city) => (
-                <span
-                  key={city}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white border border-slate-300 text-slate-800 font-bold text-xs shadow-2xs"
+            {/* Campo com Autocomplete e Validação em Tempo Real */}
+            <div className="relative">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <div className="relative flex-1">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <Search className="w-4 h-4" />
+                  </div>
+                  <input
+                    type="text"
+                    value={novaCidadeInput}
+                    onChange={(e) => {
+                      setNovaCidadeInput(e.target.value);
+                      setShowCitySuggestions(true);
+                      setCidadeError('');
+                    }}
+                    onFocus={() => setShowCitySuggestions(true)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (cidadeValidation.isValidExact && cidadeValidation.exactCityName) {
+                          handleAddCityToCoverage(cidadeValidation.exactCityName);
+                        } else if (cidadeValidation.matches.length > 0) {
+                          handleAddCityToCoverage(cidadeValidation.matches[0]);
+                        } else {
+                          handleAddCityToCoverage(novaCidadeInput);
+                        }
+                      } else if (e.key === 'Escape') {
+                        setShowCitySuggestions(false);
+                      }
+                    }}
+                    placeholder={`Digite o nome de uma cidade em ${estadoPesquisaCidade} (Ex: Betim, Sarzedo, Igarapé, Brumadinho...)`}
+                    className={`w-full pl-9 pr-9 py-2.5 border rounded-xl bg-white text-xs font-medium focus:outline-none transition-all shadow-2xs ${
+                      cidadeValidation.isValidExact
+                        ? 'border-emerald-500 focus:border-emerald-600 bg-emerald-50/20'
+                        : novaCidadeInput.trim().length >= 2 && cidadeValidation.matches.length === 0
+                        ? 'border-rose-400 focus:border-rose-500 bg-rose-50/20'
+                        : 'border-slate-300 focus:border-blue-600'
+                    }`}
+                  />
+                  {novaCidadeInput && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNovaCidadeInput('');
+                        setShowCitySuggestions(false);
+                        setCidadeError('');
+                      }}
+                      className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
+                      title="Limpar digitação"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (cidadeValidation.isValidExact && cidadeValidation.exactCityName) {
+                      handleAddCityToCoverage(cidadeValidation.exactCityName);
+                    } else if (cidadeValidation.matches.length > 0) {
+                      handleAddCityToCoverage(cidadeValidation.matches[0]);
+                    } else {
+                      handleAddCityToCoverage(novaCidadeInput);
+                    }
+                  }}
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-colors shrink-0"
                 >
-                  <MapPin className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>{city}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveCityFromCoverage(city)}
-                    className="text-slate-400 hover:text-red-600 ml-1 cursor-pointer"
-                    title={`Remover ${city}`}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  <Plus className="w-4 h-4" />
+                  <span>Adicionar Cidade</span>
+                </button>
+              </div>
+
+              {/* Status de Validação da Cidade em Tempo Real */}
+              {novaCidadeInput.trim().length >= 1 && (
+                <div className="mt-1.5 flex items-center gap-2 text-[11px] font-medium flex-wrap">
+                  {cidadeValidation.isValidExact ? (
+                    <span className="text-emerald-800 flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>Cidade oficial validada no estado de <strong>{estadoPesquisaCidade}</strong> ({cidadeValidation.exactCityName})</span>
+                    </span>
+                  ) : cidadeValidation.matches.length > 0 ? (
+                    <span className="text-blue-800 flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200">
+                      <Search className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <span>{cidadeValidation.totalMatches} cidade(s) com esse nome encontrada(s) em {estadoPesquisaCidade}. Selecione uma da lista abaixo:</span>
+                    </span>
+                  ) : (
+                    <span className="text-rose-800 flex items-center gap-1 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-200">
+                      <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                      <span>Nenhuma cidade com o nome "{novaCidadeInput}" localizada no estado {estadoPesquisaCidade}.</span>
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Lista com Autocompletar das Cidades Encontradas ao Digitar */}
+              {showCitySuggestions && novaCidadeInput.trim().length >= 1 && cidadeValidation.matches.length > 0 && (
+                <div className="absolute left-0 right-0 sm:right-44 mt-1 bg-white border border-slate-300 rounded-2xl shadow-xl z-30 max-h-56 overflow-y-auto p-1.5 divide-y divide-slate-100">
+                  <div className="px-3 py-1.5 text-[10px] uppercase font-bold text-slate-400 flex items-center justify-between">
+                    <span>Cidades de {estadoPesquisaCidade}</span>
+                    <span>Clique para selecionar e adicionar</span>
+                  </div>
+                  {cidadeValidation.matches.map((matchCity) => {
+                    const isAlreadyAdded = cidadesAtendidas.some(
+                      (c) => normalizeTextKey(c) === normalizeTextKey(matchCity)
+                    );
+                    return (
+                      <button
+                        key={matchCity}
+                        type="button"
+                        onClick={() => handleAddCityToCoverage(matchCity)}
+                        className={`w-full px-3 py-2 text-left rounded-xl text-xs flex items-center justify-between transition-colors cursor-pointer ${
+                          isAlreadyAdded
+                            ? 'bg-slate-50 text-slate-400 cursor-not-allowed'
+                            : 'hover:bg-blue-50 text-slate-800 font-semibold'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <MapPin className={`w-3.5 h-3.5 ${isAlreadyAdded ? 'text-slate-400' : 'text-blue-600'}`} />
+                          <span className={isAlreadyAdded ? 'line-through' : ''}>{matchCity}</span>
+                          <span className="text-[10px] text-slate-400 font-mono">({estadoPesquisaCidade})</span>
+                        </div>
+                        {isAlreadyAdded ? (
+                          <span className="text-[10px] text-slate-400 font-medium">Já cadastrada</span>
+                        ) : (
+                          <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-0.5">
+                            <Plus className="w-3 h-3" /> Adicionar
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Alerta de Erro de Validação */}
+            {cidadeError && (
+              <div className="p-2.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs font-medium flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{cidadeError}</span>
+              </div>
+            )}
+
+            {/* Listagem das Cidades já Cadastradas */}
+            <div className="pt-1">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-bold text-slate-700">
+                  {cidadesAtendidas.length} cidade(s) cadastrada(s) na sua área de atendimento:
                 </span>
-              ))}
+                {cidadesAtendidas.length > 0 && (
+                  <span className="text-[10px] text-slate-400">
+                    Os alunos destas cidades visualizarão seu perfil no mapa
+                  </span>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {cidadesAtendidas.map((city) => (
+                  <span
+                    key={city}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white border border-slate-300 text-slate-800 font-bold text-xs shadow-2xs hover:border-slate-400 transition-colors"
+                  >
+                    <MapPin className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>{city}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveCityFromCoverage(city)}
+                      className="text-slate-400 hover:text-red-600 ml-1 cursor-pointer"
+                      title={`Remover ${city}`}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
 

@@ -799,6 +799,69 @@ runTest(
   }
 );
 
+runTest(
+  'T21',
+  'Validação e Listagem com Autocompletar de Cidades por Estado na Área do Instrutor',
+  'Ao digitar o nome da cidade, o sistema valida se ela existe no estado selecionado, lista as cidades correspondentes e impede cadastros de cidades inexistentes',
+  async () => {
+    const geoDemandViewFile = fs.readFileSync(
+      path.join(BASE_DIR, 'src/components/instructor/InstructorGeoDemandView.tsx'),
+      'utf-8'
+    );
+    const cityServiceFile = fs.readFileSync(
+      path.join(BASE_DIR, 'src/lib/cityValidationService.ts'),
+      'utf-8'
+    );
+
+    // 1. Serviço de validação de cidades existe e contém dicionário e consulta
+    assert.equal(
+      cityServiceFile.includes('loadCitiesForState') &&
+      cityServiceFile.includes('searchAndValidateCity') &&
+      cityServiceFile.includes('BASE_CITIES_BY_STATE'),
+      true,
+      'cityValidationService possui funções loadCitiesForState, searchAndValidateCity e dicionário de cidades'
+    );
+
+    // Importa o serviço e testa a busca de cidades reais em MG
+    const { searchAndValidateCity } = await import('./src/lib/cityValidationService.ts');
+    
+    const resBetim = await searchAndValidateCity('Betim', 'MG');
+    assert.equal(resBetim.isValidExact, true, 'Betim é reconhecida como cidade válida em MG');
+    assert.equal(resBetim.exactCityName, 'Betim', 'Nome oficial Betim retornado com precisão');
+
+    const resSarzedo = await searchAndValidateCity('Sarzedo', 'MG');
+    assert.equal(resSarzedo.isValidExact, true, 'Sarzedo é reconhecida como cidade válida em MG');
+
+    const resIgarape = await searchAndValidateCity('Igarapé', 'MG');
+    assert.equal(resIgarape.isValidExact, true, 'Igarapé é reconhecida como cidade válida em MG');
+
+    // Testa autocompletar ao digitar parte do nome
+    const resPrefix = await searchAndValidateCity('Belo', 'MG');
+    assert.equal(resPrefix.matches.includes('Belo Horizonte'), true, 'Ao digitar "Belo", lista "Belo Horizonte" nas cidades de MG');
+
+    // Testa validação negativa para cidade inexistente
+    const resInvalida = await searchAndValidateCity('CidadeInexistenteXyz123', 'MG');
+    assert.equal(resInvalida.isValidExact, false, 'Cidade inexistente é marcada como inválida');
+    assert.equal(resInvalida.matches.length, 0, 'Nenhuma correspondência retornada para cidade inexistente');
+
+    // 2. Componente InstructorGeoDemandView possui os controles de estado, autocompletar e validação
+    assert.equal(
+      geoDemandViewFile.includes('estadoPesquisaCidade') &&
+      geoDemandViewFile.includes('searchAndValidateCity') &&
+      geoDemandViewFile.includes('cidadeValidation.matches.map'),
+      true,
+      'InstructorGeoDemandView possui seletor de estado e lista suspensa com autocompletar ao digitar'
+    );
+
+    assert.equal(
+      geoDemandViewFile.includes('cidadeValidation.isValidExact') &&
+      geoDemandViewFile.includes('Nenhuma cidade com o nome'),
+      true,
+      'InstructorGeoDemandView exibe feedback de validação em tempo real e alerta quando a cidade não existe'
+    );
+  }
+);
+
 console.log('\n====================================================================');
 const passed = results.filter((r) => r.status === 'PASS').length;
 const failed = results.filter((r) => r.status === 'FAIL').length;

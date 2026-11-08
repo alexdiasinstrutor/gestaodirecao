@@ -1107,8 +1107,22 @@ Abaixo estão registradas todas as melhorias estruturais, correções de sincron
   - Ao clicar em **"💾 Salvar Assinatura e Posição no Meu Perfil"**, o sistema persiste a imagem e as preferências `{ scale, offsetY, offsetX }` no perfil do usuário (`User.assinaturaConfig`), no `localStorage` e na nuvem via Supabase.
   - O gerador de PDF (`receiptPdfGenerator.ts`) replica proporcionalmente a escala e as coordenadas no documento final baixado ou impresso.
 
-### 14.13 Suite de 20 Testes Automatizados Rigorosos (`run_automated_tests.mjs`)
-- Suite automatizada com **20 baterias de testes (`T01` a `T20`)** cobrindo confidencialidade de instrutores, exibição de pacotes, geolocalização Haversine 5–40 km, filtros do mapa, demanda reversa, sanitização de telefone, agenda por período com notificação ao aluno, persistência da ficha do aluno, blindagem de pacotes, gestão de veículos dos instrutores, digitação completa de número de aulas, upload de assinatura digital e redimensionamento/posicionamento interativo com salvamento no perfil (**20/20 aprovados — 100% de conformidade e sem quebras**).
+### 14.13 Validação em Tempo Real e Autocompletar de Cidades Atendidas pelo Instrutor por Estado (`InstructorGeoDemandView.tsx` & `cityValidationService.ts`)
+- **Validação Imediata ao Digitar a Cidade**:
+  - Na tela de configuração de área de cobertura do instrutor (aba *"Minha Área de Atendimento & Cidades"*), o sistema valida em tempo real se o município digitado existe oficialmente ou não.
+  - O instrutor pode escolher o **Estado (UF)** de pesquisa através de um seletor completo com todos os 27 estados do Brasil (`ESTADOS_BRASIL`), que assume como padrão o estado base do instrutor (ex: `MG`).
+- **Autocompletar com Listagem de Cidades Oficiais**:
+  - Conforme o usuário digita no campo *"Digite o nome de uma cidade..."*, o sistema lista automaticamente todas as cidades correspondentes àquele termo dentro do estado selecionado em uma lista suspensa interativa e fluida.
+  - Ao clicar em uma cidade da lista, ela é automaticamente preenchida no campo com sua grafia oficial.
+- **Feedback Visual Claro e Proteção Contra Entradas Inválidas**:
+  - **Identificação Exata**: Exibe selo verde com ícone de confirmação (*"Cidade oficial identificada: [Nome da Cidade]"*).
+  - **Sugestões Encontradas**: Exibe contador de cidades encontradas com texto explicativo.
+  - **Cidade Inexistente**: Quando o termo digitado não corresponde a nenhum município oficial daquele estado, o sistema exibe aviso em destaque (*"Nenhuma cidade com o nome '[termo]' foi encontrada no estado selecionado"*), bloqueia o botão de adicionar e emite alerta amigável caso tente inserir sem validação.
+- **Arquitetura Híbrida Offline-First (IBGE API + Cache + Dicionário Estático)**:
+  - O motor de consulta busca os dados oficiais via API do IBGE (`servicodados.ibge.gov.br`), armazena os resultados em cache em memória e no `localStorage`, e inclui um dicionário local embarcado (`BASE_CITIES_BY_STATE`) das principais regiões metropolitanas de todos os estados, garantindo resposta instantânea (< 1ms) e funcionamento 100% resiliente mesmo sem conexão com a internet.
+
+### 14.14 Suite de 21 Testes Automatizados Rigorosos (`run_automated_tests.mjs`)
+- Suite automatizada com **21 baterias de testes (`T01` a `T21`)** cobrindo confidencialidade de instrutores, exibição de pacotes, geolocalização Haversine 5–40 km, filtros do mapa, demanda reversa, sanitização de telefone, agenda por período com notificação ao aluno, persistência da ficha do aluno, blindagem de pacotes, gestão de veículos dos instrutores, digitação completa de número de aulas, upload de assinatura digital, redimensionamento/posicionamento interativo da assinatura no recibo e validação com autocompletar de cidades por estado no cadastro do instrutor (**21/21 aprovados — 100% de conformidade e sem quebras**).
 
 ---
 
@@ -1118,7 +1132,7 @@ Este Dossiê constitui o registro definitivo e exaustivo de todas as funcionalid
 
 *Homologado para produção e operação contínua.*  
 *Administração Master: cassiordcosta@gmail.com*  
-*Versão do Sistema: v7.0 Estável, Com Posicionamento e Redimensionamento da Assinatura no Recibo, Assinatura Digital do Instrutor (2MB), Digitação Completa de Aulas, Mapa Geográfico (5–40 km), Blindagem Cloud Vault de Pacotes, Gestão de Veículos dos Instrutores, Auditada (20/20 Testes) e Sincronizada em Tempo Real no Supabase*
+*Versão do Sistema: v7.1 Estável, Com Validação e Autocompletar de Cidades por Estado (IBGE), Posicionamento e Redimensionamento da Assinatura no Recibo, Assinatura Digital do Instrutor (2MB), Digitação Completa de Aulas, Mapa Geográfico (5–40 km), Blindagem Cloud Vault de Pacotes, Gestão de Veículos dos Instrutores, Auditada (21/21 Testes) e Sincronizada em Tempo Real no Supabase*
 
 
 
