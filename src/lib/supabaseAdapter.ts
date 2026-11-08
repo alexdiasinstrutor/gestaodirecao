@@ -736,6 +736,9 @@ export const supabaseAdapter = {
   async saveSlot(slot: AvailableSlot): Promise<void> {
     await supabaseUpsert('available_slots', slotToRow(slot));
   },
+  async deleteSlot(id: string): Promise<void> {
+    await supabaseDelete('available_slots', id);
+  },
 
   // Aulas
   async getLessons(orgId?: string): Promise<Lesson[]> {

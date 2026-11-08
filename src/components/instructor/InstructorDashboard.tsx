@@ -48,7 +48,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
 }) => {
   const orgId = currentOrg.id;
 
-  const students = db.getStudents(orgId);
+  const students = db.getStudents(orgId, currentUser.id);
   const lessons = db.getLessons(orgId);
   const accounts = db.getAccountsReceivable(orgId);
   const payments = db.getPayments(orgId);
@@ -489,6 +489,106 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
                           }`}
                       >
                         {lesson.status === 'CONCLUIDA' ? '✓ Concluída' : 'Agendada'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Meus Alunos Cadastrados (Visível e Otimizado no Modo Mobile e Normal) */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs">
+          <div className="flex items-center justify-between mb-3.5">
+            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <Users className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Meus Alunos Cadastrados ({students.length})</span>
+            </h2>
+            <button
+              onClick={() => onNavigate('STUDENTS')}
+              className="text-xs font-bold text-blue-600 hover:text-blue-800 cursor-pointer"
+            >
+              Ver Detalhes →
+            </button>
+          </div>
+
+          {students.length === 0 ? (
+            <div className="p-6 text-center text-slate-500 bg-slate-50 rounded-xl border border-dashed border-slate-200 space-y-2">
+              <Users className="w-8 h-8 mx-auto text-slate-400" />
+              <p className="text-xs font-semibold text-slate-700">Nenhum aluno cadastrado no momento.</p>
+              <p className="text-xs text-slate-500">
+                Envie seu link de indicação ou cadastre novos alunos para iniciar o treinamento.
+              </p>
+              <div className="pt-2 flex justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={onOpenInvite}
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer"
+                >
+                  Compartilhar Link
+                </button>
+                <button
+                  type="button"
+                  onClick={onOpenNewStudent}
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer"
+                >
+                  Novo Aluno
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2.5 max-h-80 overflow-y-auto pr-0.5">
+              {students.map((student) => {
+                const studentLessons = lessons.filter((l) => l.alunoId === student.id && l.status === 'CONCLUIDA');
+                const cleanPhone = (student.telefone || '').replace(/\D/g, '');
+                const whatsappUrl = cleanPhone ? `https://wa.me/55${cleanPhone}?text=Ol%C3%A1%20${encodeURIComponent(student.nome)},%20sou%20seu%20instrutor!` : null;
+
+                return (
+                  <div
+                    key={student.id}
+                    className="p-3 bg-slate-50 hover:bg-slate-100/90 border border-slate-200/80 rounded-xl transition-colors space-y-2"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-bold text-slate-900 text-xs truncate">{student.nome}</span>
+                          <span className="px-1.5 py-0.2 rounded bg-slate-900 text-white font-mono text-[10px] shrink-0">
+                            CNH {student.categoriaCnh}
+                          </span>
+                          <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold shrink-0 ${
+                            student.status === 'CONCLUIDO'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {student.status === 'CONCLUIDO' ? 'Formado' : 'Em Treinamento'}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 font-mono mt-0.5">
+                          CPF: {student.cpfMascarado || student.cpfFingerprint}
+                        </p>
+                      </div>
+
+                      {whatsappUrl && (
+                        <a
+                          href={whatsappUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold shrink-0 shadow-xs transition-colors"
+                          title="Falar no WhatsApp com o aluno"
+                        >
+                          <MessageSquare className="w-3 h-3" />
+                          <span>WhatsApp</span>
+                        </a>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] text-slate-600 border-t border-slate-200/60 pt-1.5">
+                      <span className="truncate font-medium text-slate-700">
+                        📦 {student.pacoteNome || `Pacote CNH ${student.categoriaCnh}`}
+                      </span>
+                      <span className="font-bold text-slate-900 shrink-0 ml-2">
+                        {studentLessons.length}/{student.totalAulasContratadas || 20} aulas
                       </span>
                     </div>
                   </div>

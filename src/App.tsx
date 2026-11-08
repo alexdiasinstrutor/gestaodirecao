@@ -119,6 +119,44 @@ export default function App() {
     });
   }, []);
 
+  // Sincronização em tempo real com o Supabase ao acessar, retornar foco ou alternar visibilidade da plataforma
+  useEffect(() => {
+    let lastSync = 0;
+    const triggerSync = () => {
+      const now = Date.now();
+      if (now - lastSync < 10000) return; // throttle 10 segundos
+      lastSync = now;
+      syncFromSupabase().then(() => {
+        const activeUser = db.getCurrentUser();
+        if (activeUser) {
+          const freshUser = db.getUserById(activeUser.id) || activeUser;
+          setCurrentUser(freshUser);
+        }
+      }).catch(console.error);
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        triggerSync();
+      }
+    };
+
+    window.addEventListener('focus', triggerSync);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('focus', triggerSync);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, []);
+
+  // Sincronização em background ao navegar entre abas do sistema
+  useEffect(() => {
+    if (currentUser) {
+      syncFromSupabase().catch(() => {});
+    }
+  }, [activeTab, currentUser?.id]);
+
   // Monitoramento de expiração de sessão (mínimo 60min) e renovação por atividade do usuário
   useEffect(() => {
     if (!currentUser) return;

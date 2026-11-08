@@ -16,7 +16,8 @@ import {
   Moon,
   Sliders,
   Check,
-  X
+  X,
+  Trash2
 } from 'lucide-react';
 import { db } from '../../lib/storage';
 import { formatDateBR } from '../../lib/validation';
@@ -104,9 +105,9 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
   const [scheduleSuccess, setScheduleSuccess] = useState<string>('');
 
   // Data
-  const slots = db.getSlots(orgId);
+  const slots = db.getSlots(orgId, currentUser.id);
   const lessons = db.getLessons(orgId);
-  const students = db.getStudents(orgId);
+  const students = db.getStudents(orgId, currentUser.id);
   const vehicles = db.getVehicles(orgId);
 
   // Filter for selected date
@@ -166,39 +167,59 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
     }
   };
 
-  const handleReleaseConfiguredSlots = () => {
-    selectedReleaseHours.forEach((startTime) => {
-      let endTime = '';
-      if (startTime === '00:00') {
-        endTime = '00:50';
-      } else {
-        const parts = startTime.split(':');
-        const hour = parseInt(parts[0], 10);
-        endTime = `${String(hour).padStart(2, '0')}:50`;
+  const handleDeleteSlot = async (slotId: string, time: string) => {
+    if (window.confirm(`Tem certeza que deseja remover o horário das ${time} do dia ${formatDateBR(selectedDate)}?`)) {
+      try {
+        await db.deleteSlotAsync(slotId, currentUser.id);
+        setSelectedDate(selectedDate);
+        setScheduleSuccess(`Horário ${time} removido da grade com sucesso!`);
+        setTimeout(() => setScheduleSuccess(''), 3000);
+      } catch (err) {
+        console.error(err);
+        setScheduleError('Erro ao remover o horário da agenda.');
       }
-
-      const slotId = `slt_${releaseSlotsDate}_${startTime.replace(':', '')}`;
-      const existing = slots.find((s) => s.data === releaseSlotsDate && s.horaInicio === startTime);
-      if (!existing) {
-        db.saveSlot({
-          id: slotId,
-          organizacaoId: orgId,
-          instrutorId: currentUser.id,
-          data: releaseSlotsDate,
-          horaInicio: startTime,
-          horaFim: endTime,
-          bloqueado: false
-        });
-      }
-    });
-
-    setShowReleaseSlotsModal(false);
-    setSelectedDate(releaseSlotsDate);
-    setScheduleSuccess(`Grade das 06h às 00h liberada com sucesso para ${formatDateBR(releaseSlotsDate)}!`);
-    setTimeout(() => setScheduleSuccess(''), 3500);
+    }
   };
 
-  const handleAddSingleCustomSlot = (e: React.FormEvent) => {
+  const handleReleaseConfiguredSlots = async () => {
+    try {
+      const promises = selectedReleaseHours.map(async (startTime) => {
+        let endTime = '';
+        if (startTime === '00:00') {
+          endTime = '00:50';
+        } else {
+          const parts = startTime.split(':');
+          const hour = parseInt(parts[0], 10);
+          endTime = `${String(hour).padStart(2, '0')}:50`;
+        }
+
+        const slotId = `slt_${currentUser.id}_${releaseSlotsDate}_${startTime.replace(':', '')}`;
+        const existing = slots.find((s) => s.data === releaseSlotsDate && s.horaInicio === startTime && (!s.instrutorId || s.instrutorId === currentUser.id));
+        if (!existing) {
+          await db.saveSlotAsync({
+            id: slotId,
+            organizacaoId: orgId,
+            instrutorId: currentUser.id,
+            data: releaseSlotsDate,
+            horaInicio: startTime,
+            horaFim: endTime,
+            bloqueado: false
+          });
+        }
+      });
+      await Promise.all(promises);
+
+      setShowReleaseSlotsModal(false);
+      setSelectedDate(releaseSlotsDate);
+      setScheduleSuccess(`Grade das 06h às 00h liberada com sucesso para ${formatDateBR(releaseSlotsDate)}!`);
+      setTimeout(() => setScheduleSuccess(''), 3500);
+    } catch (err) {
+      console.error(err);
+      setScheduleError('Erro ao liberar os horários na base de dados.');
+    }
+  };
+
+  const handleAddSingleCustomSlot = async (e: React.FormEvent) => {
     e.preventDefault();
     let endTime = '';
     if (singleSlotTime === '00:00') {
@@ -209,26 +230,32 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
       endTime = `${String(hour).padStart(2, '0')}:50`;
     }
 
-    const slotId = `slt_${selectedDate}_${singleSlotTime.replace(':', '')}`;
-    const existing = slots.find((s) => s.data === selectedDate && s.horaInicio === singleSlotTime);
+    const slotId = `slt_${currentUser.id}_${selectedDate}_${singleSlotTime.replace(':', '')}`;
+    const existing = slots.find((s) => s.data === selectedDate && s.horaInicio === singleSlotTime && (!s.instrutorId || s.instrutorId === currentUser.id));
     if (existing) {
       setScheduleError(`O horário ${singleSlotTime} já existe na agenda deste dia.`);
       return;
     }
 
-    db.saveSlot({
-      id: slotId,
-      organizacaoId: orgId,
-      instrutorId: currentUser.id,
-      data: selectedDate,
-      horaInicio: singleSlotTime,
-      horaFim: endTime,
-      bloqueado: false
-    });
+    try {
+      await db.saveSlotAsync({
+        id: slotId,
+        organizacaoId: orgId,
+        instrutorId: currentUser.id,
+        data: selectedDate,
+        horaInicio: singleSlotTime,
+        horaFim: endTime,
+        bloqueado: false
+      });
 
-    setShowSingleSlotModal(false);
-    setScheduleSuccess(`Horário ${singleSlotTime} adicionado com sucesso para ${formatDateBR(selectedDate)}!`);
-    setTimeout(() => setScheduleSuccess(''), 3000);
+      setShowSingleSlotModal(false);
+      setSelectedDate(selectedDate);
+      setScheduleSuccess(`Horário ${singleSlotTime} adicionado com sucesso para ${formatDateBR(selectedDate)}!`);
+      setTimeout(() => setScheduleSuccess(''), 3000);
+    } catch (err) {
+      console.error(err);
+      setScheduleError('Erro ao adicionar horário.');
+    }
   };
 
   const handleOpenScheduleForSlot = (time: string) => {
@@ -550,21 +577,32 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
                       </span>
                     )
                   ) : (
-                    <>
+                    <div className="flex items-center justify-between w-full gap-2">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleOpenScheduleForSlot(slot.horaInicio)}
+                          disabled={slot.bloqueado}
+                          className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white font-semibold rounded-lg text-xs cursor-pointer shadow-xs transition-colors"
+                        >
+                          Agendar Aula
+                        </button>
+                        <button
+                          onClick={() => handleToggleBlock(slot.id, slot.bloqueado)}
+                          className="text-slate-500 hover:text-slate-800 text-xs underline cursor-pointer"
+                        >
+                          {slot.bloqueado ? 'Desbloquear' : 'Bloquear'}
+                        </button>
+                      </div>
                       <button
-                        onClick={() => handleOpenScheduleForSlot(slot.horaInicio)}
-                        disabled={slot.bloqueado}
-                        className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white font-semibold rounded-lg text-xs cursor-pointer shadow-xs"
+                        type="button"
+                        onClick={() => handleDeleteSlot(slot.id, slot.horaInicio)}
+                        title="Excluir este horário da grade"
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                        aria-label={`Excluir horário ${slot.horaInicio}`}
                       >
-                        Agendar Aula
+                        <Trash2 className="w-4 h-4" />
                       </button>
-                      <button
-                        onClick={() => handleToggleBlock(slot.id, slot.bloqueado)}
-                        className="text-slate-500 hover:text-slate-800 text-xs underline cursor-pointer"
-                      >
-                        {slot.bloqueado ? 'Desbloquear' : 'Bloquear'}
-                      </button>
-                    </>
+                    </div>
                   )}
                 </div>
               </div>

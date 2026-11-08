@@ -109,6 +109,7 @@ const STORAGE_KEYS = {
   SYNC_QUEUE: 'agd_sync_queue',
   CURRENT_USER: 'agd_current_user',
   SESSION_EXPIRY: 'agd_session_expiry',
+  DELETED_SLOTS: 'agd_deleted_slots',
   SEEDED: 'agd_seeded_v5'
 };
 
@@ -846,10 +847,45 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
         supabaseAdapter.getPackages()
       ]);
 
-    if (students && students.length > 0) writeList(STORAGE_KEYS.STUDENTS, students);
+    // Merge seguro de alunos: Supabase tem precedência, mas novos alunos locais são preservados
+    if (students && students.length > 0) {
+      const localStudents = readList<Student>(STORAGE_KEYS.STUDENTS);
+      const mergedStudentsMap = new Map<string, Student>();
+      localStudents.forEach((st) => mergedStudentsMap.set(st.id, st));
+      students.forEach((st) => mergedStudentsMap.set(st.id, st));
+      writeList(STORAGE_KEYS.STUDENTS, Array.from(mergedStudentsMap.values()));
+    }
+
     if (vehicles && vehicles.length > 0) writeList(STORAGE_KEYS.VEHICLES, vehicles);
     if (lessons && lessons.length > 0) writeList(STORAGE_KEYS.LESSONS, lessons);
-    if (slots && slots.length > 0) writeList(STORAGE_KEYS.SLOTS, slots);
+
+    // Gestão segura e bidirecional de slots (agenda de horários disponíveis)
+    const deletedSlotIds = new Set(readList<string>(STORAGE_KEYS.DELETED_SLOTS));
+    if (deletedSlotIds.size > 0) {
+      for (const dId of deletedSlotIds) {
+        supabaseAdapter.deleteSlot(dId).catch(() => {});
+      }
+    }
+
+    if (slots) {
+      const localSlots = readList<AvailableSlot>(STORAGE_KEYS.SLOTS);
+      const cleanRemote = slots.filter((s) => !deletedSlotIds.has(s.id));
+      const cleanLocal = localSlots.filter((s) => !deletedSlotIds.has(s.id));
+
+      const mergedSlotsMap = new Map<string, AvailableSlot>();
+      cleanLocal.forEach((s) => mergedSlotsMap.set(s.id, s));
+      cleanRemote.forEach((s) => mergedSlotsMap.set(s.id, s));
+      const mergedSlots = Array.from(mergedSlotsMap.values());
+      writeList(STORAGE_KEYS.SLOTS, mergedSlots);
+
+      // Envia slots locais que ainda não estão no Supabase
+      const remoteIds = new Set(cleanRemote.map((s) => s.id));
+      const localOnly = cleanLocal.filter((s) => !remoteIds.has(s.id));
+      for (const s of localOnly) {
+        supabaseAdapter.saveSlot(s).catch(console.error);
+      }
+    }
+
     if (accounts && accounts.length > 0) writeList(STORAGE_KEYS.ACCOUNTS, accounts);
     if (payments && payments.length > 0) writeList(STORAGE_KEYS.PAYMENTS, payments);
     if (expenses && expenses.length > 0) writeList(STORAGE_KEYS.EXPENSES, expenses);
@@ -1619,8 +1655,10 @@ export const db = {
   },
 
   // Available Slots & Schedule
-  getSlots(orgId: string): AvailableSlot[] {
-    return readList<AvailableSlot>(STORAGE_KEYS.SLOTS).filter((s) => s.organizacaoId === orgId);
+  getSlots(orgId: string, instrutorId?: string): AvailableSlot[] {
+    const list = readList<AvailableSlot>(STORAGE_KEYS.SLOTS).filter((s) => s.organizacaoId === orgId);
+    if (!instrutorId) return list;
+    return list.filter((s) => !s.instrutorId || s.instrutorId === instrutorId);
   },
 
   saveSlot(slot: AvailableSlot): void {
@@ -1632,7 +1670,77 @@ export const db = {
       list.push(slot);
     }
     writeList(STORAGE_KEYS.SLOTS, list);
+    const deletedSlots = readList<string>(STORAGE_KEYS.DELETED_SLOTS);
+    if (deletedSlots.includes(slot.id)) {
+      writeList(STORAGE_KEYS.DELETED_SLOTS, deletedSlots.filter((id) => id !== slot.id));
+    }
     supabaseAdapter.saveSlot(slot).catch(console.error);
+  },
+
+  async saveSlotAsync(slot: AvailableSlot): Promise<void> {
+    const list = readList<AvailableSlot>(STORAGE_KEYS.SLOTS);
+    const index = list.findIndex((s) => s.id === slot.id);
+    if (index >= 0) {
+      list[index] = slot;
+    } else {
+      list.push(slot);
+    }
+    writeList(STORAGE_KEYS.SLOTS, list);
+    const deletedSlots = readList<string>(STORAGE_KEYS.DELETED_SLOTS);
+    if (deletedSlots.includes(slot.id)) {
+      writeList(STORAGE_KEYS.DELETED_SLOTS, deletedSlots.filter((id) => id !== slot.id));
+    }
+    if (supabaseAdapter.enabled) {
+      await supabaseAdapter.saveSlot(slot).catch(console.error);
+    }
+  },
+
+  deleteSlot(slotId: string, actorId?: string): void {
+    const list = readList<AvailableSlot>(STORAGE_KEYS.SLOTS);
+    const removed = list.find((s) => s.id === slotId);
+    const filtered = list.filter((s) => s.id !== slotId);
+    writeList(STORAGE_KEYS.SLOTS, filtered);
+    const deletedSlots = readList<string>(STORAGE_KEYS.DELETED_SLOTS);
+    if (!deletedSlots.includes(slotId)) {
+      deletedSlots.push(slotId);
+      writeList(STORAGE_KEYS.DELETED_SLOTS, deletedSlots);
+    }
+    supabaseAdapter.deleteSlot(slotId).catch(console.error);
+    if (removed) {
+      this.addAuditLog(
+        removed.organizacaoId,
+        actorId || removed.instrutorId || 'sistema',
+        'EXCLUIR_HORARIO',
+        'HorarioAgenda',
+        slotId,
+        `Horário ${removed.horaInicio}-${removed.horaFim} de ${removed.data} excluído da grade.`
+      );
+    }
+  },
+
+  async deleteSlotAsync(slotId: string, actorId?: string): Promise<void> {
+    const list = readList<AvailableSlot>(STORAGE_KEYS.SLOTS);
+    const removed = list.find((s) => s.id === slotId);
+    const filtered = list.filter((s) => s.id !== slotId);
+    writeList(STORAGE_KEYS.SLOTS, filtered);
+    const deletedSlots = readList<string>(STORAGE_KEYS.DELETED_SLOTS);
+    if (!deletedSlots.includes(slotId)) {
+      deletedSlots.push(slotId);
+      writeList(STORAGE_KEYS.DELETED_SLOTS, deletedSlots);
+    }
+    if (supabaseAdapter.enabled) {
+      await supabaseAdapter.deleteSlot(slotId).catch(console.error);
+    }
+    if (removed) {
+      this.addAuditLog(
+        removed.organizacaoId,
+        actorId || removed.instrutorId || 'sistema',
+        'EXCLUIR_HORARIO',
+        'HorarioAgenda',
+        slotId,
+        `Horário ${removed.horaInicio}-${removed.horaFim} de ${removed.data} excluído da grade.`
+      );
+    }
   },
 
   toggleSlotBlock(slotId: string, motivo?: string): void {
@@ -1642,6 +1750,7 @@ export const db = {
       slot.bloqueado = !slot.bloqueado;
       slot.motivoBloqueio = slot.bloqueado ? (motivo || 'Horário Indisponível') : undefined;
       writeList(STORAGE_KEYS.SLOTS, list);
+      supabaseAdapter.saveSlot(slot).catch(console.error);
     }
   },
 
@@ -1855,10 +1964,36 @@ export const db = {
       writeList(STORAGE_KEYS.PACKAGES, [...all, ...defaults]);
       defaults.forEach((pkg) => supabaseAdapter.savePackage(pkg).catch(() => {}));
       list = defaults;
+    } else {
+      // Garante que o catálogo oficial padrão esteja disponível para escolha do aluno
+      const defaults = getDefaultOfficialPackages(orgId, instrutorId);
+      let missingAdded = false;
+      for (const def of defaults) {
+        if (!list.some((p) => p.categoriaCnh === def.categoriaCnh && p.nome === def.nome)) {
+          list.push(def);
+          all.push(def);
+          missingAdded = true;
+          supabaseAdapter.savePackage(def).catch(() => {});
+        }
+      }
+      if (missingAdded) {
+        writeList(STORAGE_KEYS.PACKAGES, all);
+      }
     }
+
     if (!instrutorId) return list;
     const instructorSpecific = list.filter((p) => p.instrutorId === instrutorId);
-    return instructorSpecific.length > 0 ? instructorSpecific : list;
+    const generalOrgPackages = list.filter((p) => !p.instrutorId || p.instrutorId === 'sistema' || p.instrutorId === '');
+    if (instructorSpecific.length > 0) {
+      const combined = [...instructorSpecific];
+      for (const gp of generalOrgPackages) {
+        if (!combined.some((p) => p.id === gp.id || (p.categoriaCnh === gp.categoriaCnh && p.nome === gp.nome))) {
+          combined.push(gp);
+        }
+      }
+      return combined;
+    }
+    return list;
   },
 
   createPackage(pkg: PackageOffer, actorId: string): void {
