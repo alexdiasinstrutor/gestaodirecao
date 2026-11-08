@@ -50,7 +50,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   onOpenInvite
 }) => {
   const orgId = currentOrg.id;
-  const students = db.getStudents(orgId);
+  const students = db.getStudents(orgId, currentUser.papel === 'INSTRUTOR' ? currentUser.id : undefined);
   const lessons = db.getLessons(orgId);
   const accounts = db.getAccountsReceivable(orgId);
   const payments = db.getPayments(orgId);
@@ -58,6 +58,19 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [activeStudent, setActiveStudent] = useState<Student | null>(null);
+
+  // Categorias que possuem pelo menos 1 aluno cadastrado para este instrutor (não polui a barra de menu com categorias vazias)
+  const activeStudentCategories = React.useMemo(() => {
+    const presentCats = new Set(students.map((s) => s.categoriaCnh).filter(Boolean));
+    return CNH_CATEGORIES.filter((cat) => presentCats.has(cat.value));
+  }, [students]);
+
+  // Se a categoria selecionada não possuir mais alunos, reseta para 'ALL'
+  React.useEffect(() => {
+    if (selectedCategory !== 'ALL' && !activeStudentCategories.some((c) => c.value === selectedCategory)) {
+      setSelectedCategory('ALL');
+    }
+  }, [activeStudentCategories, selectedCategory]);
 
   // Edit skills & address state when viewing student
   const [editingSkills, setEditingSkills] = useState<StudentSkills | null>(null);
@@ -309,33 +322,41 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
           />
         </div>
 
-        {/* Category Filters */}
-        <div className="flex items-center gap-1 p-1 bg-slate-200/80 rounded-xl w-full sm:w-auto overflow-x-auto no-scrollbar">
-          <button
-            onClick={() => setSelectedCategory('ALL')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
-              selectedCategory === 'ALL'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Todas
-          </button>
-          {CNH_CATEGORIES.map((cat) => (
+        {/* Category Filters (Exibe estritamente as categorias que possuem alunos cadastrados) */}
+        {activeStudentCategories.length > 0 && (
+          <div className="flex items-center gap-1 p-1 bg-slate-200/80 rounded-xl w-full sm:w-auto overflow-x-auto no-scrollbar">
             <button
-              key={cat.value}
-              onClick={() => setSelectedCategory(cat.value)}
-              className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
-                selectedCategory === cat.value
+              onClick={() => setSelectedCategory('ALL')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                selectedCategory === 'ALL'
                   ? 'bg-white text-slate-900 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
-              title={cat.label}
             >
-              {cat.badge}
+              Todas ({students.length})
             </button>
-          ))}
-        </div>
+            {activeStudentCategories.map((cat) => {
+              const count = students.filter((s) => s.categoriaCnh === cat.value).length;
+              return (
+                <button
+                  key={cat.value}
+                  onClick={() => setSelectedCategory(cat.value)}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                    selectedCategory === cat.value
+                      ? 'bg-white text-slate-900 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                  title={cat.label}
+                >
+                  <span>{cat.badge || `Cat. ${cat.value}`}</span>
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Students Grid Cards */}

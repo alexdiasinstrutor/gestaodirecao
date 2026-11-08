@@ -890,7 +890,10 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
     if (payments && payments.length > 0) writeList(STORAGE_KEYS.PAYMENTS, payments);
     if (expenses && expenses.length > 0) writeList(STORAGE_KEYS.EXPENSES, expenses);
     if (investments && investments.length > 0) writeList(STORAGE_KEYS.INVESTMENTS, investments);
-    if (packages && packages.length > 0) writeList(STORAGE_KEYS.PACKAGES, packages);
+    if (packages && packages.length > 0) {
+      writeList(STORAGE_KEYS.PACKAGES, packages);
+      db.sanitizePackages();
+    }
 
     // Cupons de desconto: só sobrescreve a base local se a tabela remota existir e tiver dados
     try {
@@ -988,6 +991,9 @@ export function initDatabase() {
       console.error('Erro ao verificar usuário admin master:', e);
     }
   }
+
+  // Higieniza a base para garantir que nenhum pacote de categoria aleatória seja mantido
+  db.sanitizePackages();
 }
 
 // Helpers for generic read/write
@@ -1955,45 +1961,42 @@ export const db = {
     this.addAuditLog(orgId, actorId, 'EXCLUIR_INVESTIMENTO', 'Investimento', invId, `Plano de investimento excluído.`);
   },
 
-  // Package Offers
+  // Package Offers (Estritamente os pacotes que o próprio instrutor cadastrou, sem criação aleatória de outros pacotes)
   getPackages(orgId: string, instrutorId?: string): PackageOffer[] {
     const all = readList<PackageOffer>(STORAGE_KEYS.PACKAGES);
-    let list = all.filter((p) => p.organizacaoId === orgId);
-    if (list.length === 0) {
-      const defaults = getDefaultOfficialPackages(orgId, instrutorId);
-      writeList(STORAGE_KEYS.PACKAGES, [...all, ...defaults]);
-      defaults.forEach((pkg) => supabaseAdapter.savePackage(pkg).catch(() => {}));
-      list = defaults;
-    } else {
-      // Garante que o catálogo oficial padrão esteja disponível para escolha do aluno
-      const defaults = getDefaultOfficialPackages(orgId, instrutorId);
-      let missingAdded = false;
-      for (const def of defaults) {
-        if (!list.some((p) => p.categoriaCnh === def.categoriaCnh && p.nome === def.nome)) {
-          list.push(def);
-          all.push(def);
-          missingAdded = true;
-          supabaseAdapter.savePackage(def).catch(() => {});
-        }
+    const orgPackages = all.filter((p) => p.organizacaoId === orgId);
+
+    if (instrutorId) {
+      const instructorSpecific = orgPackages.filter((p) => p.instrutorId === instrutorId);
+      // Se o instrutor tem pacotes próprios cadastrados, retorna estritamente os dele
+      if (instructorSpecific.length > 0) {
+        return instructorSpecific;
       }
-      if (missingAdded) {
-        writeList(STORAGE_KEYS.PACKAGES, all);
-      }
+      // Se ainda não cadastrou pacote próprio, retorna os pacotes gerais da organização
+      return orgPackages.filter((p) => !p.instrutorId || p.instrutorId === 'sistema' || p.instrutorId === '');
     }
 
-    if (!instrutorId) return list;
-    const instructorSpecific = list.filter((p) => p.instrutorId === instrutorId);
-    const generalOrgPackages = list.filter((p) => !p.instrutorId || p.instrutorId === 'sistema' || p.instrutorId === '');
-    if (instructorSpecific.length > 0) {
-      const combined = [...instructorSpecific];
-      for (const gp of generalOrgPackages) {
-        if (!combined.some((p) => p.id === gp.id || (p.categoriaCnh === gp.categoriaCnh && p.nome === gp.nome))) {
-          combined.push(gp);
-        }
-      }
-      return combined;
+    return orgPackages;
+  },
+
+  // Remove pacotes auto-injetados de outras categorias pelo sistema anteriormente
+  sanitizePackages(orgId?: string): void {
+    const all = readList<PackageOffer>(STORAGE_KEYS.PACKAGES);
+    const autoInjectedPrefixes = [
+      'pkg_cnh_a_20_',
+      'pkg_cnh_ab_40_',
+      'pkg_reforco_05_',
+      'pkg_habilitados_10_',
+      'pkg_cnh_d_20_'
+    ];
+    const toRemove = all.filter((p) => autoInjectedPrefixes.some((prefix) => p.id.startsWith(prefix)));
+    if (toRemove.length > 0) {
+      const cleaned = all.filter((p) => !autoInjectedPrefixes.some((prefix) => p.id.startsWith(prefix)));
+      writeList(STORAGE_KEYS.PACKAGES, cleaned);
+      toRemove.forEach((p) => {
+        supabaseAdapter.deletePackage(p.id).catch(() => {});
+      });
     }
-    return list;
   },
 
   createPackage(pkg: PackageOffer, actorId: string): void {

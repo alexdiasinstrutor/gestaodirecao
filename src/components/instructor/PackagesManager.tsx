@@ -38,8 +38,8 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
   currentUser
 }) => {
   const orgId = currentOrg.id;
-  const packages = db.getPackages(orgId);
-  const students = db.getStudents(orgId);
+  const packages = db.getPackages(orgId, currentUser.papel === 'INSTRUTOR' ? currentUser.id : undefined);
+  const students = db.getStudents(orgId, currentUser.papel === 'INSTRUTOR' ? currentUser.id : undefined);
 
   const [showModal, setShowModal] = useState<boolean>(false);
   const [editingPackage, setEditingPackage] = useState<PackageOffer | null>(null);

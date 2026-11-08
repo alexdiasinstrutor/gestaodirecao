@@ -173,26 +173,37 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
     };
   }, [defaultInstructorId]);
 
-  // Pacotes disponíveis para o instrutor/organização selecionada
+  // Pacotes disponíveis estritamente cadastrados pelo instrutor/organização (o sistema nunca inventa outras categorias)
   const availablePackages = React.useMemo(() => {
     return db.getPackages(targetOrgId, selectedInstructor?.id).filter((p) => p.ativo);
   }, [targetOrgId, selectedInstructor?.id]);
 
-  // Filtro por categoria nos pacotes
+  // Categorias de CNH estritamente oferecidas pelos planos criados pelo instrutor
+  const instructorCategories = React.useMemo(() => {
+    const catsInPackages = new Set(availablePackages.map((p) => p.categoriaCnh));
+    return CNH_CATEGORIES.filter((c) => catsInPackages.has(c.value));
+  }, [availablePackages]);
+
+  // Filtro por categoria nos pacotes (somente entre as categorias que o instrutor oferece)
   const displayedPackages = React.useMemo(() => {
     if (packageCategoryFilter === 'ALL') return availablePackages;
-    if (packageCategoryFilter === 'OUTROS') {
-      return availablePackages.filter((p) => p.categoriaCnh !== 'A' && p.categoriaCnh !== 'B' && p.categoriaCnh !== 'AB');
-    }
     return availablePackages.filter((p) => p.categoriaCnh === packageCategoryFilter);
   }, [availablePackages, packageCategoryFilter]);
 
-  // Auto-seleciona primeiro pacote se nenhum estiver selecionado
+  // Sincroniza categoria pretendida e pacote selecionado estritamente com os planos criados pelo instrutor
   useEffect(() => {
-    if (availablePackages.length > 0 && (!selectedPackageId || !availablePackages.some((p) => p.id === selectedPackageId))) {
-      // Prioriza pacote compatível com a CNH pretendida
-      const matchCat = availablePackages.find((p) => p.categoriaCnh === formData.categoriaCnh);
-      setSelectedPackageId(matchCat ? matchCat.id : availablePackages[0].id);
+    if (availablePackages.length > 0) {
+      const validCats = new Set(availablePackages.map((p) => p.categoriaCnh));
+      if (!validCats.has(formData.categoriaCnh)) {
+        const firstCat = availablePackages[0].categoriaCnh;
+        setFormData((prev) => ({ ...prev, categoriaCnh: firstCat }));
+        setSelectedPackageId(availablePackages[0].id);
+      } else if (!selectedPackageId || !availablePackages.some((p) => p.id === selectedPackageId)) {
+        const match = availablePackages.find((p) => p.categoriaCnh === formData.categoriaCnh);
+        setSelectedPackageId(match ? match.id : availablePackages[0].id);
+      }
+    } else {
+      setSelectedPackageId('');
     }
   }, [selectedInstructor?.id, availablePackages, formData.categoriaCnh]);
 
@@ -765,96 +776,92 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
                 )}
               </div>
 
-              {/* Categoria CNH Pretendida */}
+              {/* Categoria CNH Pretendida (Estritamente baseada nos planos criados pelo instrutor) */}
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
                   Categoria CNH Pretendida *
                 </label>
-                <select
-                  value={formData.categoriaCnh}
-                  onChange={(e) => {
-                    const newCat = e.target.value as CnhCategory;
-                    setFormData({ ...formData, categoriaCnh: newCat });
-                    const matchingPkg = availablePackages.find((p) => p.categoriaCnh === newCat);
-                    if (matchingPkg) setSelectedPackageId(matchingPkg.id);
-                  }}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none bg-white font-medium text-xs cursor-pointer"
-                >
-                  {CNH_CATEGORIES.map((cat) => (
-                    <option key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </option>
-                  ))}
-                </select>
+                {instructorCategories.length === 0 ? (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs">
+                    O instrutor selecionado ainda não cadastrou planos/pacotes comerciais ativos.
+                  </div>
+                ) : instructorCategories.length === 1 ? (
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                    <div>
+                      <span className="font-bold text-slate-900 text-xs block">
+                        CNH {instructorCategories[0].value} — {instructorCategories[0].label.split(' - ')[1] || instructorCategories[0].label}
+                      </span>
+                      <span className="text-[11px] text-slate-500">
+                        Categoria cadastrada pelo instrutor para este treinamento.
+                      </span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-xs font-bold">
+                      CNH {instructorCategories[0].value}
+                    </span>
+                  </div>
+                ) : (
+                  <select
+                    value={formData.categoriaCnh}
+                    onChange={(e) => {
+                      const newCat = e.target.value as CnhCategory;
+                      setFormData({ ...formData, categoriaCnh: newCat });
+                      const matchingPkg = availablePackages.find((p) => p.categoriaCnh === newCat);
+                      if (matchingPkg) setSelectedPackageId(matchingPkg.id);
+                    }}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none bg-white font-medium text-xs cursor-pointer"
+                  >
+                    {instructorCategories.map((cat) => (
+                      <option key={cat.value} value={cat.value}>
+                        {cat.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
 
-              {/* Catálogo Completo de Pacotes de Aulas */}
+              {/* Pacotes de Aulas Oferecidos pelo Instrutor */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <label className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
                     <Package className="w-4 h-4 text-emerald-600" />
-                    <span>Escolha seu Pacote de Aulas ({availablePackages.length} disponíveis) *</span>
+                    <span>Escolha seu Pacote de Aulas ({availablePackages.length} plano(s) do instrutor) *</span>
                   </label>
                 </div>
 
-                {/* Filtro rápido por Categoria dos Pacotes */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-[11px]">
-                  <button
-                    type="button"
-                    onClick={() => setPackageCategoryFilter('ALL')}
-                    className={`px-2.5 py-1 rounded-lg font-bold transition-colors cursor-pointer shrink-0 ${
-                      packageCategoryFilter === 'ALL'
-                        ? 'bg-blue-600 text-white shadow-xs'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    Todos ({availablePackages.length})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPackageCategoryFilter('B')}
-                    className={`px-2.5 py-1 rounded-lg font-bold transition-colors cursor-pointer shrink-0 ${
-                      packageCategoryFilter === 'B'
-                        ? 'bg-blue-600 text-white shadow-xs'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    CNH B (Carro)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPackageCategoryFilter('A')}
-                    className={`px-2.5 py-1 rounded-lg font-bold transition-colors cursor-pointer shrink-0 ${
-                      packageCategoryFilter === 'A'
-                        ? 'bg-blue-600 text-white shadow-xs'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    CNH A (Moto)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPackageCategoryFilter('AB')}
-                    className={`px-2.5 py-1 rounded-lg font-bold transition-colors cursor-pointer shrink-0 ${
-                      packageCategoryFilter === 'AB'
-                        ? 'bg-blue-600 text-white shadow-xs'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    CNH A+B (Duplo)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPackageCategoryFilter('OUTROS')}
-                    className={`px-2.5 py-1 rounded-lg font-bold transition-colors cursor-pointer shrink-0 ${
-                      packageCategoryFilter === 'OUTROS'
-                        ? 'bg-blue-600 text-white shadow-xs'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    Outros / Reforço
-                  </button>
-                </div>
+                {/* Filtro rápido por Categoria (somente se o instrutor tiver cadastrado mais de 1 categoria) */}
+                {instructorCategories.length > 1 && (
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-[11px]">
+                    <button
+                      type="button"
+                      onClick={() => setPackageCategoryFilter('ALL')}
+                      className={`px-2.5 py-1 rounded-lg font-bold transition-colors cursor-pointer shrink-0 ${
+                        packageCategoryFilter === 'ALL'
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      Todos ({availablePackages.length})
+                    </button>
+                    {instructorCategories.map((cat) => {
+                      const count = availablePackages.filter((p) => p.categoriaCnh === cat.value).length;
+                      return (
+                        <button
+                          key={cat.value}
+                          type="button"
+                          onClick={() => setPackageCategoryFilter(cat.value)}
+                          className={`px-2.5 py-1 rounded-lg font-bold transition-colors cursor-pointer shrink-0 flex items-center gap-1 ${
+                            packageCategoryFilter === cat.value
+                              ? 'bg-blue-600 text-white shadow-xs'
+                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          }`}
+                        >
+                          <span>CNH {cat.value}</span>
+                          <span className="text-[10px] opacity-80">({count})</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
 
                 {/* Lista de Cards de Pacotes */}
                 <div className="space-y-2 max-h-72 overflow-y-auto pr-0.5">
@@ -864,7 +871,10 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
                       return (
                         <div
                           key={pkg.id}
-                          onClick={() => setSelectedPackageId(pkg.id)}
+                          onClick={() => {
+                            setSelectedPackageId(pkg.id);
+                            setFormData((prev) => ({ ...prev, categoriaCnh: pkg.categoriaCnh }));
+                          }}
                           className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 ${
                             isSelected
                               ? 'border-blue-600 bg-blue-50/80 ring-2 ring-blue-500/20 shadow-xs'
