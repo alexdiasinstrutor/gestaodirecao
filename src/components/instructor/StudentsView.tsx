@@ -145,8 +145,8 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
     setEditingPackageId(student.pacoteId || matchedPkg?.id || '');
     setEditingPackageName(
       student.pacoteNome ||
-        matchedPkg?.nome ||
-        `Pacote CNH ${student.categoriaCnh || 'B'} (${student.totalAulasContratadas || 20} Aulas Práticas)`
+      matchedPkg?.nome ||
+      `Pacote CNH ${student.categoriaCnh || 'B'} (${student.totalAulasContratadas || 20} Aulas Práticas)`
     );
     setEditingTotalLessons(student.totalAulasContratadas || matchedPkg?.totalAulas || 20);
     setEditingSkills({ ...student.habilidades });
