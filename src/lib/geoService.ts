@@ -319,8 +319,8 @@ export function resolveCoordinatesForLocation(params: {
     const offset = params.bairro
       ? computeNeighborhoodOffset(params.bairro)
       : params.cep
-      ? computeNeighborhoodOffset(params.cep)
-      : { dLat: 0, dLon: 0 };
+        ? computeNeighborhoodOffset(params.cep)
+        : { dLat: 0, dLon: 0 };
 
     return {
       latitude: Number((matchedCity.latitude + offset.dLat).toFixed(5)),
@@ -423,18 +423,32 @@ export function buildEffectiveInstructorCoverage(params: {
     savedCoverage?.categoriasAtendidas && savedCoverage.categoriasAtendidas.length > 0
       ? Array.from(new Set([...savedCoverage.categoriasAtendidas, ...pkgCategories]))
       : pkgCategories.length > 0
-      ? pkgCategories
-      : ['B'];
+        ? pkgCategories
+        : ['B'];
 
-  // Tipos de veículo (MOTO, CARRO, CAMINHAO, ONIBUS)
-  const vehicleFleetTypes = vehicles.map((v) => v.tipo);
+  // Tipos de veículo (MOTO, CARRO, CAMINHAO, ONIBUS) e Câmbio inferidos dos veículos cadastrados pelo instrutor
+  const instructorVehicles = vehicles.filter(
+    (v) => !v.instrutorId || v.instrutorId === instructor.id
+  );
+  const vehicleFleetTypes = (instructorVehicles.length > 0 ? instructorVehicles : vehicles).map((v) => v.tipo);
   const inferredTypes = inferVehicleTypesFromCategories(categoriasAtendidas);
   const tiposVeiculo: LocatorVehicleType[] =
     savedCoverage?.tiposVeiculo && savedCoverage.tiposVeiculo.length > 0
-      ? savedCoverage.tiposVeiculo
+      ? Array.from(new Set([...savedCoverage.tiposVeiculo, ...vehicleFleetTypes]))
       : Array.from(new Set([...vehicleFleetTypes, ...inferredTypes]));
 
-  const tipoCambio: VehicleTransmissionType = savedCoverage?.tipoCambio || 'AMBOS';
+  const hasManualVeh = instructorVehicles.some((v) => (v.cambio || 'MANUAL') === 'MANUAL');
+  const hasAutoVeh = instructorVehicles.some((v) => v.cambio === 'AUTOMATICO');
+  const inferredCambio: VehicleTransmissionType =
+    hasManualVeh && hasAutoVeh
+      ? 'AMBOS'
+      : hasAutoVeh
+      ? 'AUTOMATICO'
+      : hasManualVeh
+      ? 'MANUAL'
+      : 'AMBOS';
+
+  const tipoCambio: VehicleTransmissionType = savedCoverage?.tipoCambio || inferredCambio;
   const raioAtendimentoKm = clampRadiusKm(savedCoverage?.raioAtendimentoKm ?? 20);
 
   const cidadesSet = new Set<string>();

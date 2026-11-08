@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Package,
   Plus,
@@ -38,8 +38,17 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
   currentUser
 }) => {
   const orgId = currentOrg.id;
-  const packages = db.getPackages(orgId, currentUser.papel === 'INSTRUTOR' ? currentUser.id : undefined);
-  const students = db.getStudents(orgId, currentUser.papel === 'INSTRUTOR' ? currentUser.id : undefined);
+  const targetInstructorId = currentUser.papel !== 'SUPER_ADMIN' ? currentUser.id : undefined;
+  const [, setSyncTick] = useState(0);
+
+  useEffect(() => {
+    const onSync = () => setSyncTick((t) => t + 1);
+    window.addEventListener('agd:data-synced', onSync);
+    return () => window.removeEventListener('agd:data-synced', onSync);
+  }, []);
+
+  const packages = db.getPackages(orgId, targetInstructorId);
+  const students = db.getStudents(orgId, targetInstructorId);
 
   const [showModal, setShowModal] = useState<boolean>(false);
   const [editingPackage, setEditingPackage] = useState<PackageOffer | null>(null);
@@ -89,7 +98,7 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
     setShowModal(true);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.nome.trim()) return;
 
@@ -110,10 +119,11 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
         maxParcelas: Number(form.maxParcelas) || 1,
         descontoAvistaPercentual: Number(form.descontoAvistaPercentual) || 0,
         descricao: form.descricao.trim(),
-        ativo: form.ativo
+        ativo: form.ativo,
+        atualizadoEm: new Date().toISOString()
       };
-      db.updatePackage(updated, currentUser.id);
-      setFeedbackMsg(`Pacote "${updated.nome}" atualizado com sucesso!`);
+      await db.updatePackageAsync(updated, currentUser.id);
+      setFeedbackMsg(`Pacote "${updated.nome}" atualizado e sincronizado com segurança no banco!`);
     } else {
       const newPkg: PackageOffer = {
         id: `pkg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
@@ -129,25 +139,26 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
         descontoAvistaPercentual: Number(form.descontoAvistaPercentual) || 0,
         descricao: form.descricao.trim(),
         ativo: form.ativo,
-        criadoEm: new Date().toISOString().slice(0, 10)
+        criadoEm: new Date().toISOString().slice(0, 10),
+        atualizadoEm: new Date().toISOString()
       };
-      db.createPackage(newPkg, currentUser.id);
-      setFeedbackMsg(`Novo pacote "${newPkg.nome}" cadastrado e liberado para os alunos!`);
+      await db.createPackageAsync(newPkg, currentUser.id);
+      setFeedbackMsg(`Novo pacote "${newPkg.nome}" cadastrado e sincronizado com segurança para os alunos!`);
     }
 
     setShowModal(false);
     setTimeout(() => setFeedbackMsg(''), 3500);
   };
 
-  const handleToggleStatus = (pkg: PackageOffer) => {
-    db.togglePackageStatus(pkg.id, currentUser.id);
+  const handleToggleStatus = async (pkg: PackageOffer) => {
+    await db.togglePackageStatusAsync(pkg.id, currentUser.id);
     setFeedbackMsg(`Status do pacote "${pkg.nome}" alterado para ${!pkg.ativo ? 'ATIVO' : 'PAUSADO'}.`);
     setTimeout(() => setFeedbackMsg(''), 3000);
   };
 
-  const handleDelete = (pkg: PackageOffer) => {
+  const handleDelete = async (pkg: PackageOffer) => {
     if (confirm(`Deseja realmente excluir o pacote "${pkg.nome}"?`)) {
-      db.deletePackage(pkg.id, currentUser.id);
+      await db.deletePackageAsync(pkg.id, currentUser.id);
       setFeedbackMsg(`Pacote "${pkg.nome}" excluído.`);
       setTimeout(() => setFeedbackMsg(''), 3000);
     }

@@ -216,13 +216,21 @@ function vehicleToRow(v: Vehicle): Record<string, any> {
   return {
     id: v.id,
     organizacao_id: v.organizacaoId,
+    instrutor_id: v.instrutorId || null,
+    instrutor_nome: v.instrutorNome || null,
     modelo: v.modelo,
     placa: v.placa,
     ano: v.ano,
     tipo: v.tipo,
+    cambio: v.cambio || 'MANUAL',
+    categoria_cnh: v.categoriaCnh || (v.tipo === 'MOTO' ? 'A' : v.tipo === 'CAMINHAO' ? 'C' : v.tipo === 'ONIBUS' ? 'D' : 'B'),
+    duplo_comando: v.duploComando !== undefined ? v.duploComando : true,
+    adaptado_pcd: v.adaptadoPcd || false,
+    cor: v.cor || null,
     status: v.status,
     km_atual: v.kmAtual || 0,
     proxima_revisao_km: v.proximaRevisaoKm || 10000,
+    atualizado_em: v.atualizadoEm || new Date().toISOString(),
   };
 }
 
@@ -230,13 +238,21 @@ function rowToVehicle(r: any): Vehicle {
   return {
     id: r.id,
     organizacaoId: r.organizacao_id,
+    instrutorId: r.instrutor_id || undefined,
+    instrutorNome: r.instrutor_nome || undefined,
     modelo: r.modelo,
     placa: r.placa,
     ano: r.ano,
     tipo: r.tipo,
+    cambio: r.cambio || 'MANUAL',
+    categoriaCnh: r.categoria_cnh || undefined,
+    duploComando: r.duplo_comando !== undefined ? Boolean(r.duplo_comando) : true,
+    adaptadoPcd: Boolean(r.adaptado_pcd),
+    cor: r.cor || undefined,
     status: r.status,
     kmAtual: r.km_atual,
     proximaRevisaoKm: r.proxima_revisao_km,
+    atualizadoEm: r.atualizado_em || undefined,
   };
 }
 
@@ -448,6 +464,7 @@ function packageToRow(pk: PackageOffer): Record<string, any> {
     descricao: pk.descricao,
     ativo: pk.ativo,
     criado_em: pk.criadoEm || new Date().toISOString(),
+    atualizado_em: pk.atualizadoEm || pk.criadoEm || new Date().toISOString(),
   };
 }
 
@@ -467,6 +484,7 @@ function rowToPackage(r: any): PackageOffer {
     descricao: r.descricao,
     ativo: r.ativo,
     criadoEm: r.criado_em,
+    atualizadoEm: r.atualizado_em || r.criado_em || undefined,
   };
 }
 
@@ -740,6 +758,17 @@ async function supabaseUpsert(table: string, row: Record<string, any>): Promise<
       if (table === 'package_offers') {
         delete fallbackRow.instrutor_id;
         delete fallbackRow.instrutor_nome;
+        delete fallbackRow.atualizado_em;
+      }
+      if (table === 'vehicles') {
+        delete fallbackRow.instrutor_id;
+        delete fallbackRow.instrutor_nome;
+        delete fallbackRow.cambio;
+        delete fallbackRow.categoria_cnh;
+        delete fallbackRow.duplo_comando;
+        delete fallbackRow.adaptado_pcd;
+        delete fallbackRow.cor;
+        delete fallbackRow.atualizado_em;
       }
       const retry = await supabase.from(table).upsert(fallbackRow, { onConflict: 'id' });
       if (retry.error) {
@@ -895,6 +924,17 @@ export const supabaseAdapter = {
   async saveVehicle(vehicle: Vehicle): Promise<void> {
     await supabaseUpsert('vehicles', vehicleToRow(vehicle));
   },
+  async saveVehiclesBatch(vehicles: Vehicle[]): Promise<void> {
+    if (!supabase || vehicles.length === 0) return;
+    await upsertVaultRowsBatch('vehicles', vehicles.map(vehicleToRow));
+  },
+  async deleteVehicle(id: string): Promise<void> {
+    await supabaseDelete('vehicles', id);
+  },
+  async deleteVehiclesBatch(ids: string[]): Promise<void> {
+    if (!supabase || ids.length === 0) return;
+    await deleteVaultRowsBatch('vehicles', ids);
+  },
 
   // Slots de Agenda
   async getSlots(orgId?: string): Promise<AvailableSlot[]> {
@@ -1021,8 +1061,16 @@ export const supabaseAdapter = {
   async savePackage(pkg: PackageOffer): Promise<void> {
     await supabaseUpsert('package_offers', packageToRow(pkg));
   },
+  async savePackagesBatch(pkgs: PackageOffer[]): Promise<void> {
+    if (!supabase || pkgs.length === 0) return;
+    await upsertVaultRowsBatch('package_offers', pkgs.map(packageToRow));
+  },
   async deletePackage(id: string): Promise<void> {
     await supabaseDelete('package_offers', id);
+  },
+  async deletePackagesBatch(ids: string[]): Promise<void> {
+    if (!supabase || ids.length === 0) return;
+    await deleteVaultRowsBatch('package_offers', ids);
   },
 
   // Audit Logs

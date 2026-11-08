@@ -144,7 +144,8 @@ const DEFAULT_SAAS_PLANS: Record<string, SaaSPlanDefinition> = {
     modulosPermitidos: [
       'DASHBOARD',
       'STUDENTS',
-      'SCHEDULE'
+      'SCHEDULE',
+      'VEHICLES'
     ],
     destaques: [
       'Até 3 alunos de teste cadastrados',
@@ -168,6 +169,7 @@ const DEFAULT_SAAS_PLANS: Record<string, SaaSPlanDefinition> = {
       'DASHBOARD',
       'STUDENTS',
       'SCHEDULE',
+      'VEHICLES',
       'FINANCE_RECEIVABLES',
       'FINANCE_PACKAGES'
     ],
@@ -194,6 +196,7 @@ const DEFAULT_SAAS_PLANS: Record<string, SaaSPlanDefinition> = {
       'DASHBOARD',
       'STUDENTS',
       'SCHEDULE',
+      'VEHICLES',
       'FINANCE_RECEIVABLES',
       'FINANCE_PACKAGES',
       'FINANCE_EXPENSES',

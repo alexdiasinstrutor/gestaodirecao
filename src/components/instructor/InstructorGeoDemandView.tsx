@@ -351,11 +351,10 @@ export const InstructorGeoDemandView: React.FC<InstructorGeoDemandViewProps> = (
             <button
               type="button"
               onClick={() => setActiveSubTab('MAPA_MERCADO')}
-              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                activeSubTab === 'MAPA_MERCADO'
+              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${activeSubTab === 'MAPA_MERCADO'
                   ? 'bg-blue-600 text-white shadow-xs'
                   : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
-              }`}
+                }`}
             >
               <Compass className="w-3.5 h-3.5" />
               <span>Mapa de Alunos & Instrutores</span>
@@ -364,11 +363,10 @@ export const InstructorGeoDemandView: React.FC<InstructorGeoDemandViewProps> = (
             <button
               type="button"
               onClick={() => setActiveSubTab('NOTIFICACOES')}
-              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                activeSubTab === 'NOTIFICACOES'
+              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${activeSubTab === 'NOTIFICACOES'
                   ? 'bg-amber-500 text-slate-950 shadow-xs'
                   : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
-              }`}
+                }`}
             >
               <Bell className="w-3.5 h-3.5" />
               <span>Mensagens & Notificações ({studentLeads.length})</span>
@@ -377,11 +375,10 @@ export const InstructorGeoDemandView: React.FC<InstructorGeoDemandViewProps> = (
             <button
               type="button"
               onClick={() => setActiveSubTab('MINHA_COBERTURA')}
-              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                activeSubTab === 'MINHA_COBERTURA'
+              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${activeSubTab === 'MINHA_COBERTURA'
                   ? 'bg-emerald-600 text-white shadow-xs'
                   : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
-              }`}
+                }`}
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
               <span>Minha Área & Cidades ({raioKm} km)</span>
@@ -546,11 +543,10 @@ export const InstructorGeoDemandView: React.FC<InstructorGeoDemandViewProps> = (
                 return (
                   <div
                     key={`${city.cidade}_${city.estado}`}
-                    className={`p-3 rounded-2xl border space-y-2 ${
-                      city.semInstrutor && city.totalAlunos > 0
+                    className={`p-3 rounded-2xl border space-y-2 ${city.semInstrutor && city.totalAlunos > 0
                         ? 'bg-amber-50/70 border-amber-300'
                         : 'bg-slate-50 border-slate-200'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>
@@ -627,7 +623,7 @@ export const InstructorGeoDemandView: React.FC<InstructorGeoDemandViewProps> = (
                 <span>Mensagens e Notificações — Alunos à Procura de Instrutor</span>
               </h2>
               <p className="text-xs text-slate-600">
-                 O sistema notifica aqui todos os alunos que se cadastraram procurando atendimento (especialmente em cidades que ainda não possuem instrutor). Selecione um aluno para encaminhar uma mensagem via WhatsApp!
+                O sistema notifica aqui todos os alunos que se cadastraram procurando atendimento (especialmente em cidades que ainda não possuem instrutor). Selecione um aluno para encaminhar uma mensagem via WhatsApp!
               </p>
             </div>
           </div>
@@ -657,11 +653,10 @@ export const InstructorGeoDemandView: React.FC<InstructorGeoDemandViewProps> = (
                 return (
                   <div
                     key={lead.id}
-                    className={`p-4 rounded-2xl border space-y-3 transition-all ${
-                      lead.semInstrutorNaCidade
+                    className={`p-4 rounded-2xl border space-y-3 transition-all ${lead.semInstrutorNaCidade
                         ? 'bg-amber-50/60 border-amber-300 shadow-xs'
                         : 'bg-white border-slate-200'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>
@@ -682,11 +677,10 @@ export const InstructorGeoDemandView: React.FC<InstructorGeoDemandViewProps> = (
                       </div>
 
                       <span
-                        className={`px-2 py-0.5 rounded-lg text-[10px] font-bold ${
-                          lead.status === 'AGUARDANDO_INSTRUTOR'
+                        className={`px-2 py-0.5 rounded-lg text-[10px] font-bold ${lead.status === 'AGUARDANDO_INSTRUTOR'
                             ? 'bg-amber-100 text-amber-800'
                             : 'bg-emerald-100 text-emerald-800'
-                        }`}
+                          }`}
                       >
                         {lead.status === 'AGUARDANDO_INSTRUTOR' ? 'Aguardando Contato' : 'Em Contato'}
                       </span>
@@ -936,11 +930,10 @@ export const InstructorGeoDemandView: React.FC<InstructorGeoDemandViewProps> = (
                   return (
                     <label
                       key={tv}
-                      className={`flex items-center gap-1.5 p-2 rounded-xl border font-bold cursor-pointer ${
-                        checked
+                      className={`flex items-center gap-1.5 p-2 rounded-xl border font-bold cursor-pointer ${checked
                           ? 'bg-blue-50 border-blue-400 text-blue-900'
                           : 'bg-white border-slate-200 text-slate-600'
-                      }`}
+                        }`}
                     >
                       <input
                         type="checkbox"
@@ -978,11 +971,10 @@ export const InstructorGeoDemandView: React.FC<InstructorGeoDemandViewProps> = (
                           setCategoriasAtendidas((prev) => [...prev, cat]);
                         }
                       }}
-                      className={`px-2.5 py-1 rounded-lg font-mono font-bold text-xs cursor-pointer border transition-colors ${
-                        active
+                      className={`px-2.5 py-1 rounded-lg font-mono font-bold text-xs cursor-pointer border transition-colors ${active
                           ? 'bg-slate-900 text-white border-slate-900'
                           : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100'
-                      }`}
+                        }`}
                     >
                       CNH {cat}
                     </button>

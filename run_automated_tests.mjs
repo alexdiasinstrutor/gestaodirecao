@@ -498,6 +498,88 @@ runTest(
   }
 );
 
+// ============================================================================
+// 10. TESTE DE PROTEÇÃO E BLINDAGEM CONTRA PERDA DE PACOTES DO INSTRUTOR
+// ============================================================================
+runTest(
+  'T16',
+  'Proteção Absoluta Contra Perda de Pacotes Criados/Editados pelo Instrutor',
+  'Garante que pacotes criados ou editados pelo instrutor nunca sejam apagados ou sobrescritos por pacotes padrão na sincronização',
+  () => {
+    const storageFile = fs.readFileSync(path.join(BASE_DIR, 'src/lib/storage.ts'), 'utf-8');
+    const pkgManagerFile = fs.readFileSync(
+      path.join(BASE_DIR, 'src/components/instructor/PackagesManager.tsx'),
+      'utf-8'
+    );
+
+    assert.equal(
+      storageFile.includes('PACKAGES_BACKUP') &&
+      storageFile.includes('PENDING_PACKAGES') &&
+      storageFile.includes('DELETED_PACKAGES'),
+      true,
+      'Storage possui cofre local PACKAGES_BACKUP, fila PENDING_PACKAGES e controle DELETED_PACKAGES'
+    );
+    assert.equal(
+      storageFile.includes('localIsProtected') &&
+      storageFile.includes('createPackageAsync') &&
+      storageFile.includes('updatePackageAsync'),
+      true,
+      'Sincronização protege edições locais/customizadas do instrutor contra sobrescrita por seeds remotos'
+    );
+    assert.equal(
+      pkgManagerFile.includes("currentUser.papel !== 'SUPER_ADMIN' ? currentUser.id : undefined") &&
+      pkgManagerFile.includes('await db.updatePackageAsync') &&
+      pkgManagerFile.includes('await db.createPackageAsync'),
+      true,
+      'PackagesManager passa o instrutorId para ADMIN_ORG e INSTRUTOR e persiste alterações de forma assíncrona no banco'
+    );
+  }
+);
+
+// ============================================================================
+// 11. TESTE DE CADASTRO E GESTÃO DE VEÍCULOS / CARROS DOS INSTRUTORES
+// ============================================================================
+runTest(
+  'T17',
+  'Cadastro e Gestão de Veículos / Carros dos Instrutores',
+  'Instrutor possui tela e menu dedicado "Meus Veículos" para cadastrar carros/motos (câmbio manual/automático, placa, ano, duplo comando, km) com sincronização em tempo real',
+  () => {
+    const vehiclesViewFile = fs.readFileSync(
+      path.join(BASE_DIR, 'src/components/instructor/VehiclesView.tsx'),
+      'utf-8'
+    );
+    const appFile = fs.readFileSync(path.join(BASE_DIR, 'src/App.tsx'), 'utf-8');
+    const saasPlansFile = fs.readFileSync(path.join(BASE_DIR, 'src/lib/saasPlans.ts'), 'utf-8');
+    const storageFile = fs.readFileSync(path.join(BASE_DIR, 'src/lib/storage.ts'), 'utf-8');
+
+    assert.equal(
+      vehiclesViewFile.includes('Meus Veículos e Frota de Instrução') &&
+      vehiclesViewFile.includes('await db.saveVehicleAsync(vehicleData, currentUser.id)') &&
+      vehiclesViewFile.includes('await db.deleteVehicleAsync(veh.id, currentUser.id)'),
+      true,
+      'Tela VehiclesView permite cadastrar, editar e excluir carros/veículos do instrutor com sincronização assíncrona'
+    );
+    assert.equal(
+      appFile.includes("id: 'VEHICLES'") &&
+      appFile.includes('<VehiclesView currentOrg={currentOrg!} currentUser={currentUser} />'),
+      true,
+      'Menu principal e navegação mobile incluem a aba "Meus Veículos"'
+    );
+    assert.equal(
+      storageFile.includes('VEHICLES_BACKUP') &&
+      storageFile.includes('PENDING_VEHICLES') &&
+      storageFile.includes('DELETED_VEHICLES'),
+      true,
+      'Storage protege os veículos cadastrados pelo instrutor com backup e fila de sincronização'
+    );
+    assert.equal(
+      saasPlansFile.includes("'VEHICLES'"),
+      true,
+      'Módulo VEHICLES está habilitado nos planos para todos os instrutores cadastrarem seus carros'
+    );
+  }
+);
+
 console.log('\n====================================================================');
 const passed = results.filter((r) => r.status === 'PASS').length;
 const failed = results.filter((r) => r.status === 'FAIL').length;

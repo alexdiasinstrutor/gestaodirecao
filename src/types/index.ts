@@ -170,13 +170,21 @@ export interface StudentSkills {
 export interface Vehicle {
   id: string;
   organizacaoId: string;
+  instrutorId?: string;
+  instrutorNome?: string;
   modelo: string;
   placa: string;
   ano: number;
   tipo: 'CARRO' | 'MOTO' | 'CAMINHAO' | 'ONIBUS';
+  cambio?: 'MANUAL' | 'AUTOMATICO';
+  categoriaCnh?: CnhCategory;
+  duploComando?: boolean;
+  adaptadoPcd?: boolean;
+  cor?: string;
   status: 'DISPONIVEL' | 'EM_AULA' | 'MANUTENCAO';
   proximaRevisaoKm: number;
   kmAtual: number;
+  atualizadoEm?: string;
 }
 
 export type LessonStatus = 'AGENDADA' | 'EM_ANDAMENTO' | 'CONCLUIDA' | 'CANCELADA' | 'FALTA';
@@ -304,6 +312,7 @@ export interface PackageOffer {
   descricao: string;
   ativo: boolean;
   criadoEm?: string;
+  atualizadoEm?: string;
 }
 
 export interface StudentTransferHistory {

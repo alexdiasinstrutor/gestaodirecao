@@ -114,6 +114,12 @@ const STORAGE_KEYS = {
   SESSION_EXPIRY: 'agd_session_expiry',
   DELETED_SLOTS: 'agd_deleted_slots',
   PENDING_NEW_SLOTS: 'agd_pending_new_slots',
+  PACKAGES_BACKUP: 'agd_packages_backup',
+  DELETED_PACKAGES: 'agd_deleted_packages',
+  PENDING_PACKAGES: 'agd_pending_packages',
+  VEHICLES_BACKUP: 'agd_vehicles_backup',
+  DELETED_VEHICLES: 'agd_deleted_vehicles',
+  PENDING_VEHICLES: 'agd_pending_vehicles',
   STUDENT_NOTIFICATIONS: 'agd_student_notifications',
   INSTRUCTOR_COVERAGE: 'agd_instructor_coverage',
   STUDENT_LEADS: 'agd_student_leads',
@@ -777,20 +783,68 @@ export function seedCleanProductionData(): { org: Organization; user: User } {
     aprovadoPorMaster: true
   };
 
-  writeList(STORAGE_KEYS.ORGANIZATIONS, [defaultOrg]);
-  writeList(STORAGE_KEYS.USERS, [masterUser]);
-  writeList(STORAGE_KEYS.STUDENTS, []);
-  writeList(STORAGE_KEYS.VEHICLES, []);
-  writeList(STORAGE_KEYS.SLOTS, []);
-  writeList(STORAGE_KEYS.LESSONS, []);
-  writeList(STORAGE_KEYS.PACKAGES, []);
-  writeList(STORAGE_KEYS.ACCOUNTS, []);
-  writeList(STORAGE_KEYS.PAYMENTS, []);
-  writeList(STORAGE_KEYS.EXPENSES, []);
-  writeList(STORAGE_KEYS.INVESTMENTS, []);
-  writeList(STORAGE_KEYS.AUDIT, []);
-  writeList(STORAGE_KEYS.WHATSAPP_LOGS, []);
-  writeList(STORAGE_KEYS.SYNC_QUEUE, []);
+  const existingOrgs = readList<Organization>(STORAGE_KEYS.ORGANIZATIONS).filter(
+    (o) => o.id !== orgId
+  );
+  const existingUsers = readList<User>(STORAGE_KEYS.USERS).filter(
+    (u) =>
+      u.id !== masterUser.id &&
+      u.id !== 'usr_carlos_01' &&
+      u.id !== 'usr_roberto_02' &&
+      u.id !== 'usr_aluno_pedro'
+  );
+  const existingStudents = readList<Student>(STORAGE_KEYS.STUDENTS).filter(
+    (s) =>
+      s.id !== 'stu_pedro_silva' &&
+      s.id !== 'stu_mariana_souza' &&
+      s.id !== 'stu_lucas_almeida' &&
+      s.id !== 'stu_juliana_costa' &&
+      s.nome !== 'Pedro Henrique Silva'
+  );
+  const existingVehicles = readList<Vehicle>(STORAGE_KEYS.VEHICLES).filter(
+    (v) => v.id !== 'veh_onix_01' && v.id !== 'veh_mobi_02' && v.id !== 'veh_cg_moto'
+  );
+  const existingBackupVehicles = readList<Vehicle>(STORAGE_KEYS.VEHICLES_BACKUP).filter(
+    (v) => v.id !== 'veh_onix_01' && v.id !== 'veh_mobi_02' && v.id !== 'veh_cg_moto'
+  );
+  const mergedVehiclesMap = new Map<string, Vehicle>();
+  existingBackupVehicles.forEach((v) => mergedVehiclesMap.set(v.id, v));
+  existingVehicles.forEach((v) => mergedVehiclesMap.set(v.id, v));
+
+  const existingPackages = readList<PackageOffer>(STORAGE_KEYS.PACKAGES).filter(
+    (p) =>
+      p.id !== 'pkg_cnh_b_20' &&
+      p.id !== 'pkg_cnh_a_20' &&
+      p.id !== 'pkg_cnh_ab_40' &&
+      p.id !== 'pkg_reforco_05'
+  );
+  const existingBackupPackages = readList<PackageOffer>(STORAGE_KEYS.PACKAGES_BACKUP).filter(
+    (p) =>
+      p.id !== 'pkg_cnh_b_20' &&
+      p.id !== 'pkg_cnh_a_20' &&
+      p.id !== 'pkg_cnh_ab_40' &&
+      p.id !== 'pkg_reforco_05'
+  );
+  const mergedPackagesMap = new Map<string, PackageOffer>();
+  existingBackupPackages.forEach((p) => mergedPackagesMap.set(p.id, p));
+  existingPackages.forEach((p) => mergedPackagesMap.set(p.id, p));
+
+  writeList(STORAGE_KEYS.ORGANIZATIONS, [defaultOrg, ...existingOrgs]);
+  writeList(STORAGE_KEYS.USERS, [masterUser, ...existingUsers]);
+  writeList(STORAGE_KEYS.STUDENTS, existingStudents);
+  writeList(STORAGE_KEYS.VEHICLES, Array.from(mergedVehiclesMap.values()));
+  writeList(STORAGE_KEYS.VEHICLES_BACKUP, Array.from(mergedVehiclesMap.values()));
+  writeList(STORAGE_KEYS.SLOTS, readList<AvailableSlot>(STORAGE_KEYS.SLOTS));
+  writeList(STORAGE_KEYS.LESSONS, readList<Lesson>(STORAGE_KEYS.LESSONS));
+  writeList(STORAGE_KEYS.PACKAGES, Array.from(mergedPackagesMap.values()));
+  writeList(STORAGE_KEYS.PACKAGES_BACKUP, Array.from(mergedPackagesMap.values()));
+  writeList(STORAGE_KEYS.ACCOUNTS, readList<AccountReceivable>(STORAGE_KEYS.ACCOUNTS));
+  writeList(STORAGE_KEYS.PAYMENTS, readList<PaymentRecord>(STORAGE_KEYS.PAYMENTS));
+  writeList(STORAGE_KEYS.EXPENSES, readList<Expense>(STORAGE_KEYS.EXPENSES));
+  writeList(STORAGE_KEYS.INVESTMENTS, readList<Investment>(STORAGE_KEYS.INVESTMENTS));
+  writeList(STORAGE_KEYS.AUDIT, readList<AuditLog>(STORAGE_KEYS.AUDIT));
+  writeList(STORAGE_KEYS.WHATSAPP_LOGS, readList<WhatsAppReminderLog>(STORAGE_KEYS.WHATSAPP_LOGS));
+  writeList(STORAGE_KEYS.SYNC_QUEUE, readList<SyncQueueItem>(STORAGE_KEYS.SYNC_QUEUE));
   localStorage.setItem(STORAGE_KEYS.SEEDED, 'true');
 
   // Nunca auto-loga em nenhum usuário (incluindo Master): exige login manual com e-mail e senha
@@ -1020,7 +1074,84 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
       }
     }
 
-    if (vehicles && vehicles.length > 0) writeList(STORAGE_KEYS.VEHICLES, vehicles);
+    // Sincronização bidirecional e protegida de veículos dos instrutores (Sem perda de cadastros locais)
+    {
+      const deletedVehicleIds = new Set(readList<string>(STORAGE_KEYS.DELETED_VEHICLES));
+      if (deletedVehicleIds.size > 0) {
+        supabaseAdapter.deleteVehiclesBatch(Array.from(deletedVehicleIds)).catch(() => {});
+      }
+      const pendingVehicleIds = new Set(readList<string>(STORAGE_KEYS.PENDING_VEHICLES));
+      const localVehicles = readList<Vehicle>(STORAGE_KEYS.VEHICLES);
+      const backupVehicles = readList<Vehicle>(STORAGE_KEYS.VEHICLES_BACKUP);
+      const demoVehIds = new Set(['veh_onix_01', 'veh_mobi_02', 'veh_cg_moto']);
+
+      const mergedVehiclesMap = new Map<string, Vehicle>();
+      backupVehicles.forEach((v) => {
+        if (!deletedVehicleIds.has(v.id) && !demoVehIds.has(v.id)) {
+          mergedVehiclesMap.set(v.id, v);
+        }
+      });
+      localVehicles.forEach((v) => {
+        if (!deletedVehicleIds.has(v.id) && !demoVehIds.has(v.id)) {
+          mergedVehiclesMap.set(v.id, v);
+        }
+      });
+
+      const remoteVehicleIds = new Set((vehicles || []).map((v) => v.id));
+      if (vehicles && vehicles.length > 0) {
+        vehicles.forEach((rv) => {
+          if (deletedVehicleIds.has(rv.id) || demoVehIds.has(rv.id)) return;
+          const localExisting = mergedVehiclesMap.get(rv.id);
+          if (localExisting) {
+            const localNewer =
+              pendingVehicleIds.has(rv.id) ||
+              (localExisting.atualizadoEm &&
+                (!rv.atualizadoEm || localExisting.atualizadoEm >= rv.atualizadoEm));
+            if (localNewer) {
+              mergedVehiclesMap.set(rv.id, {
+                ...rv,
+                ...localExisting
+              });
+            } else {
+              mergedVehiclesMap.set(rv.id, {
+                ...localExisting,
+                ...rv,
+                instrutorId: rv.instrutorId || localExisting.instrutorId,
+                instrutorNome: rv.instrutorNome || localExisting.instrutorNome,
+                cambio: rv.cambio || localExisting.cambio,
+                categoriaCnh: rv.categoriaCnh || localExisting.categoriaCnh,
+                duploComando: rv.duploComando ?? localExisting.duploComando,
+                adaptadoPcd: rv.adaptadoPcd ?? localExisting.adaptadoPcd,
+                cor: rv.cor || localExisting.cor
+              });
+            }
+          } else {
+            mergedVehiclesMap.set(rv.id, rv);
+          }
+        });
+      }
+
+      const finalVehicles = Array.from(mergedVehiclesMap.values());
+      writeList(STORAGE_KEYS.VEHICLES, finalVehicles);
+      writeList(STORAGE_KEYS.VEHICLES_BACKUP, finalVehicles);
+
+      // Envia para o Supabase quaisquer veículos locais ou pendentes que ainda não estavam sincronizados
+      const vehiclesToPush = finalVehicles.filter(
+        (v) => !remoteVehicleIds.has(v.id) || pendingVehicleIds.has(v.id)
+      );
+      if (vehiclesToPush.length > 0) {
+        supabaseAdapter
+          .saveVehiclesBatch(vehiclesToPush)
+          .then(() => {
+            writeList(STORAGE_KEYS.PENDING_VEHICLES, []);
+          })
+          .catch(() => {});
+      }
+
+      const remainingDeletedVehicles = Array.from(deletedVehicleIds).filter((id) => remoteVehicleIds.has(id));
+      writeList(STORAGE_KEYS.DELETED_VEHICLES, remainingDeletedVehicles);
+    }
+
     if (lessons && lessons.length > 0) writeList(STORAGE_KEYS.LESSONS, lessons);
 
     // Gestão segura e bidirecional de slots (agenda de horários disponíveis)
@@ -1126,10 +1257,17 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
     if (payments && payments.length > 0) writeList(STORAGE_KEYS.PAYMENTS, payments);
     if (expenses && expenses.length > 0) writeList(STORAGE_KEYS.EXPENSES, expenses);
     if (investments && investments.length > 0) writeList(STORAGE_KEYS.INVESTMENTS, investments);
-    // Sincronização bidirecional de pacotes e planos dos instrutores
+    // Sincronização bidirecional e protegida de pacotes e planos dos instrutores (PROIBIDO apagar ou inventar pacotes)
     {
+      const deletedPkgIds = new Set(readList<string>(STORAGE_KEYS.DELETED_PACKAGES));
+      if (deletedPkgIds.size > 0) {
+        supabaseAdapter.deletePackagesBatch(Array.from(deletedPkgIds)).catch(() => {});
+      }
+      const pendingPkgIds = new Set(readList<string>(STORAGE_KEYS.PENDING_PACKAGES));
       const localPkgs = readList<PackageOffer>(STORAGE_KEYS.PACKAGES);
+      const backupPkgs = readList<PackageOffer>(STORAGE_KEYS.PACKAGES_BACKUP);
       const remotePkgIds = new Set((packages || []).map((p) => p.id));
+
       const pkgMetaMap = new Map<string, PackageOffer>();
       if (packageMetaLogs && packageMetaLogs.length > 0) {
         const sortedPkgMeta = [...packageMetaLogs].sort((a, b) => (a.timestamp || '').localeCompare(b.timestamp || ''));
@@ -1137,7 +1275,7 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
           if (log.detalhes) {
             try {
               const parsed = JSON.parse(log.detalhes) as PackageOffer;
-              if (parsed && parsed.id) {
+              if (parsed && parsed.id && !deletedPkgIds.has(parsed.id)) {
                 pkgMetaMap.set(parsed.id, parsed);
               }
             } catch {
@@ -1146,68 +1284,99 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
           }
         }
       }
+
+      const isGenericSeedPackage = (p: PackageOffer) =>
+        p.nome === 'Pacote CNH B (20 Aulas Práticas)' &&
+        p.totalAulas === 20 &&
+        p.valorCentavos === 180000;
+
       const mergedPkgsMap = new Map<string, PackageOffer>();
-      localPkgs.forEach((lp) => mergedPkgsMap.set(lp.id, lp));
+      // 1. Primeiro restaura do cofre local de backup e da lista local
+      backupPkgs.forEach((bp) => {
+        if (!deletedPkgIds.has(bp.id)) mergedPkgsMap.set(bp.id, bp);
+      });
+      localPkgs.forEach((lp) => {
+        if (!deletedPkgIds.has(lp.id)) mergedPkgsMap.set(lp.id, lp);
+      });
+
+      // 2. Mescla pacotes remotos sem jamais sobrescrever edições locais mais recentes ou customizadas pelo instrutor
       if (packages && packages.length > 0) {
         packages.forEach((rp) => {
+          if (deletedPkgIds.has(rp.id)) return;
           const localExisting = mergedPkgsMap.get(rp.id);
           const metaExisting = pkgMetaMap.get(rp.id);
-          mergedPkgsMap.set(rp.id, {
-            ...localExisting,
-            ...rp,
-            instrutorId: rp.instrutorId || metaExisting?.instrutorId || localExisting?.instrutorId,
-            instrutorNome: rp.instrutorNome || metaExisting?.instrutorNome || localExisting?.instrutorNome
-          });
+
+          // Escolhe entre rp e metaExisting qual versão remota é mais atualizada ou customizada
+          const bestRemote: PackageOffer =
+            metaExisting &&
+            ((metaExisting.atualizadoEm && (!rp.atualizadoEm || metaExisting.atualizadoEm >= rp.atualizadoEm)) ||
+              (isGenericSeedPackage(rp) && !isGenericSeedPackage(metaExisting)))
+              ? { ...rp, ...metaExisting }
+              : {
+                  ...metaExisting,
+                  ...rp,
+                  instrutorId: rp.instrutorId || metaExisting?.instrutorId,
+                  instrutorNome: rp.instrutorNome || metaExisting?.instrutorNome,
+                  atualizadoEm: rp.atualizadoEm || metaExisting?.atualizadoEm
+                };
+
+          if (localExisting) {
+            const localIsProtected =
+              pendingPkgIds.has(rp.id) ||
+              (localExisting.atualizadoEm &&
+                (!bestRemote.atualizadoEm || localExisting.atualizadoEm >= bestRemote.atualizadoEm)) ||
+              (isGenericSeedPackage(bestRemote) && !isGenericSeedPackage(localExisting));
+
+            if (localIsProtected) {
+              mergedPkgsMap.set(rp.id, {
+                ...bestRemote,
+                ...localExisting,
+                instrutorId: localExisting.instrutorId || bestRemote.instrutorId,
+                instrutorNome: localExisting.instrutorNome || bestRemote.instrutorNome
+              });
+            } else {
+              mergedPkgsMap.set(rp.id, {
+                ...localExisting,
+                ...bestRemote,
+                instrutorId: bestRemote.instrutorId || localExisting.instrutorId,
+                instrutorNome: bestRemote.instrutorNome || localExisting.instrutorNome
+              });
+            }
+          } else {
+            mergedPkgsMap.set(rp.id, bestRemote);
+          }
         });
       }
+
+      // 3. Restaura pacotes que estavam nos logs de metadados da nuvem e ainda não constavam no map
       pkgMetaMap.forEach((metaPkg, pkgId) => {
-        if (!mergedPkgsMap.has(pkgId)) {
+        if (!deletedPkgIds.has(pkgId) && !mergedPkgsMap.has(pkgId)) {
           mergedPkgsMap.set(pkgId, metaPkg);
         }
       });
 
-      // Garante que todo instrutor credenciado real possua seu plano inicial CNH B caso a gravação anterior tenha sido bloqueada por RLS
-      const allKnownInstructors = Array.from(mergedUsersMap.values()).filter(
-        (u) => u.papel === 'ADMIN_ORG' || u.papel === 'INSTRUTOR'
-      );
-      for (const inst of allKnownInstructors) {
-        const hasPkg = Array.from(mergedPkgsMap.values()).some(
-          (p) =>
-            p.instrutorId === inst.id ||
-            (p.organizacaoId === inst.organizacaoId && (!p.instrutorId || p.instrutorId === inst.id))
-        );
-        if (!hasPkg && inst.organizacaoId) {
-          const initialPkg: PackageOffer = {
-            id: `pkg_cnh_b_20_${inst.organizacaoId}`,
-            organizacaoId: inst.organizacaoId,
-            instrutorId: inst.id,
-            instrutorNome: inst.nome,
-            nome: 'Pacote CNH B (20 Aulas Práticas)',
-            totalAulas: 20,
-            categoriaCnh: 'B',
-            valorCentavos: 180000,
-            formaPagamento: 'TODAS',
-            maxParcelas: 12,
-            descontoAvistaPercentual: 5,
-            descricao: 'Treinamento prático veicular completo com suporte e simulados de exame.',
-            ativo: true,
-            criadoEm: new Date().toISOString().slice(0, 10)
-          };
-          mergedPkgsMap.set(initialPkg.id, initialPkg);
-        }
-      }
-
       const finalPackages = Array.from(mergedPkgsMap.values());
       writeList(STORAGE_KEYS.PACKAGES, finalPackages);
+      writeList(STORAGE_KEYS.PACKAGES_BACKUP, finalPackages);
       db.sanitizePackages();
 
-      // Envia para o Supabase quaisquer pacotes locais ou reconstruídos que ainda não estavam na nuvem
+      // 4. Envia para o Supabase todos os pacotes locais, customizados ou pendentes para blindar contra perda
       const sanitizedPackages = readList<PackageOffer>(STORAGE_KEYS.PACKAGES);
-      for (const pk of sanitizedPackages) {
-        if (!remotePkgIds.has(pk.id)) {
-          supabaseAdapter.savePackage(pk).catch(() => {});
-        }
+      writeList(STORAGE_KEYS.PACKAGES_BACKUP, sanitizedPackages);
+      const pkgsToPush = sanitizedPackages.filter(
+        (pk) => !remotePkgIds.has(pk.id) || pendingPkgIds.has(pk.id) || !isGenericSeedPackage(pk)
+      );
+      if (pkgsToPush.length > 0) {
+        supabaseAdapter
+          .savePackagesBatch(pkgsToPush)
+          .then(() => {
+            writeList(STORAGE_KEYS.PENDING_PACKAGES, []);
+          })
+          .catch(() => {});
       }
+
+      const remainingDeletedPkgs = Array.from(deletedPkgIds).filter((id) => remotePkgIds.has(id));
+      writeList(STORAGE_KEYS.DELETED_PACKAGES, remainingDeletedPkgs);
     }
 
     // Sincroniza perfis de cobertura geográfica dos instrutores (Raio 5-40km, Cidades Atendidas, Câmbio e Veículos)
@@ -2056,20 +2225,172 @@ export const db = {
   },
 
   // Vehicles
-  getVehicles(orgId: string): Vehicle[] {
-    return readList<Vehicle>(STORAGE_KEYS.VEHICLES).filter((v) => v.organizacaoId === orgId);
+  getVehicles(orgId: string, instrutorId?: string): Vehicle[] {
+    const primary = readList<Vehicle>(STORAGE_KEYS.VEHICLES);
+    const backup = readList<Vehicle>(STORAGE_KEYS.VEHICLES_BACKUP);
+    const deleted = new Set(readList<string>(STORAGE_KEYS.DELETED_VEHICLES));
+    const mergedMap = new Map<string, Vehicle>();
+    backup.forEach((v) => {
+      if (!deleted.has(v.id)) mergedMap.set(v.id, v);
+    });
+    primary.forEach((v) => {
+      if (!deleted.has(v.id)) mergedMap.set(v.id, v);
+    });
+    const all = Array.from(mergedMap.values());
+
+    if (instrutorId) {
+      const cleanTargetId = instrutorId.replace(/^usr_/, '').toLowerCase();
+      return all.filter((v) => {
+        if (v.instrutorId) {
+          const cleanVehInstId = v.instrutorId.replace(/^usr_/, '').toLowerCase();
+          if (v.instrutorId === instrutorId || cleanVehInstId === cleanTargetId) return true;
+        }
+        return (
+          v.organizacaoId === orgId &&
+          (!v.instrutorId ||
+            v.instrutorId === instrutorId ||
+            v.instrutorId.replace(/^usr_/, '').toLowerCase() === cleanTargetId)
+        );
+      });
+    }
+
+    return all.filter((v) => v.organizacaoId === orgId);
   },
 
   saveVehicle(vehicle: Vehicle): void {
+    const updatedVehicle: Vehicle = {
+      ...vehicle,
+      atualizadoEm: new Date().toISOString()
+    };
     const list = readList<Vehicle>(STORAGE_KEYS.VEHICLES);
-    const index = list.findIndex((v) => v.id === vehicle.id);
+    const index = list.findIndex((v) => v.id === updatedVehicle.id);
     if (index >= 0) {
-      list[index] = vehicle;
+      list[index] = updatedVehicle;
     } else {
-      list.push(vehicle);
+      list.push(updatedVehicle);
     }
     writeList(STORAGE_KEYS.VEHICLES, list);
-    supabaseAdapter.saveVehicle(vehicle).catch(console.error);
+    writeList(STORAGE_KEYS.VEHICLES_BACKUP, list);
+
+    const deleted = readList<string>(STORAGE_KEYS.DELETED_VEHICLES).filter((id) => id !== updatedVehicle.id);
+    writeList(STORAGE_KEYS.DELETED_VEHICLES, deleted);
+
+    const pending = new Set(readList<string>(STORAGE_KEYS.PENDING_VEHICLES));
+    pending.add(updatedVehicle.id);
+    writeList(STORAGE_KEYS.PENDING_VEHICLES, Array.from(pending));
+    notifyDataChange();
+
+    supabaseAdapter
+      .saveVehicle(updatedVehicle)
+      .then(() => {
+        const afterPending = readList<string>(STORAGE_KEYS.PENDING_VEHICLES).filter(
+          (id) => id !== updatedVehicle.id
+        );
+        writeList(STORAGE_KEYS.PENDING_VEHICLES, afterPending);
+      })
+      .catch(console.error);
+  },
+
+  async saveVehicleAsync(vehicle: Vehicle, actorId?: string): Promise<void> {
+    const updatedVehicle: Vehicle = {
+      ...vehicle,
+      atualizadoEm: new Date().toISOString()
+    };
+    const list = readList<Vehicle>(STORAGE_KEYS.VEHICLES);
+    const index = list.findIndex((v) => v.id === updatedVehicle.id);
+    const isNew = index < 0;
+    if (index >= 0) {
+      list[index] = updatedVehicle;
+    } else {
+      list.push(updatedVehicle);
+    }
+    writeList(STORAGE_KEYS.VEHICLES, list);
+    writeList(STORAGE_KEYS.VEHICLES_BACKUP, list);
+
+    const deleted = readList<string>(STORAGE_KEYS.DELETED_VEHICLES).filter((id) => id !== updatedVehicle.id);
+    writeList(STORAGE_KEYS.DELETED_VEHICLES, deleted);
+
+    const pending = new Set(readList<string>(STORAGE_KEYS.PENDING_VEHICLES));
+    pending.add(updatedVehicle.id);
+    writeList(STORAGE_KEYS.PENDING_VEHICLES, Array.from(pending));
+    notifyDataChange();
+
+    if (supabaseAdapter.enabled) {
+      await supabaseAdapter.saveVehicle(updatedVehicle).catch(console.error);
+      const afterPending = readList<string>(STORAGE_KEYS.PENDING_VEHICLES).filter(
+        (id) => id !== updatedVehicle.id
+      );
+      writeList(STORAGE_KEYS.PENDING_VEHICLES, afterPending);
+    }
+
+    this.addAuditLog(
+      updatedVehicle.organizacaoId,
+      actorId || updatedVehicle.instrutorId || 'sistema',
+      isNew ? 'CADASTRAR_VEICULO' : 'ATUALIZAR_VEICULO',
+      'Veiculo',
+      updatedVehicle.id,
+      `${updatedVehicle.modelo} (${updatedVehicle.placa}) · ${updatedVehicle.tipo} · Câmbio ${updatedVehicle.cambio || 'MANUAL'}`
+    );
+    notifyDataChange();
+  },
+
+  deleteVehicle(vehicleId: string, actorId?: string): void {
+    const list = readList<Vehicle>(STORAGE_KEYS.VEHICLES);
+    const veh = list.find((v) => v.id === vehicleId);
+    const filtered = list.filter((v) => v.id !== vehicleId);
+    writeList(STORAGE_KEYS.VEHICLES, filtered);
+    writeList(STORAGE_KEYS.VEHICLES_BACKUP, filtered);
+
+    const pending = readList<string>(STORAGE_KEYS.PENDING_VEHICLES).filter((id) => id !== vehicleId);
+    writeList(STORAGE_KEYS.PENDING_VEHICLES, pending);
+
+    const deleted = new Set(readList<string>(STORAGE_KEYS.DELETED_VEHICLES));
+    deleted.add(vehicleId);
+    writeList(STORAGE_KEYS.DELETED_VEHICLES, Array.from(deleted));
+    notifyDataChange();
+
+    supabaseAdapter.deleteVehicle(vehicleId).catch(console.error);
+    if (veh) {
+      this.addAuditLog(
+        veh.organizacaoId,
+        actorId || veh.instrutorId || 'sistema',
+        'EXCLUIR_VEICULO',
+        'Veiculo',
+        vehicleId,
+        `Veículo ${veh.modelo} (${veh.placa}) excluído.`
+      );
+    }
+  },
+
+  async deleteVehicleAsync(vehicleId: string, actorId?: string): Promise<void> {
+    const list = readList<Vehicle>(STORAGE_KEYS.VEHICLES);
+    const veh = list.find((v) => v.id === vehicleId);
+    const filtered = list.filter((v) => v.id !== vehicleId);
+    writeList(STORAGE_KEYS.VEHICLES, filtered);
+    writeList(STORAGE_KEYS.VEHICLES_BACKUP, filtered);
+
+    const pending = readList<string>(STORAGE_KEYS.PENDING_VEHICLES).filter((id) => id !== vehicleId);
+    writeList(STORAGE_KEYS.PENDING_VEHICLES, pending);
+
+    const deleted = new Set(readList<string>(STORAGE_KEYS.DELETED_VEHICLES));
+    deleted.add(vehicleId);
+    writeList(STORAGE_KEYS.DELETED_VEHICLES, Array.from(deleted));
+    notifyDataChange();
+
+    if (supabaseAdapter.enabled) {
+      await supabaseAdapter.deleteVehicle(vehicleId).catch(console.error);
+    }
+    if (veh) {
+      this.addAuditLog(
+        veh.organizacaoId,
+        actorId || veh.instrutorId || 'sistema',
+        'EXCLUIR_VEICULO',
+        'Veiculo',
+        vehicleId,
+        `Veículo ${veh.modelo} (${veh.placa}) excluído.`
+      );
+    }
+    notifyDataChange();
   },
 
   // Available Slots & Schedule
@@ -2622,7 +2943,18 @@ export const db = {
 
   // Package Offers (Estritamente os pacotes que o próprio instrutor cadastrou, sem criação aleatória de outros pacotes)
   getPackages(orgId: string, instrutorId?: string): PackageOffer[] {
-    const all = readList<PackageOffer>(STORAGE_KEYS.PACKAGES);
+    const primary = readList<PackageOffer>(STORAGE_KEYS.PACKAGES);
+    const backup = readList<PackageOffer>(STORAGE_KEYS.PACKAGES_BACKUP);
+    const deleted = new Set(readList<string>(STORAGE_KEYS.DELETED_PACKAGES));
+    const mergedAllMap = new Map<string, PackageOffer>();
+    backup.forEach((p) => {
+      if (!deleted.has(p.id)) mergedAllMap.set(p.id, p);
+    });
+    primary.forEach((p) => {
+      if (!deleted.has(p.id)) mergedAllMap.set(p.id, p);
+    });
+    const all = Array.from(mergedAllMap.values());
+
     const instructorUser = instrutorId ? this.getUserById(instrutorId) : undefined;
     const effectiveOrgId = instructorUser?.organizacaoId || orgId;
 
@@ -2689,6 +3021,7 @@ export const db = {
     if (toRemove.length > 0) {
       const cleaned = all.filter((p) => !autoInjectedPrefixes.some((prefix) => p.id.startsWith(prefix)));
       writeList(STORAGE_KEYS.PACKAGES, cleaned);
+      writeList(STORAGE_KEYS.PACKAGES_BACKUP, cleaned);
       toRemove.forEach((p) => {
         supabaseAdapter.deletePackage(p.id).catch(() => {});
       });
@@ -2705,38 +3038,118 @@ export const db = {
       entidade: 'PackageOfferMeta',
       entidadeId: pkg.id,
       detalhes: JSON.stringify(pkg),
-      timestamp: new Date().toISOString()
+      timestamp: pkg.atualizadoEm || new Date().toISOString()
     };
     supabaseAdapter.addAuditLog(metaAudit).catch(() => {});
   },
 
   createPackage(pkg: PackageOffer, actorId: string): void {
+    const updatedPkg: PackageOffer = {
+      ...pkg,
+      atualizadoEm: new Date().toISOString()
+    };
     const list = readList<PackageOffer>(STORAGE_KEYS.PACKAGES);
-    list.unshift(pkg);
+    const idx = list.findIndex((p) => p.id === updatedPkg.id);
+    if (idx >= 0) {
+      list[idx] = updatedPkg;
+    } else {
+      list.unshift(updatedPkg);
+    }
     writeList(STORAGE_KEYS.PACKAGES, list);
+    writeList(STORAGE_KEYS.PACKAGES_BACKUP, list);
+
+    const deleted = readList<string>(STORAGE_KEYS.DELETED_PACKAGES).filter((id) => id !== updatedPkg.id);
+    writeList(STORAGE_KEYS.DELETED_PACKAGES, deleted);
+
+    const pending = new Set(readList<string>(STORAGE_KEYS.PENDING_PACKAGES));
+    pending.add(updatedPkg.id);
+    writeList(STORAGE_KEYS.PENDING_PACKAGES, Array.from(pending));
+
     notifyDataChange();
-    supabaseAdapter.savePackage(pkg).catch(console.error);
-    this.persistPackageMetaToCloud(pkg, actorId);
-    this.addAuditLog(pkg.organizacaoId, actorId, 'CRIAR_PACOTE', 'Pacote', pkg.id, `${pkg.nome} - R$ ${(pkg.valorCentavos / 100).toFixed(2)} (${pkg.formaPagamento})`);
+    supabaseAdapter
+      .savePackage(updatedPkg)
+      .then(() => {
+        const afterPending = readList<string>(STORAGE_KEYS.PENDING_PACKAGES).filter(
+          (id) => id !== updatedPkg.id
+        );
+        writeList(STORAGE_KEYS.PENDING_PACKAGES, afterPending);
+      })
+      .catch(console.error);
+    this.persistPackageMetaToCloud(updatedPkg, actorId);
+    this.addAuditLog(updatedPkg.organizacaoId, actorId, 'CRIAR_PACOTE', 'Pacote', updatedPkg.id, `${updatedPkg.nome} - R$ ${(updatedPkg.valorCentavos / 100).toFixed(2)} (${updatedPkg.formaPagamento})`);
+  },
+
+  async createPackageAsync(pkg: PackageOffer, actorId: string): Promise<void> {
+    const updatedPkg: PackageOffer = {
+      ...pkg,
+      atualizadoEm: new Date().toISOString()
+    };
+    const list = readList<PackageOffer>(STORAGE_KEYS.PACKAGES);
+    const idx = list.findIndex((p) => p.id === updatedPkg.id);
+    if (idx >= 0) {
+      list[idx] = updatedPkg;
+    } else {
+      list.unshift(updatedPkg);
+    }
+    writeList(STORAGE_KEYS.PACKAGES, list);
+    writeList(STORAGE_KEYS.PACKAGES_BACKUP, list);
+
+    const deleted = readList<string>(STORAGE_KEYS.DELETED_PACKAGES).filter((id) => id !== updatedPkg.id);
+    writeList(STORAGE_KEYS.DELETED_PACKAGES, deleted);
+
+    const pending = new Set(readList<string>(STORAGE_KEYS.PENDING_PACKAGES));
+    pending.add(updatedPkg.id);
+    writeList(STORAGE_KEYS.PENDING_PACKAGES, Array.from(pending));
+
+    notifyDataChange();
+    if (supabaseAdapter.enabled) {
+      await supabaseAdapter.savePackage(updatedPkg).catch(console.error);
+      const afterPending = readList<string>(STORAGE_KEYS.PENDING_PACKAGES).filter(
+        (id) => id !== updatedPkg.id
+      );
+      writeList(STORAGE_KEYS.PENDING_PACKAGES, afterPending);
+    }
+    this.persistPackageMetaToCloud(updatedPkg, actorId);
+    this.addAuditLog(updatedPkg.organizacaoId, actorId, 'CRIAR_PACOTE', 'Pacote', updatedPkg.id, `${updatedPkg.nome} - R$ ${(updatedPkg.valorCentavos / 100).toFixed(2)} (${updatedPkg.formaPagamento})`);
+    notifyDataChange();
   },
 
   savePackage(pkg: PackageOffer): void {
     const list = readList<PackageOffer>(STORAGE_KEYS.PACKAGES);
     const index = list.findIndex((p) => p.id === pkg.id);
+    const updatedPkg: PackageOffer = {
+      ...pkg,
+      instrutorId: pkg.instrutorId || (index >= 0 ? list[index].instrutorId : undefined),
+      instrutorNome: pkg.instrutorNome || (index >= 0 ? list[index].instrutorNome : undefined),
+      atualizadoEm: pkg.atualizadoEm || new Date().toISOString()
+    };
     if (index >= 0) {
-      list[index] = {
-        ...pkg,
-        instrutorId: pkg.instrutorId || list[index].instrutorId,
-        instrutorNome: pkg.instrutorNome || list[index].instrutorNome
-      };
+      list[index] = updatedPkg;
     } else {
-      list.push(pkg);
+      list.push(updatedPkg);
     }
     writeList(STORAGE_KEYS.PACKAGES, list);
+    writeList(STORAGE_KEYS.PACKAGES_BACKUP, list);
+
+    const deleted = readList<string>(STORAGE_KEYS.DELETED_PACKAGES).filter((id) => id !== updatedPkg.id);
+    writeList(STORAGE_KEYS.DELETED_PACKAGES, deleted);
+
+    const pending = new Set(readList<string>(STORAGE_KEYS.PENDING_PACKAGES));
+    pending.add(updatedPkg.id);
+    writeList(STORAGE_KEYS.PENDING_PACKAGES, Array.from(pending));
+
     notifyDataChange();
-    supabaseAdapter.savePackage(pkg).catch(console.error);
-    if (pkg.instrutorId) {
-      this.persistPackageMetaToCloud(pkg, pkg.instrutorId);
+    supabaseAdapter
+      .savePackage(updatedPkg)
+      .then(() => {
+        const afterPending = readList<string>(STORAGE_KEYS.PENDING_PACKAGES).filter(
+          (id) => id !== updatedPkg.id
+        );
+        writeList(STORAGE_KEYS.PENDING_PACKAGES, afterPending);
+      })
+      .catch(console.error);
+    if (updatedPkg.instrutorId) {
+      this.persistPackageMetaToCloud(updatedPkg, updatedPkg.instrutorId);
     }
   },
 
@@ -2745,37 +3158,170 @@ export const db = {
     const pkg = list.find((p) => p.id === packageId);
     if (pkg) {
       pkg.ativo = !pkg.ativo;
+      pkg.atualizadoEm = new Date().toISOString();
       writeList(STORAGE_KEYS.PACKAGES, list);
+      writeList(STORAGE_KEYS.PACKAGES_BACKUP, list);
+
+      const pending = new Set(readList<string>(STORAGE_KEYS.PENDING_PACKAGES));
+      pending.add(pkg.id);
+      writeList(STORAGE_KEYS.PENDING_PACKAGES, Array.from(pending));
+
       notifyDataChange();
-      supabaseAdapter.savePackage(pkg).catch(console.error);
+      supabaseAdapter
+        .savePackage(pkg)
+        .then(() => {
+          const afterPending = readList<string>(STORAGE_KEYS.PENDING_PACKAGES).filter((id) => id !== pkg.id);
+          writeList(STORAGE_KEYS.PENDING_PACKAGES, afterPending);
+        })
+        .catch(console.error);
       this.persistPackageMetaToCloud(pkg, actorId);
       this.addAuditLog(pkg.organizacaoId, actorId, 'ALTERAR_STATUS_PACOTE', 'Pacote', pkg.id, `Status alterado para ${pkg.ativo ? 'ATIVO' : 'INATIVO'}`);
     }
   },
 
-  updatePackage(pkg: PackageOffer, actorId: string): void {
+  async togglePackageStatusAsync(packageId: string, actorId: string): Promise<void> {
     const list = readList<PackageOffer>(STORAGE_KEYS.PACKAGES);
-    const index = list.findIndex((p) => p.id === pkg.id);
-    if (index >= 0) {
-      list[index] = pkg;
+    const pkg = list.find((p) => p.id === packageId);
+    if (pkg) {
+      pkg.ativo = !pkg.ativo;
+      pkg.atualizadoEm = new Date().toISOString();
       writeList(STORAGE_KEYS.PACKAGES, list);
+      writeList(STORAGE_KEYS.PACKAGES_BACKUP, list);
+
+      const pending = new Set(readList<string>(STORAGE_KEYS.PENDING_PACKAGES));
+      pending.add(pkg.id);
+      writeList(STORAGE_KEYS.PENDING_PACKAGES, Array.from(pending));
+
       notifyDataChange();
-      supabaseAdapter.savePackage(pkg).catch(console.error);
+      if (supabaseAdapter.enabled) {
+        await supabaseAdapter.savePackage(pkg).catch(console.error);
+        const afterPending = readList<string>(STORAGE_KEYS.PENDING_PACKAGES).filter((id) => id !== pkg.id);
+        writeList(STORAGE_KEYS.PENDING_PACKAGES, afterPending);
+      }
       this.persistPackageMetaToCloud(pkg, actorId);
-      this.addAuditLog(pkg.organizacaoId, actorId, 'ATUALIZAR_PACOTE', 'Pacote', pkg.id, `Atualizado pacote ${pkg.nome} - R$ ${(pkg.valorCentavos / 100).toFixed(2)}`);
+      this.addAuditLog(pkg.organizacaoId, actorId, 'ALTERAR_STATUS_PACOTE', 'Pacote', pkg.id, `Status alterado para ${pkg.ativo ? 'ATIVO' : 'INATIVO'}`);
+      notifyDataChange();
     }
+  },
+
+  updatePackage(pkg: PackageOffer, actorId: string): void {
+    const updatedPkg: PackageOffer = {
+      ...pkg,
+      atualizadoEm: new Date().toISOString()
+    };
+    const list = readList<PackageOffer>(STORAGE_KEYS.PACKAGES);
+    const index = list.findIndex((p) => p.id === updatedPkg.id);
+    if (index >= 0) {
+      list[index] = {
+        ...list[index],
+        ...updatedPkg,
+        instrutorId: updatedPkg.instrutorId || list[index].instrutorId,
+        instrutorNome: updatedPkg.instrutorNome || list[index].instrutorNome
+      };
+    } else {
+      list.push(updatedPkg);
+    }
+    writeList(STORAGE_KEYS.PACKAGES, list);
+    writeList(STORAGE_KEYS.PACKAGES_BACKUP, list);
+
+    const pending = new Set(readList<string>(STORAGE_KEYS.PENDING_PACKAGES));
+    pending.add(updatedPkg.id);
+    writeList(STORAGE_KEYS.PENDING_PACKAGES, Array.from(pending));
+
+    notifyDataChange();
+    supabaseAdapter
+      .savePackage(updatedPkg)
+      .then(() => {
+        const afterPending = readList<string>(STORAGE_KEYS.PENDING_PACKAGES).filter(
+          (id) => id !== updatedPkg.id
+        );
+        writeList(STORAGE_KEYS.PENDING_PACKAGES, afterPending);
+      })
+      .catch(console.error);
+    this.persistPackageMetaToCloud(updatedPkg, actorId);
+    this.addAuditLog(updatedPkg.organizacaoId, actorId, 'ATUALIZAR_PACOTE', 'Pacote', updatedPkg.id, `Atualizado pacote ${updatedPkg.nome} - R$ ${(updatedPkg.valorCentavos / 100).toFixed(2)}`);
+  },
+
+  async updatePackageAsync(pkg: PackageOffer, actorId: string): Promise<void> {
+    const updatedPkg: PackageOffer = {
+      ...pkg,
+      atualizadoEm: new Date().toISOString()
+    };
+    const list = readList<PackageOffer>(STORAGE_KEYS.PACKAGES);
+    const index = list.findIndex((p) => p.id === updatedPkg.id);
+    if (index >= 0) {
+      list[index] = {
+        ...list[index],
+        ...updatedPkg,
+        instrutorId: updatedPkg.instrutorId || list[index].instrutorId,
+        instrutorNome: updatedPkg.instrutorNome || list[index].instrutorNome
+      };
+    } else {
+      list.push(updatedPkg);
+    }
+    writeList(STORAGE_KEYS.PACKAGES, list);
+    writeList(STORAGE_KEYS.PACKAGES_BACKUP, list);
+
+    const pending = new Set(readList<string>(STORAGE_KEYS.PENDING_PACKAGES));
+    pending.add(updatedPkg.id);
+    writeList(STORAGE_KEYS.PENDING_PACKAGES, Array.from(pending));
+
+    notifyDataChange();
+    if (supabaseAdapter.enabled) {
+      await supabaseAdapter.savePackage(updatedPkg).catch(console.error);
+      const afterPending = readList<string>(STORAGE_KEYS.PENDING_PACKAGES).filter(
+        (id) => id !== updatedPkg.id
+      );
+      writeList(STORAGE_KEYS.PENDING_PACKAGES, afterPending);
+    }
+    this.persistPackageMetaToCloud(updatedPkg, actorId);
+    this.addAuditLog(updatedPkg.organizacaoId, actorId, 'ATUALIZAR_PACOTE', 'Pacote', updatedPkg.id, `Atualizado pacote ${updatedPkg.nome} - R$ ${(updatedPkg.valorCentavos / 100).toFixed(2)}`);
+    notifyDataChange();
   },
 
   deletePackage(packageId: string, actorId: string): void {
     const list = readList<PackageOffer>(STORAGE_KEYS.PACKAGES);
     const pkg = list.find((p) => p.id === packageId);
+    const filtered = list.filter((p) => p.id !== packageId);
+    writeList(STORAGE_KEYS.PACKAGES, filtered);
+    writeList(STORAGE_KEYS.PACKAGES_BACKUP, filtered);
+
+    const pending = readList<string>(STORAGE_KEYS.PENDING_PACKAGES).filter((id) => id !== packageId);
+    writeList(STORAGE_KEYS.PENDING_PACKAGES, pending);
+
+    const deleted = new Set(readList<string>(STORAGE_KEYS.DELETED_PACKAGES));
+    deleted.add(packageId);
+    writeList(STORAGE_KEYS.DELETED_PACKAGES, Array.from(deleted));
+
+    notifyDataChange();
+    supabaseAdapter.deletePackage(packageId).catch(console.error);
     if (pkg) {
-      const filtered = list.filter((p) => p.id !== packageId);
-      writeList(STORAGE_KEYS.PACKAGES, filtered);
-      notifyDataChange();
-      supabaseAdapter.deletePackage(packageId).catch(console.error);
       this.addAuditLog(pkg.organizacaoId, actorId, 'EXCLUIR_PACOTE', 'Pacote', pkg.id, `Excluído pacote ${pkg.nome}`);
     }
+  },
+
+  async deletePackageAsync(packageId: string, actorId: string): Promise<void> {
+    const list = readList<PackageOffer>(STORAGE_KEYS.PACKAGES);
+    const pkg = list.find((p) => p.id === packageId);
+    const filtered = list.filter((p) => p.id !== packageId);
+    writeList(STORAGE_KEYS.PACKAGES, filtered);
+    writeList(STORAGE_KEYS.PACKAGES_BACKUP, filtered);
+
+    const pending = readList<string>(STORAGE_KEYS.PENDING_PACKAGES).filter((id) => id !== packageId);
+    writeList(STORAGE_KEYS.PENDING_PACKAGES, pending);
+
+    const deleted = new Set(readList<string>(STORAGE_KEYS.DELETED_PACKAGES));
+    deleted.add(packageId);
+    writeList(STORAGE_KEYS.DELETED_PACKAGES, Array.from(deleted));
+
+    notifyDataChange();
+    if (supabaseAdapter.enabled) {
+      await supabaseAdapter.deletePackage(packageId).catch(console.error);
+    }
+    if (pkg) {
+      this.addAuditLog(pkg.organizacaoId, actorId, 'EXCLUIR_PACOTE', 'Pacote', pkg.id, `Excluído pacote ${pkg.nome}`);
+    }
+    notifyDataChange();
   },
 
   // Cobertura Geográfica do Instrutor (Raio 5 a 40 km, Cidades Atendidas, Veículos e Câmbio)

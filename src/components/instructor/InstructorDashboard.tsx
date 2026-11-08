@@ -148,6 +148,13 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
               </button>
             )}
             <button
+              onClick={() => onNavigate('VEHICLES')}
+              className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer touch-target border border-slate-700"
+            >
+              <Car className="w-4 h-4 text-sky-400 shrink-0" />
+              <span>Meus Veículos ({vehicles.length})</span>
+            </button>
+            <button
               onClick={onOpenInvite}
               className="flex items-center gap-1.5 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer touch-target border border-slate-600"
             >
@@ -271,6 +278,20 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
             <div className="min-w-0">
               <p className="text-xs font-extrabold text-slate-900 truncate">Meus Alunos</p>
               <p className="text-xs text-indigo-700 font-bold">{students.length} ativo(s)</p>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onNavigate('VEHICLES')}
+            className="p-3.5 bg-white hover:bg-sky-50/60 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-3 text-left transition-all cursor-pointer"
+          >
+            <div className="p-2.5 rounded-xl bg-sky-600 text-white shrink-0">
+              <Car className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-extrabold text-slate-900 truncate">Meus Veículos</p>
+              <p className="text-xs text-sky-700 font-bold">{vehicles.length} cadastrado(s)</p>
             </div>
           </button>
 
