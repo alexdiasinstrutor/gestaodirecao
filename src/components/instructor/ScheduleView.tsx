@@ -147,7 +147,7 @@ function generateDatesForScope(
 }
 
 export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentUser }) => {
-  const orgId = currentOrg.id;
+  const orgId = currentOrg?.id || currentUser?.organizacaoId || 'org_direcao_certa_01';
 
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().slice(0, 10)
@@ -247,7 +247,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
     () =>
       slots
         .filter((s) => s.data === selectedDate)
-        .sort((a, b) => a.horaInicio.localeCompare(b.horaInicio)),
+        .sort((a, b) => (a.horaInicio || '').localeCompare(b.horaInicio || '')),
     [slots, selectedDate]
   );
   const dateLessons = useMemo(
@@ -256,14 +256,14 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
         (l) =>
           l.data === selectedDate &&
           l.status !== 'CANCELADA' &&
-          (!l.instrutorId || l.instrutorId === currentUser.id)
+          (!l.instrutorId || l.instrutorId === currentUser?.id)
       ),
-    [lessons, selectedDate, currentUser.id]
+    [lessons, selectedDate, currentUser?.id]
   );
 
   // Form for new lesson
   const [lessonForm, setLessonForm] = useState({
-    alunoId: students[0]?.id || '',
+    alunoId: students[0]?.id || allOrgStudents[0]?.id || '',
     veiculoId: vehicles[0]?.id || '',
     topico: 'Treino de Baliza e Ponto de Embreagem',
     horaInicio: '09:00',
@@ -594,7 +594,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
     setSelectedSlotForSchedule(time);
     setLessonForm({
       ...lessonForm,
-      alunoId: lessonForm.alunoId || students[0]?.id || '',
+      alunoId: lessonForm.alunoId || students[0]?.id || allOrgStudents[0]?.id || '',
       veiculoId: lessonForm.veiculoId || vehicles[0]?.id || '',
       horaInicio: time,
       horaFim: getEndTimeForStart(time)
@@ -607,12 +607,14 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
     e.preventDefault();
     setScheduleError('');
 
-    if (!lessonForm.alunoId) {
+    const targetAlunoId = lessonForm.alunoId || students[0]?.id || allOrgStudents[0]?.id;
+    if (!targetAlunoId) {
       setScheduleError('Selecione um aluno para agendar a aula.');
       return;
     }
 
-    if (!lessonForm.veiculoId) {
+    const targetVeiculoId = lessonForm.veiculoId || vehicles[0]?.id;
+    if (!targetVeiculoId) {
       setScheduleError('Selecione o veículo da aula.');
       return;
     }
@@ -620,12 +622,12 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
     const newLesson: Lesson = {
       id: `lsn_${Date.now()}`,
       organizacaoId: orgId,
-      alunoId: lessonForm.alunoId,
+      alunoId: targetAlunoId,
       instrutorId: currentUser.id,
-      veiculoId: lessonForm.veiculoId,
+      veiculoId: targetVeiculoId,
       data: selectedDate,
       horaInicio: lessonForm.horaInicio,
-      horaFim: lessonForm.horaFim,
+      horaFim: lessonForm.horaFim || getEndTimeForStart(lessonForm.horaInicio),
       topico: lessonForm.topico.trim() || 'Aula Prática de Direção',
       status: 'AGENDADA',
       criadoEm: new Date().toISOString()

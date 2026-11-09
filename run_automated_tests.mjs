@@ -1026,6 +1026,84 @@ runTest(
   }
 );
 
+// ============================================================================
+// 18. TESTE DE BLINDAGEM CONTRA TELA BRANCA E INCONSISTÊNCIAS DE SESSÃO
+// ============================================================================
+runTest(
+  'T24',
+  'Blindagem Global Contra Tela Branca (ErrorBoundary e Safe Navigation)',
+  'Garante ErrorBoundary no ponto de entrada, inicialização segura de organização, tratamento robusto de slots na agenda e parsing seguro de contratos',
+  () => {
+    const mainFile = fs.readFileSync(path.join(BASE_DIR, 'src/main.tsx'), 'utf-8');
+    const errorBoundaryFile = fs.readFileSync(path.join(BASE_DIR, 'src/components/common/ErrorBoundary.tsx'), 'utf-8');
+    const appFile = fs.readFileSync(path.join(BASE_DIR, 'src/App.tsx'), 'utf-8');
+    const scheduleFile = fs.readFileSync(path.join(BASE_DIR, 'src/components/instructor/ScheduleView.tsx'), 'utf-8');
+    const studentsViewFile = fs.readFileSync(path.join(BASE_DIR, 'src/components/instructor/StudentsView.tsx'), 'utf-8');
+    const addPackageModalFile = fs.readFileSync(path.join(BASE_DIR, 'src/components/instructor/AddStudentPackageModal.tsx'), 'utf-8');
+    const studentPortalFile = fs.readFileSync(path.join(BASE_DIR, 'src/components/student/StudentPortal.tsx'), 'utf-8');
+    const adapterFile = fs.readFileSync(path.join(BASE_DIR, 'src/lib/supabaseAdapter.ts'), 'utf-8');
+
+    // 1. ErrorBoundary no main.tsx
+    assert.equal(
+      mainFile.includes('<ErrorBoundary>') &&
+      mainFile.includes('</ErrorBoundary>') &&
+      mainFile.includes("import { ErrorBoundary } from './components/common/ErrorBoundary';"),
+      true,
+      'main.tsx envelopa a aplicação com ErrorBoundary profissional prevenindo telas em branco'
+    );
+
+    // 2. Componente ErrorBoundary com captura e tela amigável
+    assert.equal(
+      errorBoundaryFile.includes('getDerivedStateFromError') &&
+      errorBoundaryFile.includes('componentDidCatch') &&
+      errorBoundaryFile.includes('Inconsistência Temporária Detectada') &&
+      errorBoundaryFile.includes('Recarregar Sistema'),
+      true,
+      'ErrorBoundary captura falhas de renderização e exibe tela de contingência com botões de recuperação'
+    );
+
+    // 3. App.tsx: Organização com fallback garantido
+    assert.equal(
+      appFile.includes("id: user?.organizacaoId || 'org_direcao_certa_01'") &&
+      appFile.includes('nome:'),
+      true,
+      'App.tsx assegura fallback completo para currentOrg impedindo exceções de leitura de propriedade em null/undefined'
+    );
+
+    // 4. ScheduleView: Safe comparison de horaInicio e fallback de orgId
+    assert.equal(
+      scheduleFile.includes("(a.horaInicio || '').localeCompare(b.horaInicio || '')") &&
+      scheduleFile.includes('currentOrg?.id || currentUser?.organizacaoId'),
+      true,
+      'ScheduleView possui ordenação blindada contra slots com horaInicio indefinida e fallback de organização'
+    );
+
+    // 5. StudentsView & AddStudentPackageModal: parsing de contratos e initialTab
+    assert.equal(
+      studentsViewFile.includes('Array.isArray(activeStudent.contratosPacotes)') &&
+      studentsViewFile.includes('initialTab={addPackageInitialTab}') &&
+      addPackageModalFile.includes('initialTab?: ModalTab'),
+      true,
+      'StudentsView e AddStudentPackageModal tratam array de contratos com parsing seguro e integram initialTab'
+    );
+
+    // 6. StudentPortal: proteção contra divisão por zero em aulas contratadas
+    assert.equal(
+      studentPortalFile.includes('(student.totalAulasContratadas || 0) > 0'),
+      true,
+      'StudentPortal calcula barra de progresso com proteção contra total de aulas zerado ou ausente'
+    );
+
+    // 7. SupabaseAdapter: parsing tolerante de contratos_pacotes em rowToStudent
+    assert.equal(
+      adapterFile.includes('parsedContracts') &&
+      adapterFile.includes("r.contratos_pacotes.trim().startsWith('[')"),
+      true,
+      'supabaseAdapter analisa contratos_pacotes serializados como JSON em string ou array nativo'
+    );
+  }
+);
+
 console.log('\n====================================================================');
 const passed = results.filter((r) => r.status === 'PASS').length;
 const failed = results.filter((r) => r.status === 'FAIL').length;

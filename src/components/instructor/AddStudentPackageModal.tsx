@@ -33,12 +33,13 @@ interface AddStudentPackageModalProps {
   onClose: () => void;
   student: Student;
   currentUser: User;
-  currentOrg: Organization;
+  currentOrg?: Organization;
+  initialTab?: ModalTab;
   onSuccess: (updatedStudent: Student, newContract: StudentPackageContract, newAccount?: AccountReceivable) => void;
   onRequestReceipt?: (contract: StudentPackageContract, student: Student) => void;
 }
 
-type ModalTab = 'CATALOG_PACKAGE' | 'SINGLE_CLASSES' | 'CUSTOM_PACKAGE';
+export type ModalTab = 'CATALOG_PACKAGE' | 'SINGLE_CLASSES' | 'CUSTOM_PACKAGE';
 
 export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
   isOpen,
@@ -46,12 +47,13 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
   student,
   currentUser,
   currentOrg,
+  initialTab = 'CATALOG_PACKAGE',
   onSuccess,
   onRequestReceipt
 }) => {
-  if (!isOpen) return null;
+  if (!isOpen || !student) return null;
 
-  const [activeTab, setActiveTab] = useState<ModalTab>('CATALOG_PACKAGE');
+  const [activeTab, setActiveTab] = useState<ModalTab>(initialTab);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [createdResult, setCreatedResult] = useState<{
@@ -61,19 +63,27 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
   } | null>(null);
 
   // ─── 1. Estado: Pacote do Catálogo ───────────────────────────────────────────
+  const orgId = currentOrg?.id || currentUser?.organizacaoId || student?.organizacaoId || 'org_direcao_certa_01';
+
   const instructorPackages = useMemo<PackageOffer[]>(() => {
-    const all = db.getPackageOffers(currentOrg.id);
-    return all.filter((pkg) => {
-      const matchOwner =
-        !pkg.instrutorId ||
-        pkg.instrutorId === currentUser.id ||
-        pkg.instrutorId === student.instrutorId;
-      return matchOwner && pkg.ativo !== false;
-    });
-  }, [currentOrg.id, currentUser.id, student.instrutorId]);
+    try {
+      const all = db.getPackageOffers(orgId);
+      return (all || []).filter((pkg) => {
+        const matchOwner =
+          !pkg.instrutorId ||
+          pkg.instrutorId === currentUser?.id ||
+          pkg.instrutorId === student?.instrutorId;
+        return matchOwner && pkg.ativo !== false;
+      });
+    } catch {
+      return [];
+    }
+  }, [orgId, currentUser?.id, student?.instrutorId]);
+
+  const studentCategory = student?.categoriaCnh || 'B';
 
   const [selectedCatalogPkgId, setSelectedCatalogPkgId] = useState<string>(() => {
-    const defaultMatch = instructorPackages.find((p) => p.categoriaCnh === student.categoriaCnh);
+    const defaultMatch = instructorPackages.find((p) => p.categoriaCnh === studentCategory);
     return defaultMatch?.id || instructorPackages[0]?.id || '';
   });
 
@@ -84,8 +94,9 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
   // ─── 2. Estado: Aulas Avulsas ────────────────────────────────────────────────
   const [singleClassCount, setSingleClassCount] = useState<number>(2);
   const [singleClassPriceBRL, setSingleClassPriceBRL] = useState<number>(() => {
-    if (selectedCatalogPkg && selectedCatalogPkg.totalAulas > 0) {
-      return Math.round(selectedCatalogPkg.valorCentavos / selectedCatalogPkg.totalAulas) / 100;
+    if (selectedCatalogPkg && selectedCatalogPkg.totalAulas > 0 && selectedCatalogPkg.valorCentavos > 0) {
+      const unit = Math.round(selectedCatalogPkg.valorCentavos / selectedCatalogPkg.totalAulas) / 100;
+      return Number.isFinite(unit) && unit > 0 ? unit : 90;
     }
     return 90;
   });
@@ -97,7 +108,7 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
   const [customPkgName, setCustomPkgName] = useState<string>('Pacote Especial de Reforço & Treinamento');
   const [customPkgLessons, setCustomPkgLessons] = useState<number>(8);
   const [customPkgPriceBRL, setCustomPkgPriceBRL] = useState<number>(720);
-  const [customPkgCategory, setCustomPkgCategory] = useState<CnhCategory>(student.categoriaCnh);
+  const [customPkgCategory, setCustomPkgCategory] = useState<CnhCategory>(studentCategory);
   const [customPkgObs, setCustomPkgObs] = useState<string>('Pacote personalizado sob medida para o aluno');
 
   // ─── 4. Dados Financeiros Comuns ──────────────────────────────────────────────
@@ -139,7 +150,7 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
       categoria = customPkgCategory;
     }
 
-    const aulasAtuais = student.totalAulasContratadas || 20;
+    const aulasAtuais = Number(student?.totalAulasContratadas) || 20;
     const novoTotalAulas = aulasAtuais + qtdAulas;
 
     return {
@@ -161,8 +172,9 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
     customPkgLessons,
     customPkgPriceBRL,
     customPkgCategory,
-    student.categoriaCnh,
-    student.totalAulasContratadas
+    studentCategory,
+    student?.categoriaCnh,
+    student?.totalAulasContratadas
   ]);
 
   const handleSubmit = async (e: React.FormEvent) => {

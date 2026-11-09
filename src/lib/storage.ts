@@ -1019,7 +1019,15 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
                       ? metaExisting.historicoTransferencias
                       : st.historicoTransferencias && st.historicoTransferencias.length > 0
                       ? st.historicoTransferencias
-                      : localExisting?.historicoTransferencias || []
+                      : localExisting?.historicoTransferencias || [],
+                  contratosPacotes:
+                    Array.isArray(metaExisting?.contratosPacotes) && metaExisting.contratosPacotes.length > 0
+                      ? metaExisting.contratosPacotes
+                      : Array.isArray(st.contratosPacotes) && st.contratosPacotes.length > 0
+                      ? st.contratosPacotes
+                      : Array.isArray(localExisting?.contratosPacotes)
+                      ? localExisting.contratosPacotes
+                      : []
                 }
               : {
                   pacoteId: st.pacoteId || localExisting?.pacoteId,
@@ -1030,7 +1038,13 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
                   bairro: st.bairro || localExisting?.bairro,
                   logradouro: st.logradouro || localExisting?.logradouro,
                   numero: st.numero || localExisting?.numero,
-                  complemento: st.complemento || localExisting?.complemento
+                  complemento: st.complemento || localExisting?.complemento,
+                  contratosPacotes:
+                    Array.isArray(st.contratosPacotes) && st.contratosPacotes.length > 0
+                      ? st.contratosPacotes
+                      : Array.isArray(localExisting?.contratosPacotes)
+                      ? localExisting.contratosPacotes
+                      : []
                 })
           });
         });

@@ -53,9 +53,25 @@ export default function App() {
     return db.getCurrentUser();
   });
 
-  const [currentOrg, setCurrentOrg] = useState<Organization | undefined>(() => {
+  const [currentOrg, setCurrentOrg] = useState<Organization>(() => {
     const user = db.getCurrentUser();
-    return user ? db.getOrganization(user.organizacaoId) : db.getOrganizations()[0];
+    const org = user ? db.getOrganization(user.organizacaoId) : undefined;
+    return (
+      org ||
+      db.getOrganizations()[0] || {
+        id: user?.organizacaoId || 'org_direcao_certa_01',
+        nome: 'Auto Direção - Gestão de Aulas',
+        tipo: 'INSTRUTOR_AUTONOMO',
+        cnpjCpf: '00.000.000/0001-00',
+        telefone: '(31) 98796-9608',
+        email: 'contato@gestaodirecao.com.br',
+        cidade: 'Betim',
+        estado: 'MG',
+        status: 'ATIVO',
+        plano: 'MASTER',
+        criadoEm: new Date().toISOString()
+      }
+    );
   });
 
   // Active navigation tab for Instructors / Admin

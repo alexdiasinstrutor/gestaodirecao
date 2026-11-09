@@ -184,6 +184,18 @@ function studentToRow(s: Student): Record<string, any> {
 }
 
 function rowToStudent(r: any): Student {
+  let parsedContracts: StudentPackageContract[] = [];
+  if (Array.isArray(r.contratos_pacotes)) {
+    parsedContracts = r.contratos_pacotes;
+  } else if (typeof r.contratos_pacotes === 'string' && r.contratos_pacotes.trim().startsWith('[')) {
+    try {
+      const p = JSON.parse(r.contratos_pacotes);
+      if (Array.isArray(p)) parsedContracts = p;
+    } catch {}
+  } else if (Array.isArray(r.contratosPacotes)) {
+    parsedContracts = r.contratosPacotes;
+  }
+
   return {
     id: r.id,
     organizacaoId: r.organizacao_id,
@@ -212,7 +224,7 @@ function rowToStudent(r: any): Student {
     pacoteId: r.pacote_id,
     pacoteNome: r.pacote_nome,
     historicoTransferencias: r.historico_transferencias || [],
-    contratosPacotes: r.contratos_pacotes || r.contratosPacotes || [],
+    contratosPacotes: parsedContracts,
   };
 }
 

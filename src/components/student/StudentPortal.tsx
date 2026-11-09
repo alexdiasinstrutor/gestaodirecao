@@ -223,8 +223,8 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
     }, 100);
   };
 
-  const progressPercent = student
-    ? Math.min(100, Math.round((student.aulasCumpridas / student.totalAulasContratadas) * 100))
+  const progressPercent = student && (student.totalAulasContratadas || 0) > 0
+    ? Math.min(100, Math.round(((student.aulasCumpridas || 0) / (student.totalAulasContratadas || 20)) * 100))
     : 0;
 
   const handleBookLesson = (e: React.FormEvent) => {

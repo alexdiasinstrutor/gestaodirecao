@@ -886,7 +886,19 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
 
               {/* SEÇÃO: PACOTES, AULAS EXTRAS & CONTRATAÇÕES DO ALUNO */}
               {(() => {
-                const existingContracts = activeStudent.contratosPacotes || [];
+                const existingContracts: StudentPackageContract[] = Array.isArray(activeStudent.contratosPacotes)
+                  ? activeStudent.contratosPacotes
+                  : typeof (activeStudent as any)?.contratosPacotes === 'string'
+                  ? (() => {
+                      try {
+                        const parsed = JSON.parse((activeStudent as any).contratosPacotes);
+                        return Array.isArray(parsed) ? parsed : [];
+                      } catch {
+                        return [];
+                      }
+                    })()
+                  : [];
+
                 const contractsList: StudentPackageContract[] = existingContracts.length > 0
                   ? existingContracts
                   : [
@@ -1626,6 +1638,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
           student={activeStudent}
           currentUser={currentUser}
           currentOrg={currentOrg}
+          initialTab={addPackageInitialTab}
           onSuccess={(updatedStudent, newContract) => {
             setActiveStudent(updatedStudent);
             setEditingTotalLessons(updatedStudent.totalAulasContratadas);

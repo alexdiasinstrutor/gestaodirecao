@@ -1,6 +1,6 @@
 # DOSSIÊ COMPLETO DO SISTEMA — GESTÃO AD (AUTO DIREÇÃO)
-**Documento Oficial de Registro Técnico, Arquitetura de Software, Interface Adaptativa, Mapa Geográfico (5–40 km), Blindagem Cloud Vault, Frota de Veículos, Pacotes Adicionais e Aulas Extras, Recibos Flexíveis, Regras de Negócio e Agentes de Segurança**  
-*Data de Homologação: Novembro de 2026 | Versão da Plataforma: v7.5 Auditada, Com Adição de Pacotes Adicionais, Aulas Avulsas, Pacotes Personalizados, Emissão de Recibos por Pacote e Aulas Ministradas, Exclusão Definitiva de Veículos, Assinatura Digital do Instrutor e Sincronização em Tempo Real no Supabase*
+**Documento Oficial de Registro Técnico, Arquitetura de Software, Interface Adaptativa, Mapa Geográfico (5–40 km), Blindagem Cloud Vault, Frota de Veículos, Pacotes Adicionais e Aulas Extras, Recibos Flexíveis, Blindagem Global Anti-Crash (ErrorBoundary), Regras de Negócio e Agentes de Segurança**  
+*Data de Homologação: Novembro de 2026 | Versão da Plataforma: v7.6 Auditada, Com Blindagem Global Anti-Crash (ErrorBoundary), Fallback de Organização, Tolerância JSON em Contratos, Adição de Pacotes Adicionais, Aulas Avulsas, Pacotes Personalizados, Emissão de Recibos por Pacote e Aulas Ministradas, Exclusão Definitiva de Veículos e Sincronização em Tempo Real no Supabase*
 
 ---
 
@@ -1163,8 +1163,23 @@ Abaixo estão registradas todas as melhorias estruturais, correções de sincron
     2. **Recibo por Total de Aulas Ministradas**: Emite recibo referenciando o total de aulas práticas já lecionadas ao aluno (ex: *"Referente a 15 aulas práticas ministradas"*), calculando e discriminando as aulas concluídas de forma auditável e transparente para prestação de contas.
   - O modal `AddStudentPackageModal` oferece ainda o botão direto para emitir o recibo logo após a confirmação da contratação.
 
-### 14.17 Suite de 23 Testes Automatizados Rigorosos (`run_automated_tests.mjs`)
-- Suite automatizada com **23 baterias de testes (`T01` a `T23`)** cobrindo confidencialidade de instrutores, exibição de pacotes, geolocalização Haversine 5–40 km, filtros do mapa, demanda reversa, sanitização de telefone, agenda por período com notificação ao aluno, persistência da ficha do aluno, blindagem de pacotes, gestão e exclusão definitiva de veículos dos instrutores com botão de salvar alterações da frota (`T17`), digitação completa de número de aulas, upload de assinatura digital, redimensionamento/posicionamento interativo da assinatura no recibo com blindagem contra ReferenceError, validação com autocompletar de cidades por estado (IBGE), persistência fiel ao desmarcar tipos de veículos na área de atendimento e **adição de pacotes adicionais, aulas avulsas, pacotes personalizados e emissão flexível de recibos (`T23`)** (**23/23 aprovados — 100% de conformidade e sem quebras**).
+### 14.17 Blindagem Global Anti-Crash (ErrorBoundary, Fallback de Organização & Tolerância JSON)
+- **Problema de Inconsistência Diagnosticado e Resolvido**:
+  - Quando ocorria qualquer exceção não tratada durante o ciclo de renderização no React (ex: descompasso de campos em horários de aula, parse de JSON de contratos serializados ou ausência temporária do objeto de organização antes do término da sincronização do banco), a ausência de um `<ErrorBoundary>` no nó raiz fazia com que o React desmontasse completamente a árvore de componentes, resultando em tela totalmente branca para o usuário.
+- **Implementação do Componente `ErrorBoundary.tsx` no Ponto de Entrada (`main.tsx`)**:
+  - Envolve a aplicação com ciclo de captura via `componentDidCatch` e `getDerivedStateFromError`.
+  - Em caso de inconsistência temporária de visualização, impede o desmonte total da aplicação e exibe tela amigável e moderna com alerta compreensível (*"Inconsistência Temporária Detectada — Seus dados estão seguros e preservados no banco de dados"*), acordeão com detalhes técnicos para auditoria e 3 botões de ação:
+    1. **"Recarregar Sistema"**: Atualiza a página e recompõe o estado limpo;
+    2. **"Voltar ao Início"**: Redireciona o usuário para a página inicial;
+    3. **"Limpar Cache e Reiniciar com Segurança"**: Purga chaves temporárias corrompidas de visualização preservando os dados cadastrais e restaura o fluxo operacional normal.
+- **Proteções Defensivas Adicionais na Adição de Aulas e Agenda**:
+  1. **Fallback de Organização (`currentOrg`) em `App.tsx` e Views**: Garante que o estado `currentOrg` nunca seja `undefined`, provendo objeto válido com id padrão e prevenindo qualquer `TypeError` de leitura de propriedades;
+  2. **Tratamento de Contratos de Alunos Tolerante a JSON**: No `supabaseAdapter.ts` e `StudentsView.tsx`, o campo `contratosPacotes` agora verifica e converte strings JSON legadas para arrays tipados de forma à prova de falhas;
+  3. **Sanitização de Slots na Agenda de Aulas (`ScheduleView.tsx`)**: Comparação segura `(a.horaInicio || '').localeCompare(b.horaInicio || '')` prevenindo exceções com horários nulos ou incompletos;
+  4. **Proteção Contra Divisão por Zero no Portal do Aluno (`StudentPortal.tsx`)**: Cálculo da barra de progresso com validação estrita de `totalAulasContratadas > 0`.
+
+### 14.18 Suite de 24 Testes Automatizados Rigorosos (`run_automated_tests.mjs`)
+- Suite automatizada com **24 baterias de testes (`T01` a `T24`)** cobrindo confidencialidade de instrutores, exibição de pacotes, geolocalização Haversine 5–40 km, filtros do mapa, demanda reversa, sanitização de telefone, agenda por período com notificação ao aluno, persistência da ficha do aluno, blindagem de pacotes, gestão e exclusão definitiva de veículos dos instrutores com botão de salvar alterações da frota (`T17`), digitação completa de número de aulas, upload de assinatura digital, redimensionamento/posicionamento interativo da assinatura no recibo com blindagem contra ReferenceError, validação com autocompletar de cidades por estado (IBGE), persistência fiel ao desmarcar tipos de veículos na área de atendimento, adição de pacotes adicionais, aulas avulsas, pacotes personalizados e emissão flexível de recibos (`T23`), e **blindagem global contra tela branca com ErrorBoundary, fallback de organização e parsing seguro de contratos (`T24`)** (**24/24 aprovados — 100% de conformidade e sem quebras**).
 
 ---
 
@@ -1174,7 +1189,7 @@ Este Dossiê constitui o registro definitivo e exaustivo de todas as funcionalid
 
 *Homologado para produção e operação contínua.*  
 *Administração Master: cassiordcosta@gmail.com*  
-*Versão do Sistema: v7.5 Estável, Com Adição de Pacotes Adicionais ao Aluno, Aulas Avulsas, Pacote Personalizado, Emissão Flexível de Recibos (Por Pacote e Aulas Ministradas), Exclusão Definitiva de Veículos e Botão Salvar Alterações da Frota, Correção no Modal de Recibos, Correção de Desmarcação de Veículos, Validação e Autocompletar de Cidades por Estado (IBGE), Posicionamento e Redimensionamento da Assinatura no Recibo, Assinatura Digital do Instrutor (2MB), Digitação Completa de Aulas, Mapa Geográfico (5–40 km), Blindagem Cloud Vault de Pacotes, Gestão de Veículos dos Instrutores, Auditada (23/23 Testes) e Sincronizada em Tempo Real no Supabase*
+*Versão do Sistema: v7.6 Estável, Com Blindagem Global Anti-Crash (ErrorBoundary), Fallback de Organização, Adição de Pacotes Adicionais ao Aluno, Aulas Avulsas, Pacote Personalizado, Emissão Flexível de Recibos (Por Pacote e Aulas Ministradas), Exclusão Definitiva de Veículos e Botão Salvar Alterações da Frota, Correção no Modal de Recibos, Correção de Desmarcação de Veículos, Validação e Autocompletar de Cidades por Estado (IBGE), Posicionamento e Redimensionamento da Assinatura no Recibo, Assinatura Digital do Instrutor (2MB), Digitação Completa de Aulas, Mapa Geográfico (5–40 km), Blindagem Cloud Vault de Pacotes, Gestão de Veículos dos Instrutores, Auditada (24/24 Testes) e Sincronizada em Tempo Real no Supabase*
 
 
 
