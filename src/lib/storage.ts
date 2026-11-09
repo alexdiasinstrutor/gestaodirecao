@@ -1105,9 +1105,18 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
       }
     }
 
-    // Sincronização bidirecional e protegida de veículos dos instrutores (Sem perda de cadastros locais)
+    // Sincronização bidirecional e protegida de veículos dos instrutores (Sem perda de cadastros locais e respeito estrito a exclusões)
     {
-      const deletedVehicleIds = new Set(readList<string>(STORAGE_KEYS.DELETED_VEHICLES));
+      const localDeleted = readList<string>(STORAGE_KEYS.DELETED_VEHICLES);
+      let remoteDeleted: string[] = [];
+      try {
+        remoteDeleted = await supabaseAdapter.getDeletedVehicleIds();
+      } catch {
+        // ignore
+      }
+      const deletedVehicleIds = new Set([...localDeleted, ...remoteDeleted]);
+      writeList(STORAGE_KEYS.DELETED_VEHICLES, Array.from(deletedVehicleIds));
+
       if (deletedVehicleIds.size > 0) {
         supabaseAdapter.deleteVehiclesBatch(Array.from(deletedVehicleIds)).catch(() => {});
       }
@@ -1178,9 +1187,6 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
           })
           .catch(() => {});
       }
-
-      const remainingDeletedVehicles = Array.from(deletedVehicleIds).filter((id) => remoteVehicleIds.has(id));
-      writeList(STORAGE_KEYS.DELETED_VEHICLES, remainingDeletedVehicles);
     }
 
     if (lessons && lessons.length > 0) writeList(STORAGE_KEYS.LESSONS, lessons);
@@ -2483,6 +2489,35 @@ export const db = {
         'Veiculo',
         vehicleId,
         `Veículo ${veh.modelo} (${veh.placa}) excluído.`
+      );
+    }
+    notifyDataChange();
+  },
+
+  async saveVehiclesBatchAsync(vehiclesToSave: Vehicle[], actorId?: string): Promise<void> {
+    const deletedVehicles = new Set(readList<string>(STORAGE_KEYS.DELETED_VEHICLES));
+    const activeVehicles = vehiclesToSave.filter((v) => !deletedVehicles.has(v.id));
+    writeList(STORAGE_KEYS.VEHICLES, activeVehicles);
+    writeList(STORAGE_KEYS.VEHICLES_BACKUP, activeVehicles);
+    notifyDataChange();
+
+    if (supabaseAdapter.enabled) {
+      if (activeVehicles.length > 0) {
+        await supabaseAdapter.saveVehiclesBatch(activeVehicles).catch(console.error);
+      }
+      if (deletedVehicles.size > 0) {
+        await supabaseAdapter.deleteVehiclesBatch(Array.from(deletedVehicles)).catch(console.error);
+      }
+    }
+    if (activeVehicles.length > 0) {
+      const first = activeVehicles[0];
+      this.addAuditLog(
+        first.organizacaoId,
+        actorId || first.instrutorId || 'sistema',
+        'ATUALIZAR_VEICULO',
+        'Veiculo',
+        first.id,
+        `Frota de ${activeVehicles.length} veículo(s) atualizada e sincronizada com sucesso.`
       );
     }
     notifyDataChange();

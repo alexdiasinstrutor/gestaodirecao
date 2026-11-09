@@ -399,7 +399,7 @@ export function getOfficialDossierHtml(): string {
 export function printOfficialDossier(): boolean {
   try {
     const html = getOfficialDossierHtml();
-    
+
     // Check if we can create a dedicated hidden iframe
     let printFrame = document.getElementById('official-dossier-print-frame') as HTMLIFrameElement;
     if (printFrame && printFrame.parentNode) {

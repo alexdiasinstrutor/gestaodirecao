@@ -13,7 +13,8 @@ import {
   X,
   Settings2,
   Sparkles,
-  Check
+  Check,
+  Save
 } from 'lucide-react';
 import { db } from '../../lib/storage';
 import { Organization, User, Vehicle, CnhCategory, CNH_CATEGORIES } from '../../types';
@@ -199,12 +200,33 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ currentOrg, currentU
     setTimeout(() => setFeedbackMsg(''), 3000);
   };
 
+  const [isSavingFleet, setIsSavingFleet] = useState(false);
+
+  const handleSaveFleetChanges = async () => {
+    try {
+      setIsSavingFleet(true);
+      setErrorMsg('');
+      await db.saveVehiclesBatchAsync(vehicles, currentUser.id);
+      await syncCoverageFromVehicles();
+      setFeedbackMsg(`Alterações da frota salvas e sincronizadas na nuvem com sucesso! (${vehicles.length} veículo(s) ativo(s))`);
+      setTimeout(() => setFeedbackMsg(''), 4000);
+    } catch (err: any) {
+      setErrorMsg('Erro ao salvar alterações da frota: ' + (err.message || 'Falha de comunicação com o servidor.'));
+    } finally {
+      setIsSavingFleet(false);
+    }
+  };
+
   const handleDelete = async (veh: Vehicle) => {
     if (confirm(`Deseja realmente remover o veículo "${veh.modelo}" (${veh.placa}) da sua frota?`)) {
-      await db.deleteVehicleAsync(veh.id, currentUser.id);
-      await syncCoverageFromVehicles();
-      setFeedbackMsg(`Veículo "${veh.modelo}" removido com sucesso.`);
-      setTimeout(() => setFeedbackMsg(''), 3000);
+      try {
+        await db.deleteVehicleAsync(veh.id, currentUser.id);
+        await syncCoverageFromVehicles();
+        setFeedbackMsg(`Veículo "${veh.modelo}" (${veh.placa}) removido e sincronizado com sucesso.`);
+        setTimeout(() => setFeedbackMsg(''), 4000);
+      } catch (err: any) {
+        setErrorMsg('Erro ao remover veículo: ' + (err.message || 'Falha de comunicação.'));
+      }
     }
   };
 
@@ -222,13 +244,27 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ currentOrg, currentU
           </p>
         </div>
 
-        <button
-          onClick={handleOpenNew}
-          className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all cursor-pointer touch-target shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Cadastrar Meu Veículo</span>
-        </button>
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          <button
+            type="button"
+            onClick={handleSaveFleetChanges}
+            disabled={isSavingFleet}
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer touch-target"
+            title="Salvar alterações e sincronizar frota na nuvem"
+          >
+            <Save className="w-4 h-4" />
+            <span>{isSavingFleet ? 'Salvando...' : 'Salvar Alterações da Frota'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleOpenNew}
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer touch-target"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Cadastrar Meu Veículo</span>
+          </button>
+        </div>
       </div>
 
       {feedbackMsg && (
@@ -421,6 +457,20 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ currentOrg, currentU
           </div>
         )}
       </div>
+
+      {vehicles.length > 0 && (
+        <div className="flex justify-end pt-2">
+          <button
+            type="button"
+            onClick={handleSaveFleetChanges}
+            disabled={isSavingFleet}
+            className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-xs transition-colors cursor-pointer"
+          >
+            <Save className="w-4 h-4" />
+            <span>{isSavingFleet ? 'Salvando Alterações...' : 'Salvar Alterações da Frota'}</span>
+          </button>
+        </div>
+      )}
 
       {/* Modal Add / Edit Vehicle */}
       {showModal && (

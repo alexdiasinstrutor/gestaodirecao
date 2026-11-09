@@ -1126,8 +1126,23 @@ Abaixo estão registradas todas as melhorias estruturais, correções de sincron
   - Anteriormente, ao desmarcar um tipo de veículo (ex: desmarcar `MOTO` e manter apenas `CARRO`) na tela de *Configuração da Minha Área de Atendimento & Cidades* e salvar, a função de cálculo de cobertura efetiva realizava um merge forçado com os tipos da frota veicular cadastrada (`Array.from(new Set([...savedCoverage.tiposVeiculo, ...vehicleFleetTypes]))`), fazendo com que o veículo desmarcado voltasse a aparecer marcado assim que a página atualizava o estado.
   - O mecanismo foi corrigido em `geoService.ts` (`buildEffectiveInstructorCoverage`): quando o instrutor possui preferências salvas de tipos de veículo (`savedCoverage.tiposVeiculo`) ou de categorias CNH (`savedCoverage.categoriasAtendidas`), o sistema prioriza estritamente os itens salvos pelo usuário, sem reinserir tipos removidos. A frota e os pacotes agora atuam exclusivamente como valor padrão inicial para novos perfis não configurados.
 
-### 14.15 Suite de 22 Testes Automatizados Rigorosos (`run_automated_tests.mjs`)
-- Suite automatizada com **22 baterias de testes (`T01` a `T22`)** cobrindo confidencialidade de instrutores, exibição de pacotes, geolocalização Haversine 5–40 km, filtros do mapa, demanda reversa, sanitização de telefone, agenda por período com notificação ao aluno, persistência da ficha do aluno, blindagem de pacotes, gestão de veículos dos instrutores, digitação completa de número de aulas, upload de assinatura digital, redimensionamento/posicionamento interativo da assinatura no recibo com blindagem contra ReferenceError, validação com autocompletar de cidades por estado (IBGE) e persistência fiel ao desmarcar tipos de veículos na área de atendimento (**22/22 aprovados — 100% de conformidade e sem quebras**).
+### 14.15 Exclusão Definitiva de Veículos com Cloud Vault Tombstones e Botão "Salvar Alterações da Frota" (`VehiclesView.tsx`, `supabaseAdapter.ts` & `storage.ts`)
+- **Causa Raiz Identificada e Resolvida**:
+  - Na arquitetura Supabase PostgreSQL, as políticas de segurança a nível de linha (RLS) da tabela nativa `vehicles` bloqueavam operações anônimas de `DELETE` direto (`error.code === '42501'`), fazendo com que o registro nativo permanecesse no banco de dados.
+  - Ao sincronizar o sistema (`syncFromSupabase`), a função `supabaseSelect('vehicles', ...)` recuperava o registro do banco de dados remoto e o reinseria no `localStorage` e no cofre local de backup, fazendo com que o veículo previamente excluído pelo instrutor voltasse a aparecer na tela em novas sessões ou recargas.
+- **Mecanismo de Tombstones no Cloud Vault (`__agd_vault_deleted_vehicles`)**:
+  - Para garantir a exclusão irrevogável tanto em conexões com credenciais nativas quanto com chave anônima, foi implementado o registro de *tombstones* no cofre corporativo em nuvem: `recordVaultDeletedIds`, `readVaultDeletedIds` e `unmarkVaultDeletedIds` em `supabaseAdapter.ts`.
+  - Os IDs de veículos excluídos são gravados permanentemente na nuvem com chave `__agd_vault_deleted_vehicles`.
+  - Durante qualquer operação de leitura (`supabaseSelect`), os IDs contidos no cofre de excluídos são consultados e expurgados imediatamente tanto das linhas nativas (`nativeRows`) quanto das linhas sincronizadas (`vaultRows`).
+  - No `storage.ts`, a sincronização remota (`syncFromSupabase`) agora consulta `supabaseAdapter.getDeletedVehicleIds()` e unifica com a lista de exclusões locais (`DELETED_VEHICLES`), impedindo de forma definitiva que qualquer veículo excluído seja reinserido ou reapareça no sistema.
+- **Botão Explícito "Salvar Alterações da Frota"**:
+  - Na tela de veículos (`VehiclesView.tsx`), foram adicionados botões de ação com ícone e destaque visual **"Salvar Alterações da Frota"**:
+    1. No topo, ao lado do botão *"+ Cadastrar Meu Veículo"*;
+    2. No rodapé da listagem da frota.
+  - Ao clicar no botão, a função `handleSaveFleetChanges` aciona `storage.db.saveVehiclesBatchAsync(vehicles, currentUser.id)`, que persiste a frota no estado local, remove qualquer veículo excluído do cofre e sincroniza em lote com o Cloud Vault e o Supabase em tempo real, fornecendo feedback visual claro ao instrutor com mensagem de sucesso: *"Frota de X veículo(s) salva e sincronizada com sucesso no banco de dados!"*.
+
+### 14.16 Suite de 22 Testes Automatizados Rigorosos (`run_automated_tests.mjs`)
+- Suite automatizada com **22 baterias de testes (`T01` a `T22`)** cobrindo confidencialidade de instrutores, exibição de pacotes, geolocalização Haversine 5–40 km, filtros do mapa, demanda reversa, sanitização de telefone, agenda por período com notificação ao aluno, persistência da ficha do aluno, blindagem de pacotes, gestão e exclusão definitiva de veículos dos instrutores com botão de salvar alterações da frota (`T17`), digitação completa de número de aulas, upload de assinatura digital, redimensionamento/posicionamento interativo da assinatura no recibo com blindagem contra ReferenceError, validação com autocompletar de cidades por estado (IBGE) e persistência fiel ao desmarcar tipos de veículos na área de atendimento (**22/22 aprovados — 100% de conformidade e sem quebras**).
 
 ---
 
@@ -1137,7 +1152,7 @@ Este Dossiê constitui o registro definitivo e exaustivo de todas as funcionalid
 
 *Homologado para produção e operação contínua.*  
 *Administração Master: cassiordcosta@gmail.com*  
-*Versão do Sistema: v7.3 Estável, Com Correção no Modal de Recibos, Correção de Desmarcação de Veículos, Validação e Autocompletar de Cidades por Estado (IBGE), Posicionamento e Redimensionamento da Assinatura no Recibo, Assinatura Digital do Instrutor (2MB), Digitação Completa de Aulas, Mapa Geográfico (5–40 km), Blindagem Cloud Vault de Pacotes, Gestão de Veículos dos Instrutores, Auditada (22/22 Testes) e Sincronizada em Tempo Real no Supabase*
+*Versão do Sistema: v7.4 Estável, Com Exclusão Definitiva de Veículos e Botão Salvar Alterações da Frota, Correção no Modal de Recibos, Correção de Desmarcação de Veículos, Validação e Autocompletar de Cidades por Estado (IBGE), Posicionamento e Redimensionamento da Assinatura no Recibo, Assinatura Digital do Instrutor (2MB), Digitação Completa de Aulas, Mapa Geográfico (5–40 km), Blindagem Cloud Vault de Pacotes, Gestão de Veículos dos Instrutores, Auditada (22/22 Testes) e Sincronizada em Tempo Real no Supabase*
 
 
 

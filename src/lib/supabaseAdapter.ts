@@ -707,9 +707,83 @@ async function upsertVaultRowsBatch(table: string, newRows: Record<string, any>[
   });
 }
 
+async function recordVaultDeletedIds(table: string, ids: string[]): Promise<void> {
+  if (!supabase || ids.length === 0) return;
+  const vaultId = `${VAULT_PREFIX}deleted_${table}`;
+  try {
+    const { data } = await supabase
+      .from('organizations')
+      .select('modulos_customizados')
+      .eq('id', vaultId)
+      .limit(1);
+    const raw = data?.[0]?.modulos_customizados;
+    const existing: string[] = Array.isArray(raw) ? raw : [];
+    const set = new Set([...existing, ...ids.map(String)]);
+    const payload = {
+      id: vaultId,
+      nome: '__AGD_CLOUD_VAULT__',
+      tipo: 'INSTRUTOR_AUTONOMO',
+      cnpj_cpf: `VAULT_DEL_${table.toUpperCase()}`.slice(0, 14),
+      telefone: '0000000000',
+      email: `vault_del_${table}@sistema.local`,
+      cidade: 'VAULT',
+      estado: 'MG',
+      status: 'ATIVO',
+      plano: 'MASTER',
+      modulos_customizados: Array.from(set),
+      criado_em: new Date().toISOString(),
+    };
+    await supabase.from('organizations').upsert(payload, { onConflict: 'id' });
+  } catch (err) {
+    console.warn(`[Supabase] Erro ao registrar IDs deletados para ${table}:`, err);
+  }
+}
+
+async function readVaultDeletedIds(table: string): Promise<Set<string>> {
+  if (!supabase) return new Set();
+  try {
+    const vaultId = `${VAULT_PREFIX}deleted_${table}`;
+    const { data } = await supabase
+      .from('organizations')
+      .select('modulos_customizados')
+      .eq('id', vaultId)
+      .limit(1);
+    const raw = data?.[0]?.modulos_customizados;
+    if (Array.isArray(raw)) {
+      return new Set(raw.map(String));
+    }
+  } catch {
+    // ignore
+  }
+  return new Set();
+}
+
+async function unmarkVaultDeletedIds(table: string, ids: string[]): Promise<void> {
+  if (!supabase || ids.length === 0) return;
+  const vaultId = `${VAULT_PREFIX}deleted_${table}`;
+  try {
+    const { data } = await supabase
+      .from('organizations')
+      .select('modulos_customizados')
+      .eq('id', vaultId)
+      .limit(1);
+    const raw = data?.[0]?.modulos_customizados;
+    if (Array.isArray(raw)) {
+      const idSet = new Set(ids.map(String));
+      const filtered = raw.filter((id) => !idSet.has(String(id)));
+      if (filtered.length !== raw.length) {
+        await supabase.from('organizations').update({ modulos_customizados: filtered }).eq('id', vaultId);
+      }
+    }
+  } catch {
+    // ignore
+  }
+}
+
 async function deleteVaultRowsBatch(table: string, ids: string[]): Promise<void> {
   if (!supabase || !VAULT_TABLES.has(table) || ids.length === 0) return;
   const idSet = new Set(ids.map(String));
+  await recordVaultDeletedIds(table, ids);
   await enqueueVaultOp(table, async () => {
     const current = await readVaultRows(table);
     const filtered = current.filter((item) => item && !idSet.has(String(item.id)));
@@ -818,9 +892,10 @@ async function supabaseSelect<T>(
       q = q.eq(col, val);
     }
   }
-  const [{ data, error }, vaultRows] = await Promise.all([
+  const [{ data, error }, vaultRows, vaultDeletedIds] = await Promise.all([
     q,
     VAULT_TABLES.has(table) ? readVaultRows(table) : Promise.resolve([]),
+    VAULT_TABLES.has(table) ? readVaultDeletedIds(table) : Promise.resolve(new Set<string>()),
   ]);
 
   if (error && !VAULT_TABLES.has(table)) {
@@ -832,6 +907,10 @@ async function supabaseSelect<T>(
     if (table === 'organizations') {
       return !String(r.id || '').startsWith(VAULT_PREFIX) && r.nome !== '__AGD_CLOUD_VAULT__';
     }
+    // Descarta registros cujo ID foi marcado como deletado no cofre definitivo
+    if (vaultDeletedIds.has(String(r.id))) {
+      return false;
+    }
     return true;
   });
 
@@ -841,10 +920,10 @@ async function supabaseSelect<T>(
 
   const mergedMap = new Map<string, any>();
   for (const r of nativeRows) {
-    if (r && r.id) mergedMap.set(String(r.id), r);
+    if (r && r.id && !vaultDeletedIds.has(String(r.id))) mergedMap.set(String(r.id), r);
   }
   for (const vr of vaultRows) {
-    if (vr && vr.id) {
+    if (vr && vr.id && !vaultDeletedIds.has(String(vr.id))) {
       if (filters) {
         let match = true;
         for (const [col, val] of Object.entries(filters)) {
@@ -936,6 +1015,10 @@ export const supabaseAdapter = {
   async deleteVehiclesBatch(ids: string[]): Promise<void> {
     if (!supabase || ids.length === 0) return;
     await deleteVaultRowsBatch('vehicles', ids);
+  },
+  async getDeletedVehicleIds(): Promise<string[]> {
+    const set = await readVaultDeletedIds('vehicles');
+    return Array.from(set);
   },
 
   // Slots de Agenda

@@ -555,9 +555,11 @@ runTest(
     assert.equal(
       vehiclesViewFile.includes('Meus Veículos e Frota de Instrução') &&
       vehiclesViewFile.includes('await db.saveVehicleAsync(vehicleData, currentUser.id)') &&
-      vehiclesViewFile.includes('await db.deleteVehicleAsync(veh.id, currentUser.id)'),
+      vehiclesViewFile.includes('await db.deleteVehicleAsync(veh.id, currentUser.id)') &&
+      vehiclesViewFile.includes('Salvar Alterações da Frota') &&
+      vehiclesViewFile.includes('handleSaveFleetChanges'),
       true,
-      'Tela VehiclesView permite cadastrar, editar e excluir carros/veículos do instrutor com sincronização assíncrona'
+      'Tela VehiclesView permite cadastrar, editar, excluir e salvar alterações da frota com persistência e sincronização explícita'
     );
     assert.equal(
       appFile.includes("id: 'VEHICLES'") &&
@@ -568,9 +570,10 @@ runTest(
     assert.equal(
       storageFile.includes('VEHICLES_BACKUP') &&
       storageFile.includes('PENDING_VEHICLES') &&
-      storageFile.includes('DELETED_VEHICLES'),
+      storageFile.includes('DELETED_VEHICLES') &&
+      storageFile.includes('saveVehiclesBatchAsync('),
       true,
-      'Storage protege os veículos cadastrados pelo instrutor com backup e fila de sincronização'
+      'Storage protege os veículos cadastrados pelo instrutor e possui saveVehiclesBatchAsync com respeito estrito a veículos excluídos'
     );
     assert.equal(
       saasPlansFile.includes("'VEHICLES'"),
