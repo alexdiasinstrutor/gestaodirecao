@@ -178,6 +178,7 @@ function studentToRow(s: Student): Record<string, any> {
     pacote_id: s.pacoteId || null,
     pacote_nome: s.pacoteNome || null,
     historico_transferencias: s.historicoTransferencias || [],
+    contratos_pacotes: s.contratosPacotes || [],
     data_cadastro: s.dataCadastro || new Date().toISOString(),
   };
 }
@@ -211,6 +212,7 @@ function rowToStudent(r: any): Student {
     pacoteId: r.pacote_id,
     pacoteNome: r.pacote_nome,
     historicoTransferencias: r.historico_transferencias || [],
+    contratosPacotes: r.contratos_pacotes || r.contratosPacotes || [],
   };
 }
 
@@ -835,6 +837,9 @@ async function supabaseUpsert(table: string, row: Record<string, any>): Promise<
         delete fallbackRow.instrutor_id;
         delete fallbackRow.instrutor_nome;
         delete fallbackRow.atualizado_em;
+      }
+      if (table === 'students') {
+        delete fallbackRow.contratos_pacotes;
       }
       if (table === 'vehicles') {
         delete fallbackRow.instrutor_id;

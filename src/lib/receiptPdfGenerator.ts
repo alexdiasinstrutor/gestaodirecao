@@ -9,9 +9,12 @@ export interface PaymentReceiptData {
   dataPagamento: string;
   valorCentavos: number;
   metodo: PaymentMethod;
-  tipoRecibo: 'PARCELA' | 'PERIODO' | 'QUITACAO_TOTAL' | 'AVULSO';
+  tipoRecibo: 'PARCELA' | 'PERIODO' | 'QUITACAO_TOTAL' | 'AVULSO' | 'PACOTE' | 'AULAS_MINISTRADAS';
   parcelaReferente?: string;
   periodoReferente?: string;
+  pacoteReferente?: string;
+  totalAulasMinistradas?: number;
+  totalAulasContratadas?: number;
   descricaoServico: string;
   aluno: {
     nome: string;
@@ -218,6 +221,10 @@ export function generateReceiptPdf(data: PaymentReceiptData): jsPDF {
     detalheModalidade = `• Modalidade: Aulas correspondentes ao período (${data.periodoReferente || 'Período'})`;
   } else if (data.tipoRecibo === 'AVULSO') {
     detalheModalidade = '• Modalidade: Aula avulsa / Treinamento prático de reforço';
+  } else if (data.tipoRecibo === 'PACOTE') {
+    detalheModalidade = `• Modalidade: Pacote de Aulas (${data.pacoteReferente || data.descricaoServico}${data.totalAulasContratadas ? ` · ${data.totalAulasContratadas} aulas` : ''})`;
+  } else if (data.tipoRecibo === 'AULAS_MINISTRADAS') {
+    detalheModalidade = `• Modalidade: Aulas Ministradas (${data.totalAulasMinistradas ? `${data.totalAulasMinistradas} aula(s) prática(s) cumprida(s)` : 'Aulas práticas realizadas'})`;
   } else {
     detalheModalidade = '• Modalidade: Quitação integral de pacote de aulas práticas';
   }
@@ -349,6 +356,10 @@ export function generateWhatsAppReceiptMessage(data: PaymentReceiptData): string
     modalidade = `Período: *${data.periodoReferente || 'Aulas'}*`;
   } else if (data.tipoRecibo === 'AVULSO') {
     modalidade = 'Modalidade: *Aula Avulsa / Reforço*';
+  } else if (data.tipoRecibo === 'PACOTE') {
+    modalidade = `Pacote Contratado: *${data.pacoteReferente || data.descricaoServico}*${data.totalAulasContratadas ? ` (${data.totalAulasContratadas} aulas)` : ''}`;
+  } else if (data.tipoRecibo === 'AULAS_MINISTRADAS') {
+    modalidade = `Aulas Ministradas: *${data.totalAulasMinistradas ? `${data.totalAulasMinistradas} aula(s) prática(s) cumprida(s)` : 'Aulas Práticas Realizadas'}*`;
   } else {
     modalidade = 'Modalidade: *Quitação Integral do Pacote*';
   }

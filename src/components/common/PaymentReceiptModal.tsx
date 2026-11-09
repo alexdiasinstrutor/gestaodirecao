@@ -339,12 +339,97 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                   }
                   className="w-full px-3 py-1.5 border border-slate-300 rounded-lg bg-white text-xs font-medium"
                 >
+                  <option value="PACOTE">📦 Por Pacote Contratado (Base, Adicional ou Personalizado)</option>
+                  <option value="AULAS_MINISTRADAS">🎓 Por Total de Aulas Ministradas</option>
                   <option value="PARCELA">Por Parcela (Ex: Parcela 1 de 3)</option>
                   <option value="PERIODO">Por Período (Ex: Mês de Outubro/2026)</option>
                   <option value="QUITACAO_TOTAL">Quitação Integral do Pacote</option>
                   <option value="AVULSO">Aula Avulsa / Reforço</option>
                 </select>
               </div>
+
+              {receiptData.tipoRecibo === 'PACOTE' && (
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">
+                      Nome do Pacote Contratado
+                    </label>
+                    <input
+                      type="text"
+                      value={receiptData.pacoteReferente || receiptData.descricaoServico}
+                      onChange={(e) =>
+                        setReceiptData({
+                          ...receiptData,
+                          pacoteReferente: e.target.value,
+                          descricaoServico: e.target.value
+                        })
+                      }
+                      placeholder="Ex: Pacote 10 Aulas Práticas ou Pacote Personalizado"
+                      className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">
+                      Total de Aulas do Pacote
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={receiptData.totalAulasContratadas || ''}
+                      onChange={(e) =>
+                        setReceiptData({
+                          ...receiptData,
+                          totalAulasContratadas: parseInt(e.target.value, 10) || undefined
+                        })
+                      }
+                      placeholder="Ex: 10 ou 20 aulas"
+                      className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-mono"
+                    />
+                  </div>
+                </>
+              )}
+
+              {receiptData.tipoRecibo === 'AULAS_MINISTRADAS' && (
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">
+                      Total de Aulas Ministradas
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={receiptData.totalAulasMinistradas || ''}
+                      onChange={(e) => {
+                        const qtd = parseInt(e.target.value, 10) || 0;
+                        setReceiptData({
+                          ...receiptData,
+                          totalAulasMinistradas: qtd,
+                          descricaoServico: `${qtd} Aulas Práticas de Direção Veicular Ministradas - CNH ${receiptData.aluno.categoriaCnh}`
+                        });
+                      }}
+                      placeholder="Ex: 5, 10, 15 aulas ministradas"
+                      className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">
+                      Período das Aulas Realizadas
+                    </label>
+                    <input
+                      type="text"
+                      value={receiptData.periodoReferente || ''}
+                      onChange={(e) =>
+                        setReceiptData({
+                          ...receiptData,
+                          periodoReferente: e.target.value
+                        })
+                      }
+                      placeholder="Ex: Aulas concluídas até a presente data"
+                      className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs"
+                    />
+                  </div>
+                </>
+              )}
 
               {receiptData.tipoRecibo === 'PARCELA' && (
                 <div>
@@ -849,6 +934,12 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                       ? receiptData.parcelaReferente || 'Parcela'
                       : receiptData.tipoRecibo === 'PERIODO'
                       ? receiptData.periodoReferente || 'Período'
+                      : receiptData.tipoRecibo === 'PACOTE'
+                      ? `Pacote: ${receiptData.pacoteReferente || receiptData.descricaoServico}${receiptData.totalAulasContratadas ? ` (${receiptData.totalAulasContratadas} aulas)` : ''}`
+                      : receiptData.tipoRecibo === 'AULAS_MINISTRADAS'
+                      ? `${receiptData.totalAulasMinistradas || 'Aulas'} Aulas Ministradas`
+                      : receiptData.tipoRecibo === 'AVULSO'
+                      ? 'Aula Avulsa / Reforço'
                       : 'Quitação Integral'}
                   </span>
                 </div>

@@ -1,6 +1,6 @@
 # DOSSIÊ COMPLETO DO SISTEMA — GESTÃO AD (AUTO DIREÇÃO)
-**Documento Oficial de Registro Técnico, Arquitetura de Software, Interface Adaptativa, Mapa Geográfico (5–40 km), Blindagem Cloud Vault, Frota de Veículos, Regras de Negócio e Agentes de Segurança**  
-*Data de Homologação: Novembro de 2026 | Versão da Plataforma: v6.8 Auditada, Com Geolocalização (5–40 km), Blindagem de Pacotes, Gestão de Veículos e Sincronização em Tempo Real no Supabase*
+**Documento Oficial de Registro Técnico, Arquitetura de Software, Interface Adaptativa, Mapa Geográfico (5–40 km), Blindagem Cloud Vault, Frota de Veículos, Pacotes Adicionais e Aulas Extras, Recibos Flexíveis, Regras de Negócio e Agentes de Segurança**  
+*Data de Homologação: Novembro de 2026 | Versão da Plataforma: v7.5 Auditada, Com Adição de Pacotes Adicionais, Aulas Avulsas, Pacotes Personalizados, Emissão de Recibos por Pacote e Aulas Ministradas, Exclusão Definitiva de Veículos, Assinatura Digital do Instrutor e Sincronização em Tempo Real no Supabase*
 
 ---
 
@@ -1141,8 +1141,30 @@ Abaixo estão registradas todas as melhorias estruturais, correções de sincron
     2. No rodapé da listagem da frota.
   - Ao clicar no botão, a função `handleSaveFleetChanges` aciona `storage.db.saveVehiclesBatchAsync(vehicles, currentUser.id)`, que persiste a frota no estado local, remove qualquer veículo excluído do cofre e sincroniza em lote com o Cloud Vault e o Supabase em tempo real, fornecendo feedback visual claro ao instrutor com mensagem de sucesso: *"Frota de X veículo(s) salva e sincronizada com sucesso no banco de dados!"*.
 
-### 14.16 Suite de 22 Testes Automatizados Rigorosos (`run_automated_tests.mjs`)
-- Suite automatizada com **22 baterias de testes (`T01` a `T22`)** cobrindo confidencialidade de instrutores, exibição de pacotes, geolocalização Haversine 5–40 km, filtros do mapa, demanda reversa, sanitização de telefone, agenda por período com notificação ao aluno, persistência da ficha do aluno, blindagem de pacotes, gestão e exclusão definitiva de veículos dos instrutores com botão de salvar alterações da frota (`T17`), digitação completa de número de aulas, upload de assinatura digital, redimensionamento/posicionamento interativo da assinatura no recibo com blindagem contra ReferenceError, validação com autocompletar de cidades por estado (IBGE) e persistência fiel ao desmarcar tipos de veículos na área de atendimento (**22/22 aprovados — 100% de conformidade e sem quebras**).
+### 14.16 Gestão de Pacotes Adicionais, Aulas Avulsas, Pacotes Personalizados e Emissão Flexível de Recibos (`AddStudentPackageModal.tsx`, `StudentsView.tsx`, `storage.ts`, `receiptPdfGenerator.ts` & `PaymentReceiptModal.tsx`)
+- **Problema de Negócio Solucionado**:
+  - Quando um aluno terminava sua carga horária contratada (ex: 20 de 20 aulas concluídas) ou necessitava de aulas extras antes do exame prático, não havia um fluxo seguro para anexar novos pacotes ou aulas avulsas ao aluno sem substituir os dados originais, arriscando corromper o histórico pedagógico e os lançamentos financeiros.
+- **Arquitetura de Contratos Múltiplos e Histórico Cronológico (`StudentPackageContract`)**:
+  - Foi criado o modelo de dados `StudentPackageContract` em `types/index.ts`, permitindo que cada aluno possua um histórico cumulativo de contratos (`contratosPacotes?: StudentPackageContract[]`), cada qual com ID único, tipo de contrato (`'PACOTE_BASE'`, `'NOVO_PACOTE'`, `'AULAS_AVULSAS'`, `'PACOTE_PERSONALIZADO'`), nome, quantidade de aulas, valor contratado, status de pagamento, data da contratação, observações e id de transação financeira.
+  - Para alunos já cadastrados no sistema, o método atômico `storage.db.addStudentContractAsync` sintetiza retroativamente o contrato original com base no plano atual, preservando 100% dos dados pré-existentes.
+- **Três Modalidades de Contratação na Ficha do Aluno (`AddStudentPackageModal.tsx`)**:
+  1. **Pacote do Catálogo (`CATALOG_PACKAGE`)**: O instrutor seleciona qualquer pacote ativo do seu catálogo de planos cadastrados, herdando categoria CNH, número oficial de aulas e preço sugerido (com possibilidade de ajuste).
+  2. **Aulas Avulsas (`SINGLE_CLASSES`)**: Permite adicionar uma quantidade específica de aulas extras (ex: 1, 2, 5 aulas) definindo o valor por aula ou valor total, com cálculo dinâmico instantâneo.
+  3. **Pacote Personalizado (`CUSTOM_PACKAGE`)**: O instrutor cria um plano sob medida com nome personalizado (ex: *"Reforço Baliza e Garagem"* ou *"Treinamento Intensivo Pré-Exame"*), carga horária flexível e valor acordado, podendo incluir novas aulas extras sob demanda.
+- **Integração Financeira e Reabertura de Status Sem Quebra de Módulos**:
+  - Ao confirmar a adição:
+    - O total de aulas do aluno (`student.totalAulasContratadas`) é incrementado atomicamente;
+    - Se o aluno constava como `CONCLUIDO`, seu status é reaberto para `EM_ANDAMENTO`, desbloqueando agendamentos imediatos no módulo de agenda;
+    - Uma nova conta a receber (`AccountReceivable`) é criada com status `PENDENTE` ou `PAGO` (conforme seleção do instrutor), vinculando a transação financeira ao contrato;
+    - O lançamento é auditado no log imutável do sistema (`CONTRATAR_PACOTE_ALUNO`).
+- **Emissão Flexível de Recibos de Pagamento (`PACOTE` vs `AULAS_MINISTRADAS`)**:
+  - Tanto no modal de recibos (`PaymentReceiptModal.tsx`) quanto no gerador oficial de PDF (`receiptPdfGenerator.ts`) e nas mensagens automáticas de WhatsApp:
+    1. **Recibo por Pacote**: Emite recibo referenciando o contrato ou pacote específico, detalhando nome do pacote, valor e carga horária contratada.
+    2. **Recibo por Total de Aulas Ministradas**: Emite recibo referenciando o total de aulas práticas já lecionadas ao aluno (ex: *"Referente a 15 aulas práticas ministradas"*), calculando e discriminando as aulas concluídas de forma auditável e transparente para prestação de contas.
+  - O modal `AddStudentPackageModal` oferece ainda o botão direto para emitir o recibo logo após a confirmação da contratação.
+
+### 14.17 Suite de 23 Testes Automatizados Rigorosos (`run_automated_tests.mjs`)
+- Suite automatizada com **23 baterias de testes (`T01` a `T23`)** cobrindo confidencialidade de instrutores, exibição de pacotes, geolocalização Haversine 5–40 km, filtros do mapa, demanda reversa, sanitização de telefone, agenda por período com notificação ao aluno, persistência da ficha do aluno, blindagem de pacotes, gestão e exclusão definitiva de veículos dos instrutores com botão de salvar alterações da frota (`T17`), digitação completa de número de aulas, upload de assinatura digital, redimensionamento/posicionamento interativo da assinatura no recibo com blindagem contra ReferenceError, validação com autocompletar de cidades por estado (IBGE), persistência fiel ao desmarcar tipos de veículos na área de atendimento e **adição de pacotes adicionais, aulas avulsas, pacotes personalizados e emissão flexível de recibos (`T23`)** (**23/23 aprovados — 100% de conformidade e sem quebras**).
 
 ---
 
@@ -1152,7 +1174,7 @@ Este Dossiê constitui o registro definitivo e exaustivo de todas as funcionalid
 
 *Homologado para produção e operação contínua.*  
 *Administração Master: cassiordcosta@gmail.com*  
-*Versão do Sistema: v7.4 Estável, Com Exclusão Definitiva de Veículos e Botão Salvar Alterações da Frota, Correção no Modal de Recibos, Correção de Desmarcação de Veículos, Validação e Autocompletar de Cidades por Estado (IBGE), Posicionamento e Redimensionamento da Assinatura no Recibo, Assinatura Digital do Instrutor (2MB), Digitação Completa de Aulas, Mapa Geográfico (5–40 km), Blindagem Cloud Vault de Pacotes, Gestão de Veículos dos Instrutores, Auditada (22/22 Testes) e Sincronizada em Tempo Real no Supabase*
+*Versão do Sistema: v7.5 Estável, Com Adição de Pacotes Adicionais ao Aluno, Aulas Avulsas, Pacote Personalizado, Emissão Flexível de Recibos (Por Pacote e Aulas Ministradas), Exclusão Definitiva de Veículos e Botão Salvar Alterações da Frota, Correção no Modal de Recibos, Correção de Desmarcação de Veículos, Validação e Autocompletar de Cidades por Estado (IBGE), Posicionamento e Redimensionamento da Assinatura no Recibo, Assinatura Digital do Instrutor (2MB), Digitação Completa de Aulas, Mapa Geográfico (5–40 km), Blindagem Cloud Vault de Pacotes, Gestão de Veículos dos Instrutores, Auditada (23/23 Testes) e Sincronizada em Tempo Real no Supabase*
 
 
 

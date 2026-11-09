@@ -952,6 +952,80 @@ runTest(
   }
 );
 
+// ============================================================================
+// 17. TESTE DE ADIÇÃO DE PACOTES, AULAS AVULSAS, PACOTE PERSONALIZADO E RECIBOS
+// ============================================================================
+runTest(
+  'T23',
+  'Adição de Pacotes, Aulas Avulsas, Pacote Personalizado e Emissão de Recibos Flexíveis',
+  'Garante inclusão de pacotes do catálogo, aulas avulsas e pacotes personalizados com histórico seguro e recibos flexíveis',
+  () => {
+    const typesFile = fs.readFileSync(path.join(BASE_DIR, 'src/types/index.ts'), 'utf-8');
+    const storageFile = fs.readFileSync(path.join(BASE_DIR, 'src/lib/storage.ts'), 'utf-8');
+    const receiptGenFile = fs.readFileSync(path.join(BASE_DIR, 'src/lib/receiptPdfGenerator.ts'), 'utf-8');
+    const receiptModalFile = fs.readFileSync(path.join(BASE_DIR, 'src/components/common/PaymentReceiptModal.tsx'), 'utf-8');
+    const addPackageModalFile = fs.readFileSync(path.join(BASE_DIR, 'src/components/instructor/AddStudentPackageModal.tsx'), 'utf-8');
+    const studentsViewFile = fs.readFileSync(path.join(BASE_DIR, 'src/components/instructor/StudentsView.tsx'), 'utf-8');
+
+    // 1. Tipos e Modelos de Domínio
+    assert.equal(
+      typesFile.includes('StudentContractType') &&
+      typesFile.includes('StudentPackageContract') &&
+      typesFile.includes('contratosPacotes?: StudentPackageContract[]'),
+      true,
+      'Domain types define StudentPackageContract e estendem Student com contratosPacotes'
+    );
+
+    // 2. Storage helper atômico para adição de contratos
+    assert.equal(
+      storageFile.includes('addStudentContractAsync') &&
+      storageFile.includes("currentStudent.status = 'EM_ANDAMENTO'") &&
+      storageFile.includes('CONTRATAR_PACOTE_ALUNO'),
+      true,
+      'Storage possui addStudentContractAsync que acumula totalAulasContratadas, reabre status para EM_ANDAMENTO e audita o lançamento'
+    );
+
+    // 3. Emissão de Recibos Flexíveis (Por Pacote e Por Total de Aulas Ministradas)
+    assert.equal(
+      receiptGenFile.includes("'PACOTE'") &&
+      receiptGenFile.includes("'AULAS_MINISTRADAS'") &&
+      receiptGenFile.includes('pacoteReferente?: string') &&
+      receiptGenFile.includes('totalAulasMinistradas?: number'),
+      true,
+      'receiptPdfGenerator suporta as modalidades PACOTE e AULAS_MINISTRADAS com metadados próprios'
+    );
+
+    assert.equal(
+      receiptModalFile.includes('value="PACOTE"') &&
+      receiptModalFile.includes('value="AULAS_MINISTRADAS"') &&
+      receiptModalFile.includes('totalAulasMinistradas'),
+      true,
+      'PaymentReceiptModal disponibiliza seletores e inputs dedicados para emissão por pacote ou por aulas ministradas'
+    );
+
+    // 4. Modal dedicado de Adição de Pacote / Aulas Extras
+    assert.equal(
+      addPackageModalFile.includes('CATALOG_PACKAGE') &&
+      addPackageModalFile.includes('SINGLE_CLASSES') &&
+      addPackageModalFile.includes('CUSTOM_PACKAGE') &&
+      addPackageModalFile.includes('db.addStudentContractAsync') &&
+      addPackageModalFile.includes('onRequestReceipt'),
+      true,
+      'AddStudentPackageModal implementa as 3 modalidades (Catálogo, Aulas Avulsas e Personalizado) com opção de emitir recibo imediatamente'
+    );
+
+    // 5. Interface da Ficha do Aluno
+    assert.equal(
+      studentsViewFile.includes('Pacotes Contratados, Aulas Extras & Histórico') &&
+      studentsViewFile.includes('handleEmitReceiptForContract') &&
+      studentsViewFile.includes('handleEmitReceiptForLessons') &&
+      studentsViewFile.includes('<AddStudentPackageModal'),
+      true,
+      'StudentsView integra histórico visual de pacotes/contratos, botões de ação e emissão flexível de recibos por pacote e aulas ministradas'
+    );
+  }
+);
+
 console.log('\n====================================================================');
 const passed = results.filter((r) => r.status === 'PASS').length;
 const failed = results.filter((r) => r.status === 'FAIL').length;

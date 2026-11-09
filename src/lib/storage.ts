@@ -11,6 +11,7 @@ import {
   Investment,
   PackageOffer,
   StudentTransferHistory,
+  StudentPackageContract,
   AuditLog,
   WhatsAppReminderLog,
   SyncQueueItem,
@@ -2235,6 +2236,125 @@ export const db = {
       student.id,
       `Salvo dados de ${student.nome} — CNH ${student.categoriaCnh} · Plano: ${student.pacoteNome || 'Padrão'} (Aulas: ${student.aulasCumpridas}/${student.totalAulasContratadas})`
     );
+  },
+
+  async addStudentContractAsync(params: {
+    alunoId: string;
+    contract: Omit<StudentPackageContract, 'id' | 'alunoId' | 'organizacaoId' | 'dataContratacao'> & {
+      id?: string;
+      dataContratacao?: string;
+    };
+    actorId: string;
+    actorNome?: string;
+    createAccountReceivable?: boolean;
+    dataVencimento?: string;
+    parcelasTotal?: number;
+  }): Promise<{ student: Student; contract: StudentPackageContract; account?: AccountReceivable }> {
+    const list = readList<Student>(STORAGE_KEYS.STUDENTS);
+    const index = list.findIndex((s) => s.id === params.alunoId);
+    if (index < 0) {
+      throw new Error(`Aluno com ID ${params.alunoId} não encontrado.`);
+    }
+
+    const currentStudent = { ...list[index] };
+    const today = new Date().toISOString().slice(0, 10);
+    const contratos = Array.isArray(currentStudent.contratosPacotes) ? [...currentStudent.contratosPacotes] : [];
+
+    // Se é a primeira contratação adicional e o aluno já possuía um pacote base sem registro em contratosPacotes,
+    // sintetiza o pacote inicial para preservar o histórico cronológico completo
+    if (contratos.length === 0 && (currentStudent.pacoteNome || currentStudent.pacoteId)) {
+      contratos.push({
+        id: `cnt_base_${currentStudent.id}`,
+        alunoId: currentStudent.id,
+        organizacaoId: currentStudent.organizacaoId,
+        tipo: 'PACOTE_BASE',
+        pacoteId: currentStudent.pacoteId,
+        nome: currentStudent.pacoteNome || 'Pacote Inicial de Matrícula',
+        categoriaCnh: currentStudent.categoriaCnh,
+        quantidadeAulas: currentStudent.totalAulasContratadas || 20,
+        valorCentavos: 0,
+        dataContratacao: currentStudent.dataCadastro ? currentStudent.dataCadastro.slice(0, 10) : today,
+        criadoPorId: currentStudent.instrutorId,
+        criadoPorNome: 'Sistema (Matrícula)',
+        criadoEm: currentStudent.dataCadastro || new Date().toISOString()
+      });
+    }
+
+    const newContractId = params.contract.id || `cnt_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    let createdAccount: AccountReceivable | undefined;
+
+    if (params.createAccountReceivable !== false && params.contract.valorCentavos > 0) {
+      createdAccount = {
+        id: `acc_cnt_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        organizacaoId: currentStudent.organizacaoId,
+        alunoId: currentStudent.id,
+        pacoteId: params.contract.pacoteId,
+        descricao: params.contract.nome,
+        valorTotalCentavos: params.contract.valorCentavos,
+        valorPagoCentavos: 0,
+        saldoDevedorCentavos: params.contract.valorCentavos,
+        dataVencimento: params.dataVencimento || new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
+        status: 'PENDENTE',
+        parcelasTotal: params.parcelasTotal || 1,
+        criadoEm: new Date().toISOString()
+      };
+      await this.saveAccountReceivableAsync(createdAccount, params.actorId);
+    }
+
+    const finalContract: StudentPackageContract = {
+      id: newContractId,
+      alunoId: currentStudent.id,
+      organizacaoId: currentStudent.organizacaoId,
+      tipo: params.contract.tipo,
+      pacoteId: params.contract.pacoteId,
+      nome: params.contract.nome,
+      categoriaCnh: params.contract.categoriaCnh || currentStudent.categoriaCnh,
+      quantidadeAulas: Math.max(1, Number(params.contract.quantidadeAulas) || 1),
+      valorCentavos: Math.max(0, Number(params.contract.valorCentavos) || 0),
+      dataContratacao: params.contract.dataContratacao || today,
+      formaPagamento: params.contract.formaPagamento,
+      contaReceberId: createdAccount?.id || params.contract.contaReceberId,
+      observacoes: params.contract.observacoes,
+      criadoPorId: params.actorId,
+      criadoPorNome: params.actorNome || 'Instrutor',
+      criadoEm: new Date().toISOString()
+    };
+
+    contratos.push(finalContract);
+
+    // Incrementa a carga horária contratada
+    const novoTotalAulas = (currentStudent.totalAulasContratadas || 0) + finalContract.quantidadeAulas;
+    currentStudent.totalAulasContratadas = novoTotalAulas;
+    currentStudent.contratosPacotes = contratos;
+
+    // Se o aluno estava com status CONCLUIDO, ao adquirir mais aulas ele reabre para EM_ANDAMENTO
+    if (currentStudent.status === 'CONCLUIDO' && currentStudent.aulasCumpridas < novoTotalAulas) {
+      currentStudent.status = 'EM_ANDAMENTO';
+    }
+
+    list[index] = currentStudent;
+    writeList(STORAGE_KEYS.STUDENTS, list);
+    notifyDataChange();
+
+    await Promise.all([
+      supabaseAdapter.saveStudent(currentStudent),
+      this.persistStudentMetaToCloud(currentStudent, params.actorId)
+    ]);
+
+    this.addAuditLog(
+      currentStudent.organizacaoId,
+      params.actorId,
+      'CONTRATAR_PACOTE_ALUNO',
+      'Aluno',
+      currentStudent.id,
+      `Contratação (${finalContract.tipo}) para ${currentStudent.nome}: "${finalContract.nome}" (+${finalContract.quantidadeAulas} aulas, R$ ${(finalContract.valorCentavos / 100).toFixed(2)}). Novo total: ${novoTotalAulas} aulas.`
+    );
+
+    return {
+      student: currentStudent,
+      contract: finalContract,
+      account: createdAccount
+    };
   },
 
   async saveStudentAsync(student: Student, actorId: string): Promise<void> {

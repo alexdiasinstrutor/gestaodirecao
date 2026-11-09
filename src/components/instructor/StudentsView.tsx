@@ -24,16 +24,21 @@ import {
   Download,
   Receipt,
   MessageCircle,
-  Ticket
+  Ticket,
+  Car,
+  Sparkles,
+  Layers,
+  ShoppingBag
 } from 'lucide-react';
 import { db } from '../../lib/storage';
 import { formatDateBR, formatCurrencyBRL } from '../../lib/validation';
-import type { Student, User, Organization, StudentSkills, PaymentRecord, CnhCategory, AddressFields, AccountReceivable } from '../../types';
+import type { Student, User, Organization, StudentSkills, PaymentRecord, CnhCategory, AddressFields, AccountReceivable, StudentPackageContract } from '../../types';
 import { CNH_CATEGORIES } from '../../types';
 import { StudentTransferModal } from './StudentTransferModal';
 import { PaymentReceiptModal } from '../common/PaymentReceiptModal';
 import { AddressCepFields } from '../common/AddressCepFields';
 import { ApplyDiscountModal } from '../common/ApplyDiscountModal';
+import { AddStudentPackageModal } from './AddStudentPackageModal';
 import type { PaymentReceiptData } from '../../lib/receiptPdfGenerator';
 
 interface StudentsViewProps {
@@ -107,6 +112,11 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   const [discountAccount, setDiscountAccount] = useState<AccountReceivable | null>(null);
   const [showDiscountModal, setShowDiscountModal] = useState<boolean>(false);
   const [studentsVersion, setStudentsVersion] = useState<number>(0);
+
+  // Add Package / Extra Classes Modal State
+  const [showAddPackageModal, setShowAddPackageModal] = useState<boolean>(false);
+  const [addPackageInitialTab, setAddPackageInitialTab] = useState<'CATALOG_PACKAGE' | 'SINGLE_CLASSES' | 'CUSTOM_PACKAGE'>('CATALOG_PACKAGE');
+  const [packageToast, setPackageToast] = useState<string>('');
 
   React.useEffect(() => {
     const onDataChanged = () => setStudentsVersion((v) => v + 1);
@@ -308,6 +318,90 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
       assinaturaConfig: currentUser.assinaturaConfig,
       observacoes: payment.observacao || 'Comprovante emitido com valor fiscal e registrado na gestão de direção.',
       codigoAutenticacao: payment.comprovanteNumero || `AUT-${Math.floor(100000 + Math.random() * 900000)}`
+    };
+
+    setReceiptModalData(receipt);
+    setShowReceiptModal(true);
+  };
+
+  // Helper para abrir emissão de recibo para um pacote/contrato específico
+  const handleEmitReceiptForContract = (contract: StudentPackageContract, student: Student) => {
+    const receipt: PaymentReceiptData = {
+      id: `rec_cnt_${contract.id}`,
+      numeroRecibo: `${Math.floor(100000 + Math.random() * 900000)}`,
+      dataEmissao: new Date().toISOString().slice(0, 10),
+      dataPagamento: contract.dataContratacao || new Date().toISOString().slice(0, 10),
+      valorCentavos: contract.valorCentavos,
+      metodo: 'PIX',
+      tipoRecibo: 'PACOTE',
+      pacoteReferente: contract.nome,
+      totalAulasContratadas: contract.quantidadeAulas,
+      descricaoServico: contract.nome,
+      aluno: {
+        nome: student.nome,
+        cpfMascarado: student.cpfMascarado,
+        telefone: student.telefone,
+        email: student.email,
+        categoriaCnh: student.categoriaCnh
+      },
+      instrutor: {
+        nome: currentUser.nome,
+        documento: currentUser.cpfCompleto || currentUser.cpfMascarado || 'Credencial Detran Ativa',
+        telefone: currentUser.telefone,
+        cidade: currentOrg.nome,
+        estado: 'BR',
+        assinaturaUrl: currentUser.assinaturaUrl,
+        assinaturaConfig: currentUser.assinaturaConfig
+      },
+      assinaturaUrl: currentUser.assinaturaUrl,
+      assinaturaConfig: currentUser.assinaturaConfig,
+      observacoes: contract.observacoes || `Comprovante de contratação de ${contract.quantidadeAulas} aulas práticas de direção veicular.`,
+      codigoAutenticacao: `AUT-${Math.floor(100000 + Math.random() * 900000)}`
+    };
+
+    setReceiptModalData(receipt);
+    setShowReceiptModal(true);
+  };
+
+  // Helper para abrir emissão de recibo pelo total de aulas ministradas
+  const handleEmitReceiptForLessons = (student: Student) => {
+    const studentAccounts = accounts.filter((a) => a.alunoId === student.id);
+    const aulas = Math.max(1, student.aulasCumpridas);
+    const totalAulas = Math.max(1, student.totalAulasContratadas || 20);
+    const totalContratado = studentAccounts.reduce((acc, a) => acc + a.valorTotalCentavos, 0) || 180000;
+    const valorEstimadoCentavos = Math.round((totalContratado / totalAulas) * aulas);
+
+    const receipt: PaymentReceiptData = {
+      id: `rec_lsn_${Date.now()}`,
+      numeroRecibo: `${Math.floor(100000 + Math.random() * 900000)}`,
+      dataEmissao: new Date().toISOString().slice(0, 10),
+      dataPagamento: new Date().toISOString().slice(0, 10),
+      valorCentavos: valorEstimadoCentavos,
+      metodo: 'PIX',
+      tipoRecibo: 'AULAS_MINISTRADAS',
+      totalAulasMinistradas: aulas,
+      descricaoServico: `${aulas} Aulas Práticas de Direção Veicular Ministradas - CNH ${student.categoriaCnh}`,
+      periodoReferente: `Aulas concluídas até ${formatDateBR(new Date().toISOString().slice(0, 10))}`,
+      aluno: {
+        nome: student.nome,
+        cpfMascarado: student.cpfMascarado,
+        telefone: student.telefone,
+        email: student.email,
+        categoriaCnh: student.categoriaCnh
+      },
+      instrutor: {
+        nome: currentUser.nome,
+        documento: currentUser.cpfCompleto || currentUser.cpfMascarado || 'Credencial Detran Ativa',
+        telefone: currentUser.telefone,
+        cidade: currentOrg.nome,
+        estado: 'BR',
+        assinaturaUrl: currentUser.assinaturaUrl,
+        assinaturaConfig: currentUser.assinaturaConfig
+      },
+      assinaturaUrl: currentUser.assinaturaUrl,
+      assinaturaConfig: currentUser.assinaturaConfig,
+      observacoes: `Recibo referente a ${aulas} aula(s) prática(s) de instrução veicular ministrada(s) para o aluno.`,
+      codigoAutenticacao: `AUT-${Math.floor(100000 + Math.random() * 900000)}`
     };
 
     setReceiptModalData(receipt);
@@ -627,14 +721,37 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+              <div className="flex items-center gap-1.5 w-full sm:w-auto justify-between sm:justify-end flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAddPackageInitialTab('CATALOG_PACKAGE');
+                    setShowAddPackageModal(true);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                  title="Adicionar mais pacotes ou aulas para o aluno"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>+ Pacote / Aulas</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => handleOpenCustomReceiptForStudent(activeStudent)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                  title="Emitir recibo referente a pacote de aulas"
                 >
-                  <Receipt className="w-4 h-4" />
-                  <span>Emitir Recibo</span>
+                  <Receipt className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Recibo Pacote</span>
+                  <span className="sm:hidden">Recibo</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleEmitReceiptForLessons(activeStudent)}
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                  title="Emitir recibo pelo total de aulas práticas já ministradas"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Recibo Aulas</span>
                 </button>
                 <button
                   type="button"
@@ -767,6 +884,168 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                 );
               })()}
 
+              {/* SEÇÃO: PACOTES, AULAS EXTRAS & CONTRATAÇÕES DO ALUNO */}
+              {(() => {
+                const existingContracts = activeStudent.contratosPacotes || [];
+                const contractsList: StudentPackageContract[] = existingContracts.length > 0
+                  ? existingContracts
+                  : [
+                      {
+                        id: `cnt_base_${activeStudent.id}`,
+                        alunoId: activeStudent.id,
+                        organizacaoId: activeStudent.organizacaoId,
+                        tipo: 'PACOTE_BASE',
+                        pacoteId: activeStudent.pacoteId,
+                        nome: activeStudent.pacoteNome || 'Pacote Inicial de Matrícula',
+                        categoriaCnh: activeStudent.categoriaCnh,
+                        quantidadeAulas: activeStudent.totalAulasContratadas || 20,
+                        valorCentavos: 180000,
+                        dataContratacao: activeStudent.dataCadastro ? activeStudent.dataCadastro.slice(0, 10) : new Date().toISOString().slice(0, 10),
+                        criadoPorId: activeStudent.instrutorId,
+                        criadoPorNome: 'Sistema (Matrícula)'
+                      }
+                    ];
+
+                return (
+                  <div className="p-4 bg-gradient-to-br from-indigo-50/70 via-blue-50/50 to-purple-50/40 border border-indigo-200/80 rounded-2xl space-y-3 shadow-xs">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-indigo-200/70 pb-2.5">
+                      <div>
+                        <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                          <Package className="w-4 h-4 text-indigo-600" />
+                          <span>Pacotes Contratados, Aulas Extras & Histórico ({contractsList.length})</span>
+                        </h3>
+                        <p className="text-xs text-slate-500">
+                          Adicione novos pacotes do catálogo, compre aulas avulsas ou monte um pacote personalizado sob medida
+                        </p>
+                      </div>
+
+                      {/* Botões de Ação para Adicionar Pacotes */}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAddPackageInitialTab('CATALOG_PACKAGE');
+                            setShowAddPackageModal(true);
+                          }}
+                          className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                          title="Contratar novo pacote do catálogo para o aluno"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>+ Pacote</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAddPackageInitialTab('SINGLE_CLASSES');
+                            setShowAddPackageModal(true);
+                          }}
+                          className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                          title="Comprar aulas avulsas de reforço para o aluno"
+                        >
+                          <Car className="w-3.5 h-3.5" />
+                          <span>+ Aulas Avulsas</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAddPackageInitialTab('CUSTOM_PACKAGE');
+                            setShowAddPackageModal(true);
+                          }}
+                          className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                          title="Criar pacote personalizado com valor e aulas sob medida"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>+ Personalizado</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {packageToast && (
+                      <div className="p-2.5 bg-blue-100/80 border border-blue-300 text-blue-900 rounded-xl text-xs font-semibold flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                        <span>{packageToast}</span>
+                      </div>
+                    )}
+
+                    {/* Lista de Contratos do Aluno */}
+                    <div className="grid grid-cols-1 gap-2.5">
+                      {contractsList.map((contrato, idx) => {
+                        const isBase = contrato.tipo === 'PACOTE_BASE';
+                        const isAvulsa = contrato.tipo === 'AULA_AVULSA';
+                        const isPersonalizado = contrato.tipo === 'PACOTE_PERSONALIZADO';
+
+                        const badgeColor = isBase
+                          ? 'bg-slate-100 text-slate-800 border-slate-300'
+                          : isAvulsa
+                          ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                          : isPersonalizado
+                          ? 'bg-purple-100 text-purple-800 border-purple-300'
+                          : 'bg-blue-100 text-blue-800 border-blue-300';
+
+                        const badgeLabel = isBase
+                          ? 'Pacote Base'
+                          : isAvulsa
+                          ? 'Aula Avulsa'
+                          : isPersonalizado
+                          ? 'Personalizado'
+                          : 'Pacote Adicional';
+
+                        return (
+                          <div
+                            key={contrato.id || idx}
+                            className="p-3 bg-white border border-slate-200 hover:border-indigo-300 rounded-xl flex flex-col sm:flex-row justify-between sm:items-center gap-2.5 transition-colors shadow-xs"
+                          >
+                            <div className="space-y-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold border ${badgeColor}`}>
+                                  {badgeLabel}
+                                </span>
+                                <span className="font-bold text-slate-900 text-xs break-words">
+                                  {contrato.nome}
+                                </span>
+                                {contrato.categoriaCnh && (
+                                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-mono">
+                                    CNH {contrato.categoriaCnh}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
+                                <span>
+                                  Carga: <strong className="text-blue-700 font-mono font-bold">+{contrato.quantidadeAulas} aula(s)</strong>
+                                </span>
+                                {contrato.valorCentavos > 0 && (
+                                  <span>
+                                    Valor: <strong className="text-slate-900 font-mono font-bold">{formatCurrencyBRL(contrato.valorCentavos)}</strong>
+                                  </span>
+                                )}
+                                <span>
+                                  Data: <span className="font-mono">{formatDateBR(contrato.dataContratacao)}</span>
+                                </span>
+                                {contrato.observacoes && (
+                                  <span className="italic text-slate-400">({contrato.observacoes})</span>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="shrink-0 flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleEmitReceiptForContract(contrato, activeStudent)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                                title="Emitir e baixar recibo PDF oficial referente a este pacote específico"
+                              >
+                                <Receipt className="w-3.5 h-3.5" />
+                                <span>Emitir Recibo</span>
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Contact info bar */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 p-3 bg-slate-50 rounded-xl border border-slate-200">
                 <div className="flex items-center gap-2 text-slate-700">
@@ -812,14 +1091,26 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                           Gere e envie comprovantes de pagamento de aulas por parcela, por período ou quitação integral
                         </p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleOpenCustomReceiptForStudent(activeStudent)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shrink-0 shadow-xs"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Novo Recibo</span>
-                      </button>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenCustomReceiptForStudent(activeStudent)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shrink-0 shadow-xs"
+                          title="Emitir recibo referente a pacote de aulas"
+                        >
+                          <Receipt className="w-3.5 h-3.5" />
+                          <span>Recibo por Pacote</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleEmitReceiptForLessons(activeStudent)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shrink-0 shadow-xs"
+                          title="Emitir recibo pelo total de aulas práticas já concluídas pelo aluno"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          <span>Recibo por Aulas Ministradas</span>
+                        </button>
+                      </div>
                     </div>
 
                     {/* Cards de Resumo Financeiro do Aluno */}
@@ -1323,6 +1614,27 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
           actorId={currentUser.id}
           onDiscountApplied={() => {
             setStudentsVersion((v) => v + 1);
+          }}
+        />
+      )}
+
+      {/* Modal Adicionar Pacote / Aulas Avulsas / Pacote Personalizado */}
+      {showAddPackageModal && activeStudent && (
+        <AddStudentPackageModal
+          isOpen={showAddPackageModal}
+          onClose={() => setShowAddPackageModal(false)}
+          student={activeStudent}
+          currentUser={currentUser}
+          currentOrg={currentOrg}
+          onSuccess={(updatedStudent, newContract) => {
+            setActiveStudent(updatedStudent);
+            setEditingTotalLessons(updatedStudent.totalAulasContratadas);
+            setPackageToast(`Contratação "${newContract.nome}" (+${newContract.quantidadeAulas} aulas) adicionada com sucesso!`);
+            setTimeout(() => setPackageToast(''), 5000);
+            setStudentsVersion((v) => v + 1);
+          }}
+          onRequestReceipt={(contract, std) => {
+            handleEmitReceiptForContract(contract, std);
           }}
         />
       )}

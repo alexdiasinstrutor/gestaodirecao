@@ -134,6 +134,31 @@ export const CNH_CATEGORIES: CnhCategoryDef[] = [
   { value: 'OUTRA', label: 'Outra / Cursos Especializados (MOPP, Escolar)', badge: 'Outra', descricao: 'Cursos de especialização, reciclagem e capacitação', veiculos: 'MOPP, Transporte Escolar, Emergência, Cargas Indivisíveis' },
 ];
 
+export type StudentContractType =
+  | 'PACOTE_BASE'
+  | 'PACOTE_ADICIONAL'
+  | 'AULA_AVULSA'
+  | 'PACOTE_PERSONALIZADO';
+
+export interface StudentPackageContract {
+  id: string;
+  alunoId: string;
+  organizacaoId: string;
+  tipo: StudentContractType;
+  pacoteId?: string;
+  nome: string;
+  categoriaCnh?: CnhCategory;
+  quantidadeAulas: number;
+  valorCentavos: number;
+  dataContratacao: string; // YYYY-MM-DD
+  formaPagamento?: string;
+  contaReceberId?: string;
+  observacoes?: string;
+  criadoPorId?: string;
+  criadoPorNome?: string;
+  criadoEm?: string;
+}
+
 export interface Student {
   id: string;
   organizacaoId: string;
@@ -163,6 +188,7 @@ export interface Student {
   pacoteId?: string;
   pacoteNome?: string;
   historicoTransferencias?: StudentTransferHistory[];
+  contratosPacotes?: StudentPackageContract[];
 }
 
 export interface StudentSkills {
