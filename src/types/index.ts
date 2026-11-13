@@ -508,9 +508,11 @@ export interface StudentLeadRequest {
   latitude?: number;
   longitude?: number;
   semInstrutorNaCidade: boolean;
-  status: 'AGUARDANDO_INSTRUTOR' | 'EM_CONTATO' | 'ATENDIDO';
+  status: 'AGUARDANDO_INSTRUTOR' | 'EM_CONTATO' | 'ATENDIDO' | 'DIRECIONADO';
   atendidoPorInstrutorId?: string;
   atendidoPorInstrutorNome?: string;
+  direcionadoEm?: string;
+  direcionadoPorAdminNome?: string;
   criadoEm: string;
 }
 

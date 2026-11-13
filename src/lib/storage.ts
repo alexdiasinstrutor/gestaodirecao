@@ -1462,9 +1462,17 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
       for (const log of studentLeadLogs) {
         if (log.detalhes) {
           try {
-            const parsed = JSON.parse(log.detalhes) as StudentLeadRequest;
+            if (log.acao === 'EXCLUIR_PROCURA_INSTRUTOR') {
+              leadsMap.delete(log.entidadeId);
+              continue;
+            }
+            const parsed = JSON.parse(log.detalhes) as StudentLeadRequest & { deleted?: boolean };
             if (parsed && parsed.id) {
-              leadsMap.set(parsed.id, parsed);
+              if (parsed.deleted || (parsed.status as any) === 'EXCLUIDO') {
+                leadsMap.delete(parsed.id);
+              } else {
+                leadsMap.set(parsed.id, parsed);
+              }
             }
           } catch {
             // ignore
@@ -3714,6 +3722,169 @@ export const db = {
       await supabaseAdapter.addAuditLog(auditEntry).catch(console.error);
     }
     notifyDataChange();
+  },
+
+  async updateStudentLeadAsync(lead: StudentLeadRequest, actor?: User): Promise<void> {
+    const list = readList<StudentLeadRequest>(STORAGE_KEYS.STUDENT_LEADS);
+    const idx = list.findIndex((l) => l.id === lead.id);
+    if (idx >= 0) {
+      list[idx] = lead;
+    } else {
+      list.unshift(lead);
+    }
+    writeList(STORAGE_KEYS.STUDENT_LEADS, list);
+
+    const defaultOrgId = actor?.organizacaoId || this.getOrganizations()[0]?.id || 'org_direcao_certa_01';
+    const auditEntry: AuditLog = {
+      id: 'lead_upd_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6),
+      organizacaoId: defaultOrgId,
+      usuarioId: actor?.id || lead.id,
+      usuarioNome: actor?.nome || 'Administrador Master',
+      acao: 'ATUALIZAR_PROCURA_INSTRUTOR',
+      entidade: 'StudentLeadRequest',
+      entidadeId: lead.id,
+      detalhes: JSON.stringify(lead),
+      timestamp: new Date().toISOString()
+    };
+
+    notifyDataChange();
+    if (supabaseAdapter.enabled) {
+      await supabaseAdapter.addAuditLog(auditEntry).catch(console.error);
+    }
+    notifyDataChange();
+  },
+
+  async deleteStudentLeadAsync(leadId: string, actor?: User): Promise<void> {
+    const list = readList<StudentLeadRequest>(STORAGE_KEYS.STUDENT_LEADS);
+    const filtered = list.filter((l) => l.id !== leadId);
+    writeList(STORAGE_KEYS.STUDENT_LEADS, filtered);
+
+    const defaultOrgId = actor?.organizacaoId || this.getOrganizations()[0]?.id || 'org_direcao_certa_01';
+    const auditEntry: AuditLog = {
+      id: 'lead_del_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6),
+      organizacaoId: defaultOrgId,
+      usuarioId: actor?.id || 'admin_master',
+      usuarioNome: actor?.nome || 'Administrador Master',
+      acao: 'EXCLUIR_PROCURA_INSTRUTOR',
+      entidade: 'StudentLeadRequest',
+      entidadeId: leadId,
+      detalhes: JSON.stringify({ id: leadId, deleted: true, excluidoEm: new Date().toISOString() }),
+      timestamp: new Date().toISOString()
+    };
+
+    notifyDataChange();
+    if (supabaseAdapter.enabled) {
+      await supabaseAdapter.addAuditLog(auditEntry).catch(console.error);
+    }
+    notifyDataChange();
+  },
+
+  async directStudentLeadToInstructorAsync(params: {
+    leadId: string;
+    instructorId: string;
+    createActiveStudent?: boolean;
+    observacoesDirecionamento?: string;
+    actor?: User;
+  }): Promise<{ success: boolean; lead: StudentLeadRequest; student?: Student; message: string }> {
+    const list = readList<StudentLeadRequest>(STORAGE_KEYS.STUDENT_LEADS);
+    const lead = list.find((l) => l.id === params.leadId);
+    if (!lead) {
+      return { success: false, lead: {} as StudentLeadRequest, message: 'Solicitação de aluno não encontrada.' };
+    }
+
+    const allUsers = this.getUsers();
+    const instructor = allUsers.find((u) => u.id === params.instructorId);
+    if (!instructor) {
+      return { success: false, lead, message: 'Instrutor selecionado não encontrado.' };
+    }
+
+    const nowIso = new Date().toISOString();
+    lead.status = 'DIRECIONADO';
+    lead.atendidoPorInstrutorId = instructor.id;
+    lead.atendidoPorInstrutorNome = instructor.nome;
+    lead.direcionadoEm = nowIso;
+    lead.direcionadoPorAdminNome = params.actor?.nome || 'Administrador Master';
+
+    if (params.observacoesDirecionamento?.trim()) {
+      const notaAdmin = `[Direcionado pelo Administrador em ${new Date().toLocaleDateString('pt-BR')} para ${instructor.nome}]: ${params.observacoesDirecionamento.trim()}`;
+      lead.observacoes = lead.observacoes ? `${lead.observacoes}\n${notaAdmin}` : notaAdmin;
+    }
+
+    writeList(STORAGE_KEYS.STUDENT_LEADS, list);
+
+    let createdStudent: Student | undefined;
+    if (params.createActiveStudent) {
+      const studentId = 'std_lead_' + lead.id.replace(/\D/g, '').substring(0, 8) + '_' + Date.now().toString(36);
+      const studentEmail = lead.email?.trim() || `${lead.telefone.replace(/\D/g, '')}@gestaodirecao.com.br`;
+
+      const newStudent: Student = {
+        id: studentId,
+        organizacaoId: instructor.organizacaoId,
+        instrutorId: instructor.id,
+        nome: lead.nome,
+        email: studentEmail,
+        telefone: lead.telefone,
+        cpfMascarado: '***.***.***-**',
+        cpfFingerprint: 'LEAD_' + lead.id,
+        dataNascimento: '2000-01-01',
+        idade: 24,
+        categoriaCnh: lead.categoriaCnh,
+        cep: lead.cep,
+        estado: lead.estado,
+        cidade: lead.cidade,
+        bairro: lead.bairro,
+        status: 'EM_ANDAMENTO',
+        aulasCumpridas: 0,
+        totalAulasContratadas: 20,
+        habilidades: {
+          baliza: 0,
+          percursoUrbano: 0,
+          estradaRodovia: 0,
+          estacionamentoGaragem: 0,
+          controleEmbreagemAclive: 0,
+          sinalizacaoPreferencia: 0,
+          posturaDefensiva: 0,
+          simuladoExame: 0
+        },
+        observacoesInstrutor: `Aluno originado da Demanda Reversa (Procurando Instrutor) e direcionado pelo Administrador Master para ${instructor.nome}.${lead.observacoes ? ' Obs: ' + lead.observacoes : ''}`,
+        dataCadastro: new Date().toISOString().split('T')[0]
+      };
+
+      this.saveStudent(newStudent, params.actor?.id || 'admin_master');
+      createdStudent = newStudent;
+    }
+
+    const defaultOrgId = instructor.organizacaoId || this.getOrganizations()[0]?.id || 'org_direcao_certa_01';
+    const auditEntry: AuditLog = {
+      id: 'lead_dir_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6),
+      organizacaoId: defaultOrgId,
+      usuarioId: params.actor?.id || 'admin_master',
+      usuarioNome: params.actor?.nome || 'Administrador Master',
+      acao: 'DIRECIONAR_PROCURA_INSTRUTOR',
+      entidade: 'StudentLeadRequest',
+      entidadeId: lead.id,
+      detalhes: JSON.stringify({
+        lead,
+        instructorId: instructor.id,
+        instructorNome: instructor.nome,
+        alunoCriadoId: createdStudent?.id,
+        direcionadoEm: nowIso
+      }),
+      timestamp: nowIso
+    };
+
+    notifyDataChange();
+    if (supabaseAdapter.enabled) {
+      await supabaseAdapter.addAuditLog(auditEntry).catch(console.error);
+    }
+    notifyDataChange();
+
+    return {
+      success: true,
+      lead,
+      student: createdStudent,
+      message: `Aluno "${lead.nome}" direcionado com sucesso para o instrutor "${instructor.nome}"!`
+    };
   },
 
   // Discount Coupons (PLATAFORMA = Master → instrutores | ALUNO = instrutor → alunos)

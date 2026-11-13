@@ -202,8 +202,8 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
             activeTab === 'SINGLE_CLASSES'
               ? singleClassDesc
               : activeTab === 'CUSTOM_PACKAGE'
-              ? customPkgObs
-              : `Contratação adicional de pacote via catálogo do instrutor.`
+                ? customPkgObs
+                : `Contratação adicional de pacote via catálogo do instrutor.`
         },
         actorId: currentUser.id,
         actorNome: currentUser.nome,
@@ -269,8 +269,8 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
                 {createdResult.contract.tipo === 'AULA_AVULSA'
                   ? 'Aulas Avulsas Adicionadas com Sucesso!'
                   : createdResult.contract.tipo === 'PACOTE_PERSONALIZADO'
-                  ? 'Pacote Personalizado Criado com Sucesso!'
-                  : 'Pacote Adicional Vinculado com Sucesso!'}
+                    ? 'Pacote Personalizado Criado com Sucesso!'
+                    : 'Pacote Adicional Vinculado com Sucesso!'}
               </h3>
               <p className="text-xs text-slate-600 max-w-md mx-auto">
                 O aluno <strong>{student.nome}</strong> agora tem um total de{' '}
@@ -340,11 +340,10 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
               <button
                 type="button"
                 onClick={() => setActiveTab('CATALOG_PACKAGE')}
-                className={`py-3 px-2 flex items-center justify-center gap-1.5 border-b-2 transition-colors cursor-pointer ${
-                  activeTab === 'CATALOG_PACKAGE'
+                className={`py-3 px-2 flex items-center justify-center gap-1.5 border-b-2 transition-colors cursor-pointer ${activeTab === 'CATALOG_PACKAGE'
                     ? 'border-blue-600 text-blue-700 bg-white'
                     : 'border-transparent hover:text-slate-900'
-                }`}
+                  }`}
               >
                 <Package className="w-4 h-4 shrink-0" />
                 <span className="truncate">Pacote do Catálogo</span>
@@ -353,11 +352,10 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
               <button
                 type="button"
                 onClick={() => setActiveTab('SINGLE_CLASSES')}
-                className={`py-3 px-2 flex items-center justify-center gap-1.5 border-b-2 transition-colors cursor-pointer ${
-                  activeTab === 'SINGLE_CLASSES'
+                className={`py-3 px-2 flex items-center justify-center gap-1.5 border-b-2 transition-colors cursor-pointer ${activeTab === 'SINGLE_CLASSES'
                     ? 'border-blue-600 text-blue-700 bg-white'
                     : 'border-transparent hover:text-slate-900'
-                }`}
+                  }`}
               >
                 <Car className="w-4 h-4 shrink-0" />
                 <span className="truncate">Aulas Avulsas</span>
@@ -366,11 +364,10 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
               <button
                 type="button"
                 onClick={() => setActiveTab('CUSTOM_PACKAGE')}
-                className={`py-3 px-2 flex items-center justify-center gap-1.5 border-b-2 transition-colors cursor-pointer ${
-                  activeTab === 'CUSTOM_PACKAGE'
+                className={`py-3 px-2 flex items-center justify-center gap-1.5 border-b-2 transition-colors cursor-pointer ${activeTab === 'CUSTOM_PACKAGE'
                     ? 'border-blue-600 text-blue-700 bg-white'
                     : 'border-transparent hover:text-slate-900'
-                }`}
+                  }`}
               >
                 <Settings className="w-4 h-4 shrink-0" />
                 <span className="truncate">Pacote Personalizado</span>

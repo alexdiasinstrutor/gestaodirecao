@@ -58,6 +58,7 @@ import { SupabaseMigrationModal } from './SupabaseMigrationModal';
 import { MasterPasswordModal } from './MasterPasswordModal';
 import { MasterUserEditModal } from './MasterUserEditModal';
 import { CouponsManager } from '../common/CouponsManager';
+import { AdminStudentLeadsView } from './AdminStudentLeadsView';
 
 interface AdminMasterPanelProps {
   currentUser: User;
@@ -80,8 +81,10 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
   const allUsers = usersList;
   const allStudents = db.getStudents(organizations[0]?.id || '');
   const allPayments = db.getPayments(organizations[0]?.id || '');
+  const studentLeads = db.getStudentLeads();
+  const pendingLeadsCount = studentLeads.filter((l) => l.status === 'AGUARDANDO_INSTRUTOR').length;
 
-  const [activeSubTab, setActiveSubTab] = useState<'VERIFICADOR' | 'ORGS' | 'MASTERS' | 'PLANS' | 'COUPONS' | 'MAINTENANCE' | 'SUPABASE_LIVE'>(
+  const [activeSubTab, setActiveSubTab] = useState<'VERIFICADOR' | 'ORGS' | 'MASTERS' | 'DEMANDAS' | 'PLANS' | 'COUPONS' | 'MAINTENANCE' | 'SUPABASE_LIVE'>(
     () => (isSimplified ? 'ORGS' : 'VERIFICADOR')
   );
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -435,6 +438,23 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
         >
           <ShieldCheck className="w-3.5 h-3.5 xl:w-4 xl:h-4 shrink-0" />
           <span>Equipe Master & Senhas ({superAdmins.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveSubTab('DEMANDAS')}
+          className={`flex items-center justify-center lg:flex-1 gap-1.5 px-2.5 xl:px-3.5 py-2.5 rounded-xl text-xs xl:text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+            activeSubTab === 'DEMANDAS'
+              ? 'bg-purple-600 text-white shadow-xs'
+              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+          }`}
+        >
+          <Users className="w-3.5 h-3.5 xl:w-4 xl:h-4 shrink-0" />
+          <span>Alunos Procurando ({studentLeads.length})</span>
+          {pendingLeadsCount > 0 && (
+            <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-slate-950 font-black text-xs animate-pulse">
+              {pendingLeadsCount} novo(s)
+            </span>
+          )}
         </button>
 
         {(!isSimplified || activeSubTab === 'PLANS') && (
@@ -1116,6 +1136,14 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* TAB: ALUNOS PROCURANDO INSTRUTOR (DEMANDA REVERSA) */}
+      {activeSubTab === 'DEMANDAS' && (
+        <AdminStudentLeadsView
+          currentUser={currentUser}
+          showFeedback={showFeedback}
+        />
       )}
 
       {/* TAB 3: PLANOS SAAS & MÓDULOS */}

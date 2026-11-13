@@ -1178,8 +1178,35 @@ Abaixo estão registradas todas as melhorias estruturais, correções de sincron
   3. **Sanitização de Slots na Agenda de Aulas (`ScheduleView.tsx`)**: Comparação segura `(a.horaInicio || '').localeCompare(b.horaInicio || '')` prevenindo exceções com horários nulos ou incompletos;
   4. **Proteção Contra Divisão por Zero no Portal do Aluno (`StudentPortal.tsx`)**: Cálculo da barra de progresso com validação estrita de `totalAulasContratadas > 0`.
 
-### 14.18 Suite de 24 Testes Automatizados Rigorosos (`run_automated_tests.mjs`)
-- Suite automatizada com **24 baterias de testes (`T01` a `T24`)** cobrindo confidencialidade de instrutores, exibição de pacotes, geolocalização Haversine 5–40 km, filtros do mapa, demanda reversa, sanitização de telefone, agenda por período com notificação ao aluno, persistência da ficha do aluno, blindagem de pacotes, gestão e exclusão definitiva de veículos dos instrutores com botão de salvar alterações da frota (`T17`), digitação completa de número de aulas, upload de assinatura digital, redimensionamento/posicionamento interativo da assinatura no recibo com blindagem contra ReferenceError, validação com autocompletar de cidades por estado (IBGE), persistência fiel ao desmarcar tipos de veículos na área de atendimento, adição de pacotes adicionais, aulas avulsas, pacotes personalizados e emissão flexível de recibos (`T23`), e **blindagem global contra tela branca com ErrorBoundary, fallback de organização e parsing seguro de contratos (`T24`)** (**24/24 aprovados — 100% de conformidade e sem quebras**).
+### 14.18 Suite de 25 Testes Automatizados Rigorosos (`run_automated_tests.mjs`)
+- Suite automatizada com **25 baterias de testes (`T01` a `T25`)** cobrindo confidencialidade de instrutores, exibição de pacotes, geolocalização Haversine 5–40 km, filtros do mapa, demanda reversa, sanitização de telefone, agenda por período com notificação ao aluno, persistência da ficha do aluno, blindagem de pacotes, gestão e exclusão definitiva de veículos dos instrutores com botão de salvar alterações da frota (`T17`), digitação completa de número de aulas, upload de assinatura digital, redimensionamento/posicionamento interativo da assinatura no recibo com blindagem contra ReferenceError, validação com autocompletar de cidades por estado (IBGE), persistência fiel ao desmarcar tipos de veículos na área de atendimento, adição de pacotes adicionais, aulas avulsas, pacotes personalizados e emissão flexível de recibos (`T23`), blindagem global contra tela branca com ErrorBoundary (`T24`), e **gestão administrativa de demandas reversas com edição de dados, exclusão definitiva sincronizada e direcionamento inteligente de alunos para instrutores por categoria CNH (`T25`)** (**25/25 aprovados — 100% de conformidade e sem quebras**).
+
+### 14.19 Gestão Administrativa de Demandas Reversas: Edição, Exclusão e Direcionamento por Categoria CNH (`AdminStudentLeadsView.tsx`, `EditStudentLeadModal.tsx`, `DirectStudentLeadModal.tsx` & `storage.ts`)
+- **Problema de Negócio Solucionado**:
+  - Pessoas cadastradas na plataforma em busca de instrutor (via Demanda Reversa ou mapa público) ficavam dispersas sem um módulo central de controle para o Administrador Master. O administrador necessitava de um ambiente completo para gerenciar essas solicitações: editar dados cadastrais dos candidatos, excluir solicitações desnecessárias ou canceladas de forma permanente e direcionar o aluno a um instrutor credenciado conforme a categoria de CNH procurada e a área geográfica atendida.
+- **Sub-Aba Dedicada no Console Master (`AdminMasterPanel.tsx`)**:
+  - Adicionada a sub-aba **"Alunos Procurando" (`DEMANDAS`)** com contador dinâmico e badge de novas solicitações pendentes (`AGUARDANDO_INSTRUTOR`), integrada na navegação responsiva `SmartScrollNav`.
+  - Apresenta métricas em tempo real: Total de Cadastros, Aguardando Instrutor, Em Contato e Direcionados/Atendidos.
+  - Filtros instantâneos: Busca por texto (nome, telefone, cidade, e-mail), filtro por Status, filtro por Categoria CNH (Todas, A, B, AB, C, D, E, ACC, PCD) e filtro rápido por Estado (UF).
+- **Módulo de Edição de Dados do Candidato (`EditStudentLeadModal.tsx`)**:
+  - Permite ao Administrador editar nome completo, telefone/WhatsApp (com sanitização e preservação de máscara), e-mail, status da solicitação, cidade, estado, bairro, CEP, categoria CNH procurada, tipo de veículo, tipo de câmbio e observações detalhadas.
+  - Atualização com persistência atômica via `db.updateStudentLeadAsync` e log de auditoria sincronizado no Supabase.
+- **Módulo de Exclusão Permanente e Blindagem de Sincronização (`deleteStudentLeadAsync`)**:
+  - Exclusão com confirmação visual que remove o registro da base local e grava tombstone de auditoria (`EXCLUIR_PROCURA_INSTRUTOR`).
+  - O método `syncFromSupabase` filtra e expurga registros excluídos, impedindo terminantemente que solicitações apagadas pelo Administrador reapareçam após sincronizações da nuvem.
+- **Módulo de Direcionamento Inteligente por Categoria CNH (`DirectStudentLeadModal.tsx`)**:
+  - **Classificação e Compatibilidade Automática**:
+    1. Analisa as categorias atendidas pelo perfil do instrutor (`InstructorCoverageProfile.categoriasAtendidas`) e pela sua frota de veículos (`Vehicle`);
+    2. Identifica se o instrutor atende a categoria CNH que o aluno procura (ex: se o aluno procura CNH B, destaca instrutores com CNH B ou AB e veículos de passeio; se procura CNH A, destaca instrutores com motos credenciadas; se procura CNH PCD, destaca veículos adaptados);
+    3. Cruza com as cidades atendidas (`cidadesAtendidas`), cidade-base e estado do instrutor.
+  - **Ranking Visual de Relevância**:
+    - ⭐ **Recomendação Máxima**: Instrutores 100% compatíveis em Categoria CNH e Cidade;
+    - ✓ **Compatível com a Categoria**: Instrutores habilitados para a CNH procurada;
+    - Opção de filtro: *"Apenas compatíveis com CNH X"* (ativo por padrão).
+  - **Ações e Integrações no Direcionamento**:
+    - Atualiza a solicitação para status `DIRECIONADO` com `atendidoPorInstrutorId`, `atendidoPorInstrutorNome`, data e autor do direcionamento;
+    - **Matrícula Automática Opcional**: Opção de matricular o aluno imediatamente na organização do instrutor selecionado (`Student`), criando a ficha com a CNH desejada, 20 aulas contratadas padrão e status `EM_ANDAMENTO`;
+    - **Comunicação Imediata via WhatsApp**: Tela de conclusão com links diretos e mensagens pré-formatadas para avisar o instrutor (com os dados completos do aluno) e para avisar o aluno (informando qual instrutor foi designado).
 
 ---
 
@@ -1189,7 +1216,7 @@ Este Dossiê constitui o registro definitivo e exaustivo de todas as funcionalid
 
 *Homologado para produção e operação contínua.*  
 *Administração Master: cassiordcosta@gmail.com*  
-*Versão do Sistema: v7.6 Estável, Com Blindagem Global Anti-Crash (ErrorBoundary), Fallback de Organização, Adição de Pacotes Adicionais ao Aluno, Aulas Avulsas, Pacote Personalizado, Emissão Flexível de Recibos (Por Pacote e Aulas Ministradas), Exclusão Definitiva de Veículos e Botão Salvar Alterações da Frota, Correção no Modal de Recibos, Correção de Desmarcação de Veículos, Validação e Autocompletar de Cidades por Estado (IBGE), Posicionamento e Redimensionamento da Assinatura no Recibo, Assinatura Digital do Instrutor (2MB), Digitação Completa de Aulas, Mapa Geográfico (5–40 km), Blindagem Cloud Vault de Pacotes, Gestão de Veículos dos Instrutores, Auditada (24/24 Testes) e Sincronizada em Tempo Real no Supabase*
+*Versão do Sistema: v7.7 Estável, Com Gestão Administrativa de Demandas Reversas (Edição, Exclusão Definitiva e Direcionamento por Categoria CNH com Matrícula e WhatsApp), Blindagem Global Anti-Crash (ErrorBoundary), Fallback de Organização, Adição de Pacotes Adicionais ao Aluno, Aulas Avulsas, Pacote Personalizado, Emissão Flexível de Recibos (Por Pacote e Aulas Ministradas), Exclusão Definitiva de Veículos e Botão Salvar Alterações da Frota, Correção no Modal de Recibos, Correção de Desmarcação de Veículos, Validação e Autocompletar de Cidades por Estado (IBGE), Posicionamento e Redimensionamento da Assinatura no Recibo, Assinatura Digital do Instrutor (2MB), Digitação Completa de Aulas, Mapa Geográfico (5–40 km), Blindagem Cloud Vault de Pacotes, Gestão de Veículos dos Instrutores, Auditada (25/25 Testes) e Sincronizada em Tempo Real no Supabase*
 
 
 

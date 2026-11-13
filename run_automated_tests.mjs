@@ -1104,6 +1104,85 @@ runTest(
   }
 );
 
+runTest(
+  'T25',
+  'Gestão Administrativa de Demandas Reversas — Edição, Exclusão e Direcionamento por Categoria CNH',
+  'Garante que no modo Administrador seja possível listar, editar dados, excluir e direcionar alunos em busca de instrutor conforme categoria CNH',
+  () => {
+    const adminPanelFile = fs.readFileSync(path.join(BASE_DIR, 'src/components/admin/AdminMasterPanel.tsx'), 'utf-8');
+    const studentLeadsViewFile = fs.readFileSync(path.join(BASE_DIR, 'src/components/admin/AdminStudentLeadsView.tsx'), 'utf-8');
+    const editLeadModalFile = fs.readFileSync(path.join(BASE_DIR, 'src/components/admin/EditStudentLeadModal.tsx'), 'utf-8');
+    const directLeadModalFile = fs.readFileSync(path.join(BASE_DIR, 'src/components/admin/DirectStudentLeadModal.tsx'), 'utf-8');
+    const storageFile = fs.readFileSync(path.join(BASE_DIR, 'src/lib/storage.ts'), 'utf-8');
+    const typesFile = fs.readFileSync(path.join(BASE_DIR, 'src/types/index.ts'), 'utf-8');
+
+    // 1. Verificação de Tipagem e Status Direcionado
+    assert.equal(
+      typesFile.includes("'DIRECIONADO'") &&
+      typesFile.includes('direcionadoEm?: string;') &&
+      typesFile.includes('direcionadoPorAdminNome?: string;'),
+      true,
+      'StudentLeadRequest suporta status DIRECIONADO, data de direcionamento e registro do administrador'
+    );
+
+    // 2. Métodos de Banco de Dados no Storage (update, delete, direct, sync)
+    assert.equal(
+      storageFile.includes('updateStudentLeadAsync(') &&
+      storageFile.includes('deleteStudentLeadAsync(') &&
+      storageFile.includes('directStudentLeadToInstructorAsync('),
+      true,
+      'storage.ts implementa updateStudentLeadAsync, deleteStudentLeadAsync e directStudentLeadToInstructorAsync'
+    );
+
+    assert.equal(
+      storageFile.includes("log.acao === 'EXCLUIR_PROCURA_INSTRUTOR'") &&
+      storageFile.includes('leadsMap.delete(log.entidadeId);'),
+      true,
+      'syncFromSupabase respeita tombstones de exclusão impedindo ressurgimento de solicitações excluídas'
+    );
+
+    // 3. Sub-Aba no Painel Master Administrativo
+    assert.equal(
+      adminPanelFile.includes("import { AdminStudentLeadsView } from './AdminStudentLeadsView';") &&
+      adminPanelFile.includes("setActiveSubTab('DEMANDAS')") &&
+      adminPanelFile.includes("Alunos Procurando"),
+      true,
+      'AdminMasterPanel possui a sub-aba DEMANDAS (Alunos Procurando) com contador dinâmico e integração completa'
+    );
+
+    // 4. Componente de Visualização e Gestão (AdminStudentLeadsView)
+    assert.equal(
+      studentLeadsViewFile.includes('EditStudentLeadModal') &&
+      studentLeadsViewFile.includes('DirectStudentLeadModal') &&
+      studentLeadsViewFile.includes('deleteStudentLeadAsync') &&
+      studentLeadsViewFile.includes('buildWhatsAppLink'),
+      true,
+      'AdminStudentLeadsView integra modais de edição, direcionamento inteligente, exclusão confirmada e WhatsApp'
+    );
+
+    // 5. Modal de Edição (EditStudentLeadModal)
+    assert.equal(
+      editLeadModalFile.includes('updateStudentLeadAsync') &&
+      editLeadModalFile.includes('setCategoriaCnh') &&
+      editLeadModalFile.includes('setTipoVeiculo') &&
+      editLeadModalFile.includes('setTipoCambio'),
+      true,
+      'EditStudentLeadModal permite ao administrador editar dados pessoais, localização, categoria CNH e preferências'
+    );
+
+    // 6. Modal de Direcionamento por Categoria CNH (DirectStudentLeadModal)
+    assert.equal(
+      directLeadModalFile.includes('isCategoryMatch') &&
+      directLeadModalFile.includes('isCityMatch') &&
+      directLeadModalFile.includes('filterOnlyCategoryMatch') &&
+      directLeadModalFile.includes('directStudentLeadToInstructorAsync') &&
+      directLeadModalFile.includes('createActiveStudent'),
+      true,
+      'DirectStudentLeadModal avalia compatibilidade de CNH e localização, classifica instrutores e permite matrícula direta'
+    );
+  }
+);
+
 console.log('\n====================================================================');
 const passed = results.filter((r) => r.status === 'PASS').length;
 const failed = results.filter((r) => r.status === 'FAIL').length;
