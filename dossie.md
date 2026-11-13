@@ -1232,6 +1232,25 @@ Abaixo estão registradas todas as melhorias estruturais, correções de sincron
   - **No Instrutor (`ScheduleView.tsx`)**: Seção dedicada com listagem de todas as aulas concluídas numeradas (ex: *"Aula 12 de 20"*), filtro por aluno, badges de remarcação e conclusão automática.
   - **No Aluno (`StudentPortal.tsx`)**: O aluno acompanha sua barra de progresso oficial e a lista detalhada de aulas já realizadas com data, horário, tema e número sequencial correspondente ao seu plano.
 
+### 14.21 Regra de 24 Horas para Remarcação e Cancelamento pelo Aluno e Exclusividade do Instrutor (`StudentPortal.tsx`, `storage.ts`, `VehiclesView.tsx`)
+- **Problema de Negócio Solucionado**:
+  - Para garantir o planejamento operacional do instrutor e evitar cancelamentos de última hora que prejudiquem a grade horária e a frota de instrução, foi instituída a regra de antecedência mínima de 24 horas para alterações solicitadas diretamente pelo aluno.
+- **Validação de Janela de 24 Horas (`checkLessonCancellationWindow`)**:
+  - Calcula a diferença exata entre o início previsto da aula (`data + horaInicio`) e o momento atual (`Date.now()`).
+  - Se a diferença for $\ge 24\text{ horas}$, a alteração direta pelo aluno é autorizada.
+  - Se a diferença for $< 24\text{ horas}$, a ação é bloqueada no sistema para o aluno, emitindo aviso com o tempo restante (horas ou minutos).
+- **Bloqueio Educativo com Redirecionamento Direto via WhatsApp**:
+  - Ao tentar remarcar ou desmarcar com prazo $< 24\text{ horas}$, o aluno visualiza um modal explicativo alertando sobre a regra de antecedência mínima.
+  - O modal integra um botão de contato imediato via WhatsApp para o instrutor responsável (`buildWhatsAppLink`), já com mensagem pré-formatada contendo os dados da aula e a solicitação formal.
+- **Exclusividade do Instrutor para Alterações em Menos de 24 Horas**:
+  - Somente o instrutor responsável ou administrador possui autorização para remarcar ou cancelar aulas com menos de 24 horas restantes, garantindo autonomia pedagógica e flexibilidade de atendimento.
+- **Cancelamento e Remarcação pelo Aluno quando $\ge 24\text{ Horas}$**:
+  - **Cancelamento**: O aluno pode informar motivo opcional e confirmar a desmarcação (`cancelLessonByStudentAsync`), liberando o horário na grade e registrando log de auditoria.
+  - **Remarcação**: O aluno seleciona uma nova data e escolhe entre os horários disponíveis da agenda do instrutor (`rescheduleLessonAsync`), com histórico registrado.
+- **Blindagem e Persistência da Frota de Veículos (`seedCleanProductionData` & `VehiclesView.tsx`)**:
+  - Filtragem rigorosa do conjunto `DELETED_VEHICLES` no seed de produção, impedindo qualquer ressurgimento de veículos removidos a partir de backups locais.
+  - Botão dedicado **"Salvar Alterações da Frota"** no topo e no rodapé da tela de veículos, persistindo a frota ativa e sincronizando exclusões definitivas no Supabase.
+
 ---
 
 ## 15. TERMO DE HOMOLOGAÇÃO E DECLARAÇÃO DE INTEGRIDADE
@@ -1240,7 +1259,7 @@ Este Dossiê constitui o registro definitivo e exaustivo de todas as funcionalid
 
 *Homologado para produção e operação contínua.*  
 *Administração Master: cassiordcosta@gmail.com*  
-*Versão do Sistema: v7.8 Estável, Com Agendamento Recorrente (Semanal e Mensal), Remarcação de Aulas com Histórico e Notificação, Registro Automático de Aulas Realizadas ao Término do Horário com Crédito Idempotente no Plano do Aluno (Visível para Instrutor e Aluno), Gestão Administrativa de Demandas Reversas (Edição, Exclusão Definitiva e Direcionamento por Categoria CNH), Blindagem Global Anti-Crash (ErrorBoundary), Fallback de Organização, Adição de Pacotes Adicionais ao Aluno, Aulas Avulsas, Pacote Personalizado, Emissão Flexível de Recibos (Por Pacote e Aulas Ministradas), Exclusão Definitiva de Veículos e Botão Salvar Alterações da Frota, Correção no Modal de Recibos, Correção de Desmarcação de Veículos, Validação e Autocompletar de Cidades por Estado (IBGE), Posicionamento e Redimensionamento da Assinatura no Recibo, Assinatura Digital do Instrutor (2MB), Digitação Completa de Aulas, Mapa Geográfico (5–40 km), Blindagem Cloud Vault de Pacotes, Gestão de Veículos dos Instrutores, Auditada (26/26 Testes) e Sincronizada em Tempo Real no Supabase*
+*Versão do Sistema: v7.9 Estável, Com Regra de 24 Horas para Remarcação e Cancelamento pelo Aluno (Bloqueio <24h com Contato Direto via WhatsApp do Instrutor e Exclusividade do Instrutor para Prazos Menores), Blindagem Definitiva de Exclusão de Veículos da Frota (seedCleanProductionData + Botão Salvar Alterações da Frota), Agendamento Recorrente (Semanal e Mensal), Remarcação de Aulas com Histórico e Notificação, Registro Automático de Aulas Realizadas ao Término do Horário com Crédito Idempotente no Plano do Aluno (Visível para Instrutor e Aluno), Gestão Administrativa de Demandas Reversas (Edição, Exclusão Definitiva e Direcionamento por Categoria CNH), Blindagem Global Anti-Crash (ErrorBoundary), Fallback de Organização, Adição de Pacotes Adicionais ao Aluno, Aulas Avulsas, Pacote Personalizado, Emissão Flexível de Recibos (Por Pacote e Aulas Ministradas), Exclusão Definitiva de Veículos e Botão Salvar Alterações da Frota, Correção no Modal de Recibos, Correção de Desmarcação de Veículos, Validação e Autocompletar de Cidades por Estado (IBGE), Posicionamento e Redimensionamento da Assinatura no Recibo, Assinatura Digital do Instrutor (2MB), Digitação Completa de Aulas, Mapa Geográfico (5–40 km), Blindagem Cloud Vault de Pacotes, Gestão de Veículos dos Instrutores, Auditada (27/27 Testes) e Sincronizada em Tempo Real no Supabase*
 
 
 

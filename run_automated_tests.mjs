@@ -1246,6 +1246,48 @@ runTest(
   }
 );
 
+runTest(
+  'T27',
+  'Regra de 24 Horas para Remarcação e Cancelamento pelo Aluno e Exclusividade do Instrutor',
+  'Garante bloqueio de cancelamento/remarcação pelo aluno com <24h para o início, redirecionamento via WhatsApp para o instrutor, e permissão exclusiva ao instrutor em prazo inferior a 24h',
+  () => {
+    const storageFile = fs.readFileSync(path.join(BASE_DIR, 'src/lib/storage.ts'), 'utf-8');
+    const studentPortalFile = fs.readFileSync(path.join(BASE_DIR, 'src/components/student/StudentPortal.tsx'), 'utf-8');
+    const vehiclesViewFile = fs.readFileSync(path.join(BASE_DIR, 'src/components/instructor/VehiclesView.tsx'), 'utf-8');
+
+    // 1. Validação no storage.ts: checkLessonCancellationWindow, cancelLessonByStudentAsync e trava de 24h em rescheduleLessonAsync
+    assert.equal(
+      storageFile.includes('checkLessonCancellationWindow(') &&
+      storageFile.includes('cancelLessonByStudentAsync(') &&
+      storageFile.includes('O cancelamento pelo aluno só pode ser realizado com no mínimo 24 horas') &&
+      storageFile.includes('A remarcação pelo aluno só pode ser realizada com no mínimo 24 horas'),
+      true,
+      'storage.ts implementa validação de 24h e bloqueio de cancelamento e remarcação para alunos com prazo < 24h'
+    );
+
+    // 2. Proteção de veículos e exclusão definitiva sem ressurreição em seedCleanProductionData
+    assert.equal(
+      storageFile.includes('const deletedVehicles = new Set(readList<string>(STORAGE_KEYS.DELETED_VEHICLES));') &&
+      storageFile.includes('!deletedVehicles.has(v.id)') &&
+      vehiclesViewFile.includes('Salvar Alterações da Frota'),
+      true,
+      'storage.ts blinda seedCleanProductionData contra ressurgimento de veículos excluídos e VehiclesView possui botão de salvar alterações'
+    );
+
+    // 3. Interface do Aluno no StudentPortal.tsx: Modais de 24h, WhatsApp e ações permitidas quando >= 24h
+    assert.equal(
+      studentPortalFile.includes('checkLessonCancellationWindow(') &&
+      studentPortalFile.includes('blocked24hLesson') &&
+      studentPortalFile.includes('buildWhatsAppLink') &&
+      studentPortalFile.includes('Prazo Limite de 24 Horas') &&
+      studentPortalFile.includes('lessonToStudentCancel') &&
+      studentPortalFile.includes('lessonToStudentReschedule'),
+      true,
+      'StudentPortal.tsx possui modais de bloqueio com botão de WhatsApp do instrutor, cancelamento e remarcação quando >= 24h'
+    );
+  }
+);
+
 console.log('\n====================================================================');
 const passed = results.filter((r) => r.status === 'PASS').length;
 const failed = results.filter((r) => r.status === 'FAIL').length;

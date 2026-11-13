@@ -806,11 +806,20 @@ export function seedCleanProductionData(): { org: Organization; user: User } {
       s.id !== 'stu_juliana_costa' &&
       s.nome !== 'Pedro Henrique Silva'
   );
+  const deletedVehicles = new Set(readList<string>(STORAGE_KEYS.DELETED_VEHICLES));
   const existingVehicles = readList<Vehicle>(STORAGE_KEYS.VEHICLES).filter(
-    (v) => v.id !== 'veh_onix_01' && v.id !== 'veh_mobi_02' && v.id !== 'veh_cg_moto'
+    (v) =>
+      !deletedVehicles.has(v.id) &&
+      v.id !== 'veh_onix_01' &&
+      v.id !== 'veh_mobi_02' &&
+      v.id !== 'veh_cg_moto'
   );
   const existingBackupVehicles = readList<Vehicle>(STORAGE_KEYS.VEHICLES_BACKUP).filter(
-    (v) => v.id !== 'veh_onix_01' && v.id !== 'veh_mobi_02' && v.id !== 'veh_cg_moto'
+    (v) =>
+      !deletedVehicles.has(v.id) &&
+      v.id !== 'veh_onix_01' &&
+      v.id !== 'veh_mobi_02' &&
+      v.id !== 'veh_cg_moto'
   );
   const mergedVehiclesMap = new Map<string, Vehicle>();
   existingBackupVehicles.forEach((v) => mergedVehiclesMap.set(v.id, v));
@@ -3189,6 +3198,88 @@ export const db = {
   },
 
   /**
+   * Valida o prazo limite de 24 horas para o aluno cancelar ou remarcar a aula.
+   * Retorna se a alteração pelo aluno é permitida e o tempo restante.
+   */
+  checkLessonCancellationWindow(lessonDate: string, lessonStartTime: string): {
+    canStudentChange: boolean;
+    diffHours: number;
+    hoursRemainingText: string;
+  } {
+    const lessonStartMs = new Date(`${lessonDate}T${lessonStartTime}:00`).getTime();
+    const nowMs = Date.now();
+    const diffHours = (lessonStartMs - nowMs) / (1000 * 60 * 60);
+    const canStudentChange = Number.isFinite(diffHours) && diffHours >= 24;
+
+    let hoursRemainingText = '';
+    if (diffHours <= 0) {
+      hoursRemainingText = 'horário já iniciado ou encerrado';
+    } else if (diffHours < 1) {
+      const mins = Math.max(1, Math.floor(diffHours * 60));
+      hoursRemainingText = `faltam apenas ${mins} minuto(s)`;
+    } else {
+      const h = Math.floor(diffHours);
+      hoursRemainingText = `faltam apenas ${h} hora(s)`;
+    }
+
+    return { canStudentChange, diffHours, hoursRemainingText };
+  },
+
+  /**
+   * Cancelamento de aula pelo aluno — respeita estritamente a regra de 24 horas.
+   * Se faltar menos de 24 horas, o aluno é impedido e deve contatar o instrutor.
+   */
+  async cancelLessonByStudentAsync(
+    lessonId: string,
+    actor: User,
+    motivo?: string
+  ): Promise<{ success: boolean; error?: string; lesson?: Lesson }> {
+    const list = readList<Lesson>(STORAGE_KEYS.LESSONS);
+    const idx = list.findIndex((l) => l.id === lessonId);
+    if (idx < 0) return { success: false, error: 'Aula não encontrada.' };
+    const original = list[idx];
+    if (original.status !== 'AGENDADA' && original.status !== 'EM_ANDAMENTO') {
+      return { success: false, error: 'Somente aulas agendadas podem ser canceladas.' };
+    }
+
+    // Regra de 24 horas: O aluno só pode cancelar com no mínimo 24 horas de antecedência
+    const isStudentActor = actor.papel === 'ALUNO' || actor.id === original.alunoId;
+    if (isStudentActor) {
+      const windowCheck = this.checkLessonCancellationWindow(original.data, original.horaInicio);
+      if (!windowCheck.canStudentChange) {
+        return {
+          success: false,
+          error: `O cancelamento pelo aluno só pode ser realizado com no mínimo 24 horas de antecedência ao horário previsto (${windowCheck.hoursRemainingText}). Entre em contato diretamente com seu instrutor.`
+        };
+      }
+    }
+
+    const updated: Lesson = {
+      ...original,
+      status: 'CANCELADA',
+      observacaoInstrutor: `[CANCELADA_PELO_ALUNO] Cancelada pelo aluno ${actor.nome} com antecedência superior a 24h.${motivo ? ' Motivo: ' + motivo.trim() : ''}`
+    };
+
+    list[idx] = updated;
+    writeList(STORAGE_KEYS.LESSONS, list);
+    notifyDataChange();
+    if (supabaseAdapter.enabled) {
+      await supabaseAdapter.saveLesson(updated).catch(console.error);
+    }
+
+    this.addAuditLog(
+      original.organizacaoId,
+      actor.id,
+      'CANCELAR_AULA_ALUNO',
+      'Aula',
+      original.id,
+      `Aula de ${original.data} ${original.horaInicio} cancelada pelo aluno ${actor.nome} (>24h)`
+    );
+
+    return { success: true, lesson: updated };
+  },
+
+  /**
    * Remarca (altera) data e/ou horário de uma aula agendada, registrando o histórico
    * e notificando o aluno.
    */
@@ -3209,6 +3300,19 @@ export const db = {
     }
     if (original.data === params.novaData && original.horaInicio === params.novaHoraInicio) {
       return { success: false, error: 'Escolha uma data ou horário diferente do atual.' };
+    }
+
+    // Regra de 24 horas: O aluno só pode remarcar com no mínimo 24h de antecedência.
+    // Menos de 24h: somente o instrutor tem autorização.
+    const isStudentActor = params.actor.papel === 'ALUNO' || params.actor.id === original.alunoId;
+    if (isStudentActor) {
+      const windowCheck = this.checkLessonCancellationWindow(original.data, original.horaInicio);
+      if (!windowCheck.canStudentChange) {
+        return {
+          success: false,
+          error: `A remarcação pelo aluno só pode ser realizada com no mínimo 24 horas de antecedência ao horário previsto (${windowCheck.hoursRemainingText}). Entre em contato com seu instrutor para solicitar a alteração.`
+        };
+      }
     }
 
     const instructorSlots = this.getSlots(original.organizacaoId, original.instrutorId);

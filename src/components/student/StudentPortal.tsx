@@ -21,11 +21,13 @@ import {
   LayoutGrid,
   Ticket,
   Tag,
-  Sparkles
+  Sparkles,
+  CalendarClock,
+  MessageCircle
 } from 'lucide-react';
 import { db, syncFromSupabase } from '../../lib/storage';
 import { formatCurrencyBRL, formatDateBR } from '../../lib/validation';
-import { generatePixCopiaECola, getPixQrCodeImageUrl } from '../../lib/whatsapp';
+import { generatePixCopiaECola, getPixQrCodeImageUrl, buildWhatsAppLink } from '../../lib/whatsapp';
 import {
   Student,
   User as UserType,
@@ -395,6 +397,91 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
     navigator.clipboard.writeText(pixConfig.chavePix);
     setChaveCopied(true);
     setTimeout(() => setChaveCopied(false), 3000);
+  };
+
+  // Estados para cancelamento e remarcação pelo aluno (Regra de 24h)
+  const [blocked24hLesson, setBlocked24hLesson] = useState<{
+    lesson: Lesson;
+    action: 'REMARCAR' | 'CANCELAR';
+    hoursRemainingText: string;
+  } | null>(null);
+  const [lessonToStudentCancel, setLessonToStudentCancel] = useState<Lesson | null>(null);
+  const [studentCancelReason, setStudentCancelReason] = useState<string>('');
+  const [lessonToStudentReschedule, setLessonToStudentReschedule] = useState<Lesson | null>(null);
+  const [studentRescheduleDate, setStudentRescheduleDate] = useState<string>('');
+  const [studentRescheduleSlot, setStudentRescheduleSlot] = useState<string>('');
+  const [studentRescheduleReason, setStudentRescheduleReason] = useState<string>('');
+  const [studentRescheduleError, setStudentRescheduleError] = useState<string>('');
+  const [isProcessingAction, setIsProcessingAction] = useState<boolean>(false);
+
+  const handleInitiateCancel = (lsn: Lesson) => {
+    const windowCheck = db.checkLessonCancellationWindow(lsn.data, lsn.horaInicio);
+    if (!windowCheck.canStudentChange) {
+      setBlocked24hLesson({ lesson: lsn, action: 'CANCELAR', hoursRemainingText: windowCheck.hoursRemainingText });
+      return;
+    }
+    setLessonToStudentCancel(lsn);
+    setStudentCancelReason('');
+  };
+
+  const handleInitiateReschedule = (lsn: Lesson) => {
+    const windowCheck = db.checkLessonCancellationWindow(lsn.data, lsn.horaInicio);
+    if (!windowCheck.canStudentChange) {
+      setBlocked24hLesson({ lesson: lsn, action: 'REMARCAR', hoursRemainingText: windowCheck.hoursRemainingText });
+      return;
+    }
+    setLessonToStudentReschedule(lsn);
+    setStudentRescheduleDate('');
+    setStudentRescheduleSlot('');
+    setStudentRescheduleReason('');
+    setStudentRescheduleError('');
+  };
+
+  const handleConfirmStudentCancel = async () => {
+    if (!lessonToStudentCancel) return;
+    try {
+      setIsProcessingAction(true);
+      const res = await db.cancelLessonByStudentAsync(lessonToStudentCancel.id, currentUser, studentCancelReason);
+      if (!res.success) {
+        alert(res.error || 'Erro ao cancelar aula.');
+        return;
+      }
+      setLessonToStudentCancel(null);
+      setPortalVersion((v) => v + 1);
+    } catch (err: any) {
+      alert('Erro ao cancelar aula: ' + (err.message || 'Falha de comunicação.'));
+    } finally {
+      setIsProcessingAction(false);
+    }
+  };
+
+  const handleConfirmStudentReschedule = async () => {
+    if (!lessonToStudentReschedule) return;
+    if (!studentRescheduleDate || !studentRescheduleSlot) {
+      setStudentRescheduleError('Selecione uma data e um horário disponível.');
+      return;
+    }
+    try {
+      setIsProcessingAction(true);
+      setStudentRescheduleError('');
+      const res = await db.rescheduleLessonAsync({
+        aulaId: lessonToStudentReschedule.id,
+        novaData: studentRescheduleDate,
+        novaHoraInicio: studentRescheduleSlot,
+        motivo: studentRescheduleReason.trim() || 'Remarcação realizada pelo aluno no portal (>24h)',
+        actor: currentUser
+      });
+      if (!res.success) {
+        setStudentRescheduleError(res.error || 'Erro ao remarcar aula.');
+        return;
+      }
+      setLessonToStudentReschedule(null);
+      setPortalVersion((v) => v + 1);
+    } catch (err: any) {
+      setStudentRescheduleError('Erro ao remarcar aula: ' + (err.message || 'Falha de comunicação.'));
+    } finally {
+      setIsProcessingAction(false);
+    }
   };
 
   if (!student) {
@@ -799,13 +886,19 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {lessons.map((lsn) => {
                 const isCancelled = lsn.status === 'CANCELADA';
+                const isScheduled = lsn.status === 'AGENDADA';
+                const windowCheck = isScheduled
+                  ? db.checkLessonCancellationWindow(lsn.data, lsn.horaInicio)
+                  : null;
+
                 return (
                   <div
                     key={lsn.id}
-                    className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs ${isCancelled
+                    className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs ${
+                      isCancelled
                         ? 'border-rose-200 bg-rose-50/70'
                         : 'border-slate-100 bg-slate-50'
-                      }`}
+                    }`}
                   >
                     <div className="min-w-0 space-y-0.5">
                       <p className={`font-bold truncate ${isCancelled ? 'text-rose-900 line-through' : 'text-slate-900'}`}>
@@ -828,21 +921,62 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                           Agendamento {lsn.recorrenciaTipo === 'SEMANAL' ? 'semanal' : 'mensal'}
                         </p>
                       )}
+                      {isScheduled && windowCheck && !windowCheck.canStudentChange && (
+                        <p className="text-amber-700 font-semibold text-[11px] flex items-center gap-1">
+                          <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
+                          <span>Menos de 24h para o início ({windowCheck.hoursRemainingText}) — alteração requer contato com instrutor.</span>
+                        </p>
+                      )}
                     </div>
-                    <span
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold shrink-0 self-start sm:self-center ${lsn.status === 'CONCLUIDA'
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : isCancelled
+
+                    <div className="flex flex-wrap items-center gap-1.5 shrink-0 self-start sm:self-center">
+                      {isScheduled && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleInitiateReschedule(lsn)}
+                            className="px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors cursor-pointer flex items-center gap-1"
+                            title={
+                              windowCheck?.canStudentChange
+                                ? 'Remarcar data/horário da aula (>24h)'
+                                : 'Menos de 24h — alteração requer contato com o instrutor'
+                            }
+                          >
+                            <CalendarClock className="w-3.5 h-3.5" />
+                            <span>Remarcar</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleInitiateCancel(lsn)}
+                            className="px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition-colors cursor-pointer flex items-center gap-1"
+                            title={
+                              windowCheck?.canStudentChange
+                                ? 'Cancelar aula com antecedência (>24h)'
+                                : 'Menos de 24h — cancelamento requer contato com o instrutor'
+                            }
+                          >
+                            <X className="w-3.5 h-3.5" />
+                            <span>Cancelar</span>
+                          </button>
+                        </>
+                      )}
+
+                      <span
+                        className={`px-2.5 py-1 rounded-lg text-xs font-bold shrink-0 ${
+                          lsn.status === 'CONCLUIDA'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : isCancelled
                             ? 'bg-rose-600 text-white'
                             : 'bg-blue-100 text-blue-800'
                         }`}
-                    >
-                      {isCancelled
-                        ? 'DESMARCADA — REMARCAR'
-                        : lsn.status === 'CONCLUIDA'
-                        ? 'REALIZADA'
-                        : lsn.status}
-                    </span>
+                      >
+                        {isCancelled
+                          ? 'DESMARCADA'
+                          : lsn.status === 'CONCLUIDA'
+                          ? 'REALIZADA'
+                          : lsn.status}
+                      </span>
+                    </div>
                   </div>
                 );
               })}
@@ -1110,6 +1244,308 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
               <p className="text-xs text-slate-600 font-medium">
                 Abra o app do seu banco, escolha <strong>PIX Copia e Cola</strong> e efetue o pagamento. O instrutor receberá a confirmação imediatamente.
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 1: BLOQUEIO DE 24H COM CONTATO DIRETO VIA WHATSAPP AO INSTRUTOR */}
+      {blocked24hLesson && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="p-3 rounded-2xl bg-amber-100 text-amber-700 shrink-0">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-base font-extrabold text-slate-900">
+                  Prazo Limite de 24 Horas
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Regra de antecedência mínima para alterações pelo aluno
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setBlocked24hLesson(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-1.5 leading-relaxed">
+              <p>
+                A <strong>{blocked24hLesson.action === 'REMARCAR' ? 'remarcação' : 'desmarcação / cancelamento'}</strong> de aula pelo aluno no sistema só pode ser realizada com no mínimo <strong>24 horas de antecedência</strong> do horário previsto.
+              </p>
+              <p className="font-semibold text-amber-800">
+                Para esta aula ({blocked24hLesson.hoursRemainingText}), somente o instrutor tem autorização para realizar a alteração no sistema.
+              </p>
+            </div>
+
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-1">
+              <p className="text-slate-500 font-semibold">Aula selecionada:</p>
+              <p className="font-bold text-slate-900">
+                {formatDateBR(blocked24hLesson.lesson.data)} às {blocked24hLesson.lesson.horaInicio} - {blocked24hLesson.lesson.horaFim}
+              </p>
+              <p className="text-slate-600">{blocked24hLesson.lesson.topico}</p>
+            </div>
+
+            <div className="p-3.5 bg-blue-50/70 border border-blue-200/70 rounded-xl text-xs space-y-1">
+              <p className="font-bold text-blue-900">Instrutor Responsável:</p>
+              <p className="text-slate-700">
+                <strong>{instructor?.nome || 'Alexsandro Dias da Silva'}</strong>
+                <br />
+                Telefone: {instructor?.telefone || '(11) 98765-4321'}
+              </p>
+            </div>
+
+            <div className="pt-2 flex flex-col sm:flex-row gap-2">
+              {(() => {
+                const actionText = blocked24hLesson.action === 'REMARCAR' ? 'remarcação' : 'cancelamento';
+                const msg = `Olá ${instructor?.nome || 'Instrutor'}, gostaria de solicitar o(a) ${actionText} da minha aula de direção do dia ${formatDateBR(blocked24hLesson.lesson.data)} às ${blocked24hLesson.lesson.horaInicio}. Aluno: ${currentUser.nome}.`;
+                const waLink = buildWhatsAppLink(instructor?.telefone, msg);
+                return waLink ? (
+                  <a
+                    href={waLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    <span>Falar no WhatsApp</span>
+                  </a>
+                ) : (
+                  <div className="flex-1 text-center py-2 text-xs text-slate-500 italic">
+                    Telefone do instrutor não configurado para WhatsApp
+                  </div>
+                );
+              })()}
+              <button
+                type="button"
+                onClick={() => setBlocked24hLesson(null)}
+                className="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: CANCELAMENTO PELO ALUNO (ANTECEDÊNCIA >= 24H) */}
+      {lessonToStudentCancel && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-xl bg-rose-100 text-rose-700 shrink-0">
+                  <X className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">
+                    Cancelar Aula Agendada
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Antecedência superior a 24 horas confirmada
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setLessonToStudentCancel(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-1">
+              <p className="font-bold text-slate-900">
+                {formatDateBR(lessonToStudentCancel.data)} às {lessonToStudentCancel.horaInicio} - {lessonToStudentCancel.horaFim}
+              </p>
+              <p className="text-slate-600">{lessonToStudentCancel.topico}</p>
+            </div>
+
+            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900 leading-relaxed">
+              <p>
+                ✓ Você está realizando o cancelamento com <strong>mais de 24 horas de antecedência</strong>. O horário será liberado na agenda e você poderá agendar outra aula normalmente.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 block">
+                Motivo do cancelamento (opcional):
+              </label>
+              <textarea
+                value={studentCancelReason}
+                onChange={(e) => setStudentCancelReason(e.target.value)}
+                placeholder="Ex: Imprevisto de trabalho, compromisso médico..."
+                rows={2}
+                className="w-full p-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+              />
+            </div>
+
+            <div className="pt-2 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setLessonToStudentCancel(null)}
+                disabled={isProcessingAction}
+                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+              >
+                Voltar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmStudentCancel}
+                disabled={isProcessingAction}
+                className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                <X className="w-4 h-4" />
+                <span>{isProcessingAction ? 'Cancelando...' : 'Confirmar Cancelamento'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: REMARCAÇÃO PELO ALUNO (ANTECEDÊNCIA >= 24H) */}
+      {lessonToStudentReschedule && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-xl bg-blue-100 text-blue-700 shrink-0">
+                  <CalendarClock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">
+                    Remarcar Aula de Direção
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Escolha uma nova data e horário disponível
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setLessonToStudentReschedule(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-1">
+              <p className="text-slate-500 text-[11px] font-semibold">Horário atual agendado:</p>
+              <p className="font-bold text-slate-900">
+                {formatDateBR(lessonToStudentReschedule.data)} às {lessonToStudentReschedule.horaInicio} - {lessonToStudentReschedule.horaFim}
+              </p>
+              <p className="text-slate-600">{lessonToStudentReschedule.topico}</p>
+            </div>
+
+            {studentRescheduleError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 font-semibold flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{studentRescheduleError}</span>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">Nova Data:</label>
+                <input
+                  type="date"
+                  min={new Date().toISOString().slice(0, 10)}
+                  value={studentRescheduleDate}
+                  onChange={(e) => {
+                    setStudentRescheduleDate(e.target.value);
+                    setStudentRescheduleSlot('');
+                  }}
+                  className="w-full p-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                />
+              </div>
+
+              {studentRescheduleDate && (
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">Novo Horário Disponível:</label>
+                  {(() => {
+                    const freeSlots = allSlots.filter((slot) => {
+                      if (slot.data !== studentRescheduleDate) return false;
+                      if (slot.bloqueado) return false;
+                      const isBooked = allOrgLessons.some(
+                        (l) =>
+                          l.id !== lessonToStudentReschedule.id &&
+                          l.data === studentRescheduleDate &&
+                          l.horaInicio === slot.horaInicio &&
+                          l.status !== 'CANCELADA' &&
+                          (!l.instrutorId || !student?.instrutorId || l.instrutorId === student.instrutorId)
+                      );
+                      return !isBooked;
+                    });
+
+                    if (freeSlots.length === 0) {
+                      return (
+                        <p className="text-xs text-amber-700 bg-amber-50 p-2.5 rounded-xl border border-amber-200">
+                          Nenhum horário livre encontrado nesta data na agenda do instrutor. Escolha outra data.
+                        </p>
+                      );
+                    }
+
+                    return (
+                      <div className="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto p-1">
+                        {freeSlots.map((s) => (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => setStudentRescheduleSlot(s.horaInicio)}
+                            className={`p-2 rounded-xl border text-xs font-bold text-center transition-all cursor-pointer ${
+                              studentRescheduleSlot === s.horaInicio
+                                ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                                : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
+                            }`}
+                          >
+                            {s.horaInicio} - {s.horaFim}
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">
+                  Motivo da alteração (opcional):
+                </label>
+                <input
+                  type="text"
+                  value={studentRescheduleReason}
+                  onChange={(e) => setStudentRescheduleReason(e.target.value)}
+                  placeholder="Ex: Ajuste de escala ou compromisso"
+                  className="w-full p-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="pt-2 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setLessonToStudentReschedule(null)}
+                disabled={isProcessingAction}
+                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmStudentReschedule}
+                disabled={isProcessingAction || !studentRescheduleDate || !studentRescheduleSlot}
+                className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                <Check className="w-4 h-4" />
+                <span>{isProcessingAction ? 'Remarcando...' : 'Confirmar Remarcação'}</span>
+              </button>
             </div>
           </div>
         </div>
