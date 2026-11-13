@@ -127,6 +127,10 @@ const STORAGE_KEYS = {
   SEEDED: 'agd_seeded_v5'
 };
 
+// Registro (ledger) de aulas já creditadas no plano do aluno — garante idempotência
+// do lançamento de aulas realizadas (manual ou automático), mesmo após sincronizações.
+const CREDITED_LESSONS_KEY = 'agd_credited_lessons';
+
 function notifyDataChange() {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('agd:data-synced'));
@@ -3072,6 +3076,303 @@ export const db = {
       supabaseAdapter.saveLesson(lesson).then(() => notifyDataChange()).catch(console.error);
       this.addAuditLog(lesson.organizacaoId, actorId, 'ATUALIZAR_AULA', 'Aula', lesson.id, `Status: ${lesson.status}`);
     }
+  },
+
+  // ==========================================================================
+  // AGENDAMENTO RECORRENTE, REMARCAÇÃO E REGISTRO AUTOMÁTICO DE AULAS REALIZADAS
+  // ==========================================================================
+
+  /**
+   * Saldo do plano do aluno: total contratado, aulas realizadas, aulas futuras já agendadas
+   * e quantas aulas ainda podem ser agendadas sem ultrapassar o plano.
+   */
+  getStudentPlanBalance(studentId: string): {
+    total: number;
+    cumpridas: number;
+    agendadas: number;
+    saldo: number;
+  } {
+    const student = this.getStudentById(studentId);
+    const total = Math.max(0, Number(student?.totalAulasContratadas) || 0);
+    const cumpridas = Math.max(0, Number(student?.aulasCumpridas) || 0);
+    const agendadas = readList<Lesson>(STORAGE_KEYS.LESSONS).filter(
+      (l) => l.alunoId === studentId && (l.status === 'AGENDADA' || l.status === 'EM_ANDAMENTO')
+    ).length;
+    return { total, cumpridas, agendadas, saldo: Math.max(0, total - cumpridas - agendadas) };
+  },
+
+  /**
+   * Cria uma série de aulas (única, semanal ou mensal) para o aluno, respeitando bloqueios
+   * e conflitos. Datas com conflito são ignoradas e reportadas. Garante que o horário exista
+   * na grade do instrutor para que a aula apareça na agenda.
+   */
+  async createLessonSeriesAsync(params: {
+    template: Omit<Lesson, 'id' | 'data' | 'criadoEm'>;
+    dates: string[];
+    recorrenciaTipo: Lesson['recorrenciaTipo'];
+    actorId: string;
+  }): Promise<{ created: Lesson[]; skipped: { data: string; motivo: string }[] }> {
+    const created: Lesson[] = [];
+    const skipped: { data: string; motivo: string }[] = [];
+    const recorrenciaId =
+      params.dates.length > 1 ? `rec_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}` : undefined;
+    const slotsToCreate: AvailableSlot[] = [];
+    const instructorSlots = this.getSlots(params.template.organizacaoId, params.template.instrutorId);
+
+    params.dates.forEach((dateStr, idx) => {
+      const lesson: Lesson = {
+        ...params.template,
+        id: `lsn_${Date.now().toString(36)}_${idx}_${Math.random().toString(36).slice(2, 6)}`,
+        data: dateStr,
+        status: 'AGENDADA',
+        criadoEm: new Date().toISOString(),
+        recorrenciaId,
+        recorrenciaTipo: params.recorrenciaTipo
+      };
+
+      const ownSlot = instructorSlots.find((s) => s.data === dateStr && s.horaInicio === lesson.horaInicio);
+      if (ownSlot && ownSlot.bloqueado) {
+        skipped.push({ data: dateStr, motivo: ownSlot.motivoBloqueio || 'Horário bloqueado' });
+        return;
+      }
+
+      const conflict = this.hasSchedulingConflict(
+        lesson.organizacaoId,
+        lesson.data,
+        lesson.horaInicio,
+        lesson.horaFim,
+        lesson.alunoId,
+        lesson.instrutorId
+      );
+      if (conflict.conflict) {
+        skipped.push({ data: dateStr, motivo: conflict.reason || 'Conflito de horário' });
+        return;
+      }
+
+      const list = readList<Lesson>(STORAGE_KEYS.LESSONS);
+      list.push(lesson);
+      writeList(STORAGE_KEYS.LESSONS, list);
+      supabaseAdapter.saveLesson(lesson).catch(console.error);
+      created.push(lesson);
+
+      if (!ownSlot) {
+        slotsToCreate.push({
+          id: `slt_${lesson.instrutorId}_${dateStr}_${lesson.horaInicio.replace(':', '')}`,
+          organizacaoId: lesson.organizacaoId,
+          instrutorId: lesson.instrutorId,
+          data: dateStr,
+          horaInicio: lesson.horaInicio,
+          horaFim: lesson.horaFim,
+          bloqueado: false
+        });
+      }
+    });
+
+    if (slotsToCreate.length > 0) {
+      await this.saveSlotsBatchAsync(slotsToCreate, params.actorId);
+    }
+
+    if (created.length > 0) {
+      this.addAuditLog(
+        params.template.organizacaoId,
+        params.actorId,
+        'AGENDAR_AULAS_RECORRENTES',
+        'Aula',
+        recorrenciaId || created[0].id,
+        `${created.length} aula(s) agendada(s) (${params.recorrenciaTipo || 'UNICA'}) para o aluno ${params.template.alunoId}: ${created
+          .map((c) => c.data)
+          .join(', ')}`
+      );
+    }
+    notifyDataChange();
+    return { created, skipped };
+  },
+
+  /**
+   * Remarca (altera) data e/ou horário de uma aula agendada, registrando o histórico
+   * e notificando o aluno.
+   */
+  async rescheduleLessonAsync(params: {
+    lessonId: string;
+    novaData: string;
+    novaHoraInicio: string;
+    novaHoraFim: string;
+    motivo?: string;
+    actor: User;
+  }): Promise<{ success: boolean; error?: string; lesson?: Lesson }> {
+    const list = readList<Lesson>(STORAGE_KEYS.LESSONS);
+    const idx = list.findIndex((l) => l.id === params.lessonId);
+    if (idx < 0) return { success: false, error: 'Aula não encontrada.' };
+    const original = list[idx];
+    if (original.status !== 'AGENDADA' && original.status !== 'EM_ANDAMENTO') {
+      return { success: false, error: 'Somente aulas agendadas podem ser remarcadas.' };
+    }
+    if (original.data === params.novaData && original.horaInicio === params.novaHoraInicio) {
+      return { success: false, error: 'Escolha uma data ou horário diferente do atual.' };
+    }
+
+    const instructorSlots = this.getSlots(original.organizacaoId, original.instrutorId);
+    const targetSlot = instructorSlots.find(
+      (s) => s.data === params.novaData && s.horaInicio === params.novaHoraInicio
+    );
+    if (targetSlot && targetSlot.bloqueado) {
+      return { success: false, error: `Horário bloqueado: ${targetSlot.motivoBloqueio || 'Indisponível'}` };
+    }
+
+    const conflict = this.hasSchedulingConflict(
+      original.organizacaoId,
+      params.novaData,
+      params.novaHoraInicio,
+      params.novaHoraFim,
+      original.alunoId,
+      original.instrutorId,
+      original.id
+    );
+    if (conflict.conflict) return { success: false, error: conflict.reason };
+
+    const entry = {
+      dataAnterior: original.data,
+      horaInicioAnterior: original.horaInicio,
+      novaData: params.novaData,
+      novaHoraInicio: params.novaHoraInicio,
+      motivo: params.motivo?.trim() || undefined,
+      alteradoPorId: params.actor.id,
+      alteradoPorNome: params.actor.nome,
+      alteradoEm: new Date().toISOString()
+    };
+
+    const updated: Lesson = {
+      ...original,
+      data: params.novaData,
+      horaInicio: params.novaHoraInicio,
+      horaFim: params.novaHoraFim,
+      historicoRemarcacoes: [...(original.historicoRemarcacoes || []), entry]
+    };
+    list[idx] = updated;
+    writeList(STORAGE_KEYS.LESSONS, list);
+    notifyDataChange();
+    supabaseAdapter.saveLesson(updated).catch(console.error);
+
+    if (!targetSlot) {
+      await this.saveSlotsBatchAsync(
+        [
+          {
+            id: `slt_${original.instrutorId}_${params.novaData}_${params.novaHoraInicio.replace(':', '')}`,
+            organizacaoId: original.organizacaoId,
+            instrutorId: original.instrutorId,
+            data: params.novaData,
+            horaInicio: params.novaHoraInicio,
+            horaFim: params.novaHoraFim,
+            bloqueado: false
+          }
+        ],
+        params.actor.id
+      );
+    }
+
+    const student = this.getStudentById(original.alunoId);
+    await this.createStudentNotificationAsync({
+      id: `notif_resched_${original.id}_${Date.now().toString(36)}`,
+      organizacaoId: original.organizacaoId,
+      alunoId: original.alunoId,
+      alunoNome: student?.nome,
+      instrutorId: params.actor.id,
+      instrutorNome: params.actor.nome,
+      aulaId: original.id,
+      dataAula: params.novaData,
+      horaAula: params.novaHoraInicio,
+      tipo: 'AVISO_AGENDA',
+      titulo: 'Aula Remarcada pelo Instrutor',
+      mensagem: `Sua aula de ${formatDateBR(original.data)} às ${original.horaInicio} foi remarcada para ${formatDateBR(
+        params.novaData
+      )} às ${params.novaHoraInicio}.${entry.motivo ? ` Motivo: ${entry.motivo}` : ''}`,
+      lida: false,
+      criadoEm: new Date().toISOString()
+    }).catch(console.error);
+
+    this.addAuditLog(
+      original.organizacaoId,
+      params.actor.id,
+      'REMARCAR_AULA',
+      'Aula',
+      original.id,
+      `Aula remarcada de ${original.data} ${original.horaInicio} para ${params.novaData} ${params.novaHoraInicio}`
+    );
+    return { success: true, lesson: updated };
+  },
+
+  /**
+   * Conclui uma aula e credita +1 aula realizada no plano do aluno de forma idempotente
+   * (uma mesma aula nunca é creditada duas vezes, mesmo após sincronizações).
+   */
+  completeLessonWithCredit(
+    lesson: Lesson,
+    opts: { notaAula?: number; observacaoInstrutor?: string; automatica?: boolean },
+    actorId: string
+  ): boolean {
+    const list = readList<Lesson>(STORAGE_KEYS.LESSONS);
+    const idx = list.findIndex((l) => l.id === lesson.id);
+    const base = idx >= 0 ? list[idx] : lesson;
+    if (base.status === 'CANCELADA') return false;
+
+    const updated: Lesson = {
+      ...base,
+      status: 'CONCLUIDA',
+      notaAula: opts.notaAula ?? base.notaAula,
+      observacaoInstrutor: opts.observacaoInstrutor ?? base.observacaoInstrutor,
+      concluidaAutomaticamente: opts.automatica ? true : undefined,
+      concluidaEm: new Date().toISOString()
+    };
+    if (idx >= 0) list[idx] = updated;
+    else list.push(updated);
+    writeList(STORAGE_KEYS.LESSONS, list);
+    supabaseAdapter.saveLesson(updated).catch(console.error);
+
+    let credited = false;
+    const ledger = new Set<string>(readList<string>(CREDITED_LESSONS_KEY));
+    if (!ledger.has(updated.id) && base.status !== 'CONCLUIDA') {
+      const student = this.getStudentById(updated.alunoId);
+      if (student) {
+        ledger.add(updated.id);
+        writeList(CREDITED_LESSONS_KEY, Array.from(ledger).slice(-5000));
+        this.saveStudent({ ...student, aulasCumpridas: (Number(student.aulasCumpridas) || 0) + 1 }, actorId);
+        credited = true;
+      }
+    }
+
+    this.addAuditLog(
+      updated.organizacaoId,
+      actorId,
+      opts.automatica ? 'REGISTRO_AUTOMATICO_AULA' : 'CONCLUIR_AULA',
+      'Aula',
+      updated.id,
+      `Aula de ${updated.data} ${updated.horaInicio} registrada como realizada${opts.automatica ? ' automaticamente ao término do horário' : ''}`
+    );
+    notifyDataChange();
+    return credited;
+  },
+
+  /**
+   * Registra automaticamente como realizadas as aulas agendadas (não canceladas/não alteradas
+   * após o horário) cujo horário de término já passou.
+   */
+  autoCompleteElapsedLessons(params: { orgId?: string; instrutorId?: string; alunoId?: string; actorId: string }): number {
+    const now = Date.now();
+    const pending = readList<Lesson>(STORAGE_KEYS.LESSONS).filter((l) => {
+      if (l.status !== 'AGENDADA') return false;
+      if (params.orgId && l.organizacaoId !== params.orgId) return false;
+      if (params.instrutorId && l.instrutorId && l.instrutorId !== params.instrutorId) return false;
+      if (params.alunoId && l.alunoId !== params.alunoId) return false;
+      if (!l.data || !l.horaFim) return false;
+      const endMs = new Date(`${l.data}T${l.horaFim}:00`).getTime();
+      return Number.isFinite(endMs) && endMs <= now;
+    });
+    let count = 0;
+    for (const l of pending) {
+      this.completeLessonWithCredit(l, { automatica: true }, params.actorId);
+      count++;
+    }
+    return count;
   },
 
   // Accounts Receivable

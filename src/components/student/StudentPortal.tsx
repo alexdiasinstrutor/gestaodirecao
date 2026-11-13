@@ -227,6 +227,31 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
     ? Math.min(100, Math.round(((student.aulasCumpridas || 0) / (student.totalAulasContratadas || 20)) * 100))
     : 0;
 
+  // Registro automático das aulas já finalizadas (mesma regra do instrutor, idempotente)
+  useEffect(() => {
+    if (!student?.id) return;
+    const run = () => {
+      try {
+        const count = db.autoCompleteElapsedLessons({ alunoId: student.id, actorId: currentUser.id });
+        if (count > 0) setPortalVersion((v) => v + 1);
+      } catch (err) {
+        console.error('Falha no registro automático de aulas:', err);
+      }
+    };
+    run();
+    const id = setInterval(run, 60000);
+    return () => clearInterval(id);
+  }, [student?.id, currentUser.id]);
+
+  // Registro de aulas realizadas do aluno (numeradas conforme o plano)
+  const completedLessonsRegistry = useMemo(() => {
+    const done = lessons
+      .filter((l) => l.status === 'CONCLUIDA')
+      .sort((a, b) => `${a.data}_${a.horaInicio}`.localeCompare(`${b.data}_${b.horaInicio}`));
+    const offset = Math.max(0, (Number(student?.aulasCumpridas) || 0) - done.length);
+    return done.map((l, i) => ({ lesson: l, numero: offset + i + 1 })).reverse();
+  }, [lessons, student?.aulasCumpridas]);
+
   const handleBookLesson = (e: React.FormEvent) => {
     e.preventDefault();
     setScheduleError('');
@@ -792,6 +817,17 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                           Horário desmarcado pelo instrutor — escolha uma nova data e horário disponível na agenda.
                         </p>
                       )}
+                      {(lsn.historicoRemarcacoes?.length || 0) > 0 && (
+                        <p className="text-amber-700 font-semibold text-[11px]">
+                          Remarcada (antes: {formatDateBR(lsn.historicoRemarcacoes![lsn.historicoRemarcacoes!.length - 1].dataAnterior)} às{' '}
+                          {lsn.historicoRemarcacoes![lsn.historicoRemarcacoes!.length - 1].horaInicioAnterior})
+                        </p>
+                      )}
+                      {lsn.recorrenciaTipo && lsn.recorrenciaTipo !== 'UNICA' && (
+                        <p className="text-indigo-700 font-semibold text-[11px]">
+                          Agendamento {lsn.recorrenciaTipo === 'SEMANAL' ? 'semanal' : 'mensal'}
+                        </p>
+                      )}
                     </div>
                     <span
                       className={`px-2.5 py-1 rounded-lg text-xs font-bold shrink-0 self-start sm:self-center ${lsn.status === 'CONCLUIDA'
@@ -801,11 +837,51 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                             : 'bg-blue-100 text-blue-800'
                         }`}
                     >
-                      {isCancelled ? 'DESMARCADA — REMARCAR' : lsn.status}
+                      {isCancelled
+                        ? 'DESMARCADA — REMARCAR'
+                        : lsn.status === 'CONCLUIDA'
+                        ? 'REALIZADA'
+                        : lsn.status}
                     </span>
                   </div>
                 );
               })}
+            </div>
+
+            {/* Registro de Aulas Realizadas — mesmo registro visível ao instrutor */}
+            <div className="pt-3 border-t border-slate-100 space-y-2">
+              <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>
+                  Registro de Aulas Realizadas ({student.aulasCumpridas || 0} de {student.totalAulasContratadas || 0})
+                </span>
+              </h3>
+              {completedLessonsRegistry.length === 0 ? (
+                <p className="text-[11px] text-slate-500 italic">
+                  Suas aulas serão registradas aqui automaticamente ao término de cada horário agendado.
+                </p>
+              ) : (
+                <div className="space-y-1.5 max-h-60 overflow-y-auto">
+                  {completedLessonsRegistry.map(({ lesson: l, numero }) => (
+                    <div
+                      key={l.id}
+                      className="p-2.5 rounded-xl border border-emerald-100 bg-emerald-50/50 flex items-center justify-between gap-2 text-xs"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-bold text-slate-900">
+                          Aula {numero}
+                          {student.totalAulasContratadas ? ` de ${student.totalAulasContratadas}` : ''} ·{' '}
+                          {formatDateBR(l.data)} às {l.horaInicio}
+                        </p>
+                        <p className="text-slate-600 truncate">{l.topico}</p>
+                      </div>
+                      <span className="px-2 py-0.5 rounded bg-emerald-600 text-white text-[10px] font-bold shrink-0">
+                        {l.concluidaAutomaticamente ? '✓ Registrada' : `✓ Avaliada${l.notaAula ? ` ${l.notaAula}` : ''}`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}

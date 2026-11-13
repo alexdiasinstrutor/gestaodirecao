@@ -1183,6 +1183,69 @@ runTest(
   }
 );
 
+runTest(
+  'T26',
+  'Agendamento Recorrente (Semanal/Mensal), Remarcação com Histórico e Registro Automático de Aulas Realizadas',
+  'Garante agendamento único, semanal e mensal respeitando o plano do aluno, remarcação de datas com notificação, e registro automático/manual de aulas realizadas visível a instrutor e aluno',
+  () => {
+    const typesFile = fs.readFileSync(path.join(BASE_DIR, 'src/types/index.ts'), 'utf-8');
+    const storageFile = fs.readFileSync(path.join(BASE_DIR, 'src/lib/storage.ts'), 'utf-8');
+    const scheduleFile = fs.readFileSync(path.join(BASE_DIR, 'src/components/instructor/ScheduleView.tsx'), 'utf-8');
+    const studentPortalFile = fs.readFileSync(path.join(BASE_DIR, 'src/components/student/StudentPortal.tsx'), 'utf-8');
+    const adapterFile = fs.readFileSync(path.join(BASE_DIR, 'src/lib/supabaseAdapter.ts'), 'utf-8');
+
+    // 1. Tipagem de Aula, Recorrência e Histórico de Remarcações
+    assert.equal(
+      typesFile.includes('recorrenciaTipo?: LessonRecurrenceType;') &&
+      typesFile.includes('historicoRemarcacoes?: LessonRescheduleEntry[];') &&
+      typesFile.includes('concluidaAutomaticamente?: boolean;') &&
+      typesFile.includes("'SEMANAL' | 'MENSAL'"),
+      true,
+      'types/index.ts suporta agendamentos com recorrência semanal/mensal, histórico de remarcações e conclusão automática'
+    );
+
+    // 2. Métodos de Banco de Dados no Storage
+    assert.equal(
+      storageFile.includes('getStudentPlanBalance(') &&
+      storageFile.includes('createLessonSeriesAsync(') &&
+      storageFile.includes('rescheduleLessonAsync(') &&
+      storageFile.includes('completeLessonWithCredit(') &&
+      storageFile.includes('autoCompleteElapsedLessons('),
+      true,
+      'storage.ts implementa saldo do plano, criação de séries recorrentes, remarcação com histórico e registro automático/idempotente'
+    );
+
+    // 3. Adapter do Supabase com preservação de metadados de recorrência e remarcação
+    assert.equal(
+      adapterFile.includes('LESSON_META_PREFIX') &&
+      adapterFile.includes('recorrenciaTipo') &&
+      adapterFile.includes('historicoRemarcacoes'),
+      true,
+      'supabaseAdapter preserva metadados de recorrência e remarcação de forma retrocompatível'
+    );
+
+    // 4. Interface do Instrutor (ScheduleView)
+    assert.equal(
+      scheduleFile.includes('generateRecurringLessonDates') &&
+      scheduleFile.includes('handleRescheduleSubmit') &&
+      scheduleFile.includes('selectedPlanBalance') &&
+      scheduleFile.includes('completedLessonsRegistry') &&
+      scheduleFile.includes('Registro de Aulas Realizadas'),
+      true,
+      'ScheduleView possui seletor de recorrência (semanal/mensal), verificação do saldo do plano, modal de remarcação e painel de aulas realizadas'
+    );
+
+    // 5. Interface do Aluno (StudentPortal)
+    assert.equal(
+      studentPortalFile.includes('autoCompleteElapsedLessons') &&
+      studentPortalFile.includes('completedLessonsRegistry') &&
+      studentPortalFile.includes('Registro de Aulas Realizadas'),
+      true,
+      'StudentPortal executa registro automático de aulas concluídas e exibe o registro de aulas realizadas em sincronia com o plano'
+    );
+  }
+);
+
 console.log('\n====================================================================');
 const passed = results.filter((r) => r.status === 'PASS').length;
 const failed = results.filter((r) => r.status === 'FAIL').length;

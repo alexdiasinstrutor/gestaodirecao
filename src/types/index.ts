@@ -239,6 +239,27 @@ export interface Lesson {
   notaAula?: number; // 1 to 10
   competenciasTrabalhadas?: string[];
   criadoEm: string;
+  // Agendamento recorrente (semanal / mensal) vinculado ao plano do aluno
+  recorrenciaId?: string;
+  recorrenciaTipo?: LessonRecurrenceType;
+  // Histórico de remarcações (aula alterada de data/horário)
+  historicoRemarcacoes?: LessonRescheduleEntry[];
+  // Registro automático de aula realizada ao término do horário
+  concluidaAutomaticamente?: boolean;
+  concluidaEm?: string;
+}
+
+export type LessonRecurrenceType = 'UNICA' | 'SEMANAL' | 'MENSAL';
+
+export interface LessonRescheduleEntry {
+  dataAnterior: string; // YYYY-MM-DD
+  horaInicioAnterior: string; // HH:mm
+  novaData: string;
+  novaHoraInicio: string;
+  motivo?: string;
+  alteradoPorId?: string;
+  alteradoPorNome?: string;
+  alteradoEm: string;
 }
 
 export interface AvailableSlot {

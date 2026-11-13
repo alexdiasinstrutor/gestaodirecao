@@ -21,7 +21,10 @@ import {
   Trash2,
   BellRing,
   RefreshCw,
-  CalendarRange
+  CalendarRange,
+  CalendarClock,
+  Repeat,
+  ClipboardCheck
 } from 'lucide-react';
 import { db, syncFromSupabase } from '../../lib/storage';
 import { formatDateBR } from '../../lib/validation';
@@ -32,7 +35,8 @@ import {
   AvailableSlot,
   Vehicle,
   Student,
-  SchedulePeriodScope
+  SchedulePeriodScope,
+  LessonRecurrenceType
 } from '../../types';
 
 interface ScheduleViewProps {
@@ -146,6 +150,44 @@ function generateDatesForScope(
   return dates;
 }
 
+/**
+ * Gera as datas de uma série de aulas do aluno:
+ * - UNICA: somente a data inicial
+ * - SEMANAL: nos dias da semana escolhidos, a partir da data inicial
+ * - MENSAL: no mesmo dia de cada mês (ajustado ao último dia do mês quando necessário)
+ */
+export function generateRecurringLessonDates(
+  startDateStr: string,
+  tipo: LessonRecurrenceType,
+  weekdays: number[],
+  count: number
+): string[] {
+  if (!startDateStr || count <= 0) return [];
+  if (tipo === 'UNICA') return [startDateStr];
+
+  const out: string[] = [];
+  if (tipo === 'SEMANAL') {
+    const days = weekdays.length > 0 ? weekdays : [new Date(`${startDateStr}T12:00:00`).getDay()];
+    const start = new Date(`${startDateStr}T12:00:00`);
+    for (let i = 0; i < 730 && out.length < count; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      if (days.includes(d.getDay())) out.push(d.toISOString().slice(0, 10));
+    }
+    return out;
+  }
+
+  // MENSAL
+  const [y, m, day] = startDateStr.split('-').map((v) => parseInt(v, 10));
+  for (let k = 0; k < 120 && out.length < count; k++) {
+    const target = new Date(y, m - 1 + k, 1, 12, 0, 0);
+    const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+    target.setDate(Math.min(day, lastDay));
+    out.push(target.toISOString().slice(0, 10));
+  }
+  return out;
+}
+
 export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentUser }) => {
   const orgId = currentOrg?.id || currentUser?.organizacaoId || 'org_direcao_certa_01';
 
@@ -203,6 +245,23 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
   const [completionGrade, setCompletionGrade] = useState<number>(9);
   const [completionNote, setCompletionNote] = useState<string>('');
 
+  // Agendamento do aluno: data inicial editável, recorrência (Única / Semanal / Mensal) e quantidade
+  const [lessonStartDate, setLessonStartDate] = useState<string>(selectedDate);
+  const [lessonRecurrence, setLessonRecurrence] = useState<LessonRecurrenceType>('UNICA');
+  const [lessonWeekdays, setLessonWeekdays] = useState<number[]>([]);
+  const [lessonQuantity, setLessonQuantity] = useState<string>('1');
+  const [allowExceedPlan, setAllowExceedPlan] = useState<boolean>(false);
+
+  // Remarcação de aula (alterar data/horário marcado)
+  const [lessonToReschedule, setLessonToReschedule] = useState<Lesson | null>(null);
+  const [rescheduleDate, setRescheduleDate] = useState<string>(selectedDate);
+  const [rescheduleTime, setRescheduleTime] = useState<string>('09:00');
+  const [rescheduleReason, setRescheduleReason] = useState<string>('');
+  const [rescheduleError, setRescheduleError] = useState<string>('');
+
+  // Registro de aulas realizadas
+  const [registryStudentFilter, setRegistryStudentFilter] = useState<string>('TODOS');
+
   const [scheduleError, setScheduleError] = useState<string>('');
   const [scheduleSuccess, setScheduleSuccess] = useState<string>('');
 
@@ -219,6 +278,32 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
       window.removeEventListener('storage', handleDataSynced);
     };
   }, []);
+
+  // Registro automático das aulas realizadas: ao término do horário, aulas agendadas
+  // (não desmarcadas) são registradas como realizadas e creditadas no plano do aluno.
+  useEffect(() => {
+    const runAutoComplete = () => {
+      try {
+        const count = db.autoCompleteElapsedLessons({
+          orgId,
+          instrutorId: currentUser.id,
+          actorId: currentUser.id
+        });
+        if (count > 0) {
+          setSyncVersion((v) => v + 1);
+          setScheduleSuccess(
+            `${count} aula(s) finalizada(s) registrada(s) automaticamente como realizada(s) e creditada(s) no plano do aluno.`
+          );
+          setTimeout(() => setScheduleSuccess(''), 5000);
+        }
+      } catch (err) {
+        console.error('Falha no registro automático de aulas:', err);
+      }
+    };
+    runAutoComplete();
+    const intervalId = setInterval(runAutoComplete, 60000);
+    return () => clearInterval(intervalId);
+  }, [orgId, currentUser.id]);
 
   // Data
   const slots = useMemo(
@@ -269,6 +354,43 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
     horaInicio: '09:00',
     horaFim: '09:50'
   });
+
+  // Plano do aluno selecionado (total, realizadas, agendadas e saldo disponível)
+  const selectedStudentForLesson = useMemo(
+    () => allOrgStudents.find((s) => s.id === lessonForm.alunoId) || null,
+    [allOrgStudents, lessonForm.alunoId]
+  );
+  const selectedPlanBalance = useMemo(
+    () => (lessonForm.alunoId ? db.getStudentPlanBalance(lessonForm.alunoId) : null),
+    [lessonForm.alunoId, syncVersion, showScheduleModal]
+  );
+
+  // Datas previstas da série a agendar (limitadas ao saldo do plano, salvo exceção autorizada)
+  const plannedLessonDates = useMemo(() => {
+    const requested = Math.max(1, Math.min(120, parseInt(lessonQuantity, 10) || 1));
+    const saldo = selectedPlanBalance?.saldo ?? requested;
+    const effective = lessonRecurrence === 'UNICA' ? 1 : allowExceedPlan ? requested : Math.min(requested, saldo);
+    return generateRecurringLessonDates(lessonStartDate, lessonRecurrence, lessonWeekdays, effective);
+  }, [lessonQuantity, selectedPlanBalance, lessonRecurrence, allowExceedPlan, lessonStartDate, lessonWeekdays]);
+
+  // Registro de aulas realizadas (visível ao instrutor; o aluno visualiza o mesmo registro no portal)
+  const completedLessonsRegistry = useMemo(() => {
+    const done = lessons
+      .filter((l) => l.status === 'CONCLUIDA' && (!l.instrutorId || l.instrutorId === currentUser.id))
+      .sort((a, b) => `${a.data}_${a.horaInicio}`.localeCompare(`${b.data}_${b.horaInicio}`));
+    const perStudentIndex = new Map<string, number>();
+    const numbered = done.map((l) => {
+      const st = allOrgStudents.find((s) => s.id === l.alunoId);
+      const totalDoneForStudent = done.filter((d) => d.alunoId === l.alunoId).length;
+      const offset = Math.max(0, (Number(st?.aulasCumpridas) || 0) - totalDoneForStudent);
+      const idx = (perStudentIndex.get(l.alunoId) || 0) + 1;
+      perStudentIndex.set(l.alunoId, idx);
+      return { lesson: l, student: st, numero: offset + idx, total: Number(st?.totalAulasContratadas) || 0 };
+    });
+    return numbered
+      .filter((n) => registryStudentFilter === 'TODOS' || n.lesson.alunoId === registryStudentFilter)
+      .reverse();
+  }, [lessons, allOrgStudents, currentUser.id, registryStudentFilter]);
 
   // Preview de datas para Liberação
   const targetReleaseDates = useMemo(
@@ -590,7 +712,8 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
     }
   };
 
-  const handleOpenScheduleForSlot = (time: string) => {
+  const handleOpenScheduleForSlot = (time: string, dateOverride?: string) => {
+    const baseDate = dateOverride || selectedDate;
     setSelectedSlotForSchedule(time);
     setLessonForm({
       ...lessonForm,
@@ -599,11 +722,29 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
       horaInicio: time,
       horaFim: getEndTimeForStart(time)
     });
+    setLessonStartDate(baseDate);
+    setLessonRecurrence('UNICA');
+    setLessonWeekdays([new Date(`${baseDate}T12:00:00`).getDay()]);
+    setLessonQuantity('1');
+    setAllowExceedPlan(false);
     setScheduleError('');
     setShowScheduleModal(true);
   };
 
-  const handleCreateLessonSubmit = (e: React.FormEvent) => {
+  const handleChangeRecurrence = (tipo: LessonRecurrenceType) => {
+    setLessonRecurrence(tipo);
+    if (tipo === 'UNICA') {
+      setLessonQuantity('1');
+    } else {
+      const saldo = selectedPlanBalance?.saldo ?? 4;
+      setLessonQuantity(String(Math.max(1, Math.min(saldo || 1, tipo === 'SEMANAL' ? 20 : 12))));
+      if (lessonWeekdays.length === 0) {
+        setLessonWeekdays([new Date(`${lessonStartDate}T12:00:00`).getDay()]);
+      }
+    }
+  };
+
+  const handleCreateLessonSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setScheduleError('');
 
@@ -619,56 +760,128 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
       return;
     }
 
-    const newLesson: Lesson = {
-      id: `lsn_${Date.now()}`,
-      organizacaoId: orgId,
-      alunoId: targetAlunoId,
-      instrutorId: currentUser.id,
-      veiculoId: targetVeiculoId,
-      data: selectedDate,
-      horaInicio: lessonForm.horaInicio,
-      horaFim: lessonForm.horaFim || getEndTimeForStart(lessonForm.horaInicio),
-      topico: lessonForm.topico.trim() || 'Aula Prática de Direção',
-      status: 'AGENDADA',
-      criadoEm: new Date().toISOString()
-    };
-
-    const result = db.createLesson(newLesson, currentUser.id);
-    if (!result.success) {
-      setScheduleError(result.error || 'Não foi possível agendar esta aula.');
+    if (!lessonStartDate) {
+      setScheduleError('Informe a data da aula.');
       return;
     }
 
-    setShowScheduleModal(false);
-    setSyncVersion((v) => v + 1);
-    setScheduleSuccess(`Aula prática agendada com sucesso para ${formatDateBR(selectedDate)} às ${lessonForm.horaInicio}!`);
-    setTimeout(() => setScheduleSuccess(''), 3500);
+    const balance = db.getStudentPlanBalance(targetAlunoId);
+    if (balance.saldo <= 0 && !allowExceedPlan) {
+      setScheduleError(
+        `O plano do aluno não possui saldo de aulas (${balance.cumpridas} realizadas + ${balance.agendadas} agendadas de ${balance.total}). Adicione um pacote/aulas avulsas na ficha do aluno ou marque "Agendar mesmo excedendo o plano".`
+      );
+      return;
+    }
+
+    if (plannedLessonDates.length === 0) {
+      setScheduleError('Nenhuma data gerada para o agendamento. Verifique a recorrência e os dias da semana.');
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const horaFim = lessonForm.horaFim || getEndTimeForStart(lessonForm.horaInicio);
+      const result = await db.createLessonSeriesAsync({
+        template: {
+          organizacaoId: orgId,
+          alunoId: targetAlunoId,
+          instrutorId: currentUser.id,
+          veiculoId: targetVeiculoId,
+          horaInicio: lessonForm.horaInicio,
+          horaFim,
+          topico: lessonForm.topico.trim() || 'Aula Prática de Direção',
+          status: 'AGENDADA'
+        },
+        dates: plannedLessonDates,
+        recorrenciaTipo: lessonRecurrence,
+        actorId: currentUser.id
+      });
+
+      if (result.created.length === 0) {
+        setScheduleError(
+          result.skipped.length > 0
+            ? `Não foi possível agendar: ${result.skipped.map((s) => `${formatDateBR(s.data)} (${s.motivo})`).join('; ')}`
+            : 'Não foi possível agendar esta aula.'
+        );
+        return;
+      }
+
+      setShowScheduleModal(false);
+      setSyncVersion((v) => v + 1);
+      const recurrenceLabel =
+        lessonRecurrence === 'SEMANAL' ? 'semanal' : lessonRecurrence === 'MENSAL' ? 'mensal' : 'única';
+      const skippedText =
+        result.skipped.length > 0
+          ? ` ${result.skipped.length} data(s) ignorada(s) por conflito/bloqueio: ${result.skipped
+              .map((s) => formatDateBR(s.data))
+              .join(', ')}.`
+          : '';
+      setScheduleSuccess(
+        result.created.length === 1
+          ? `Aula agendada com sucesso para ${formatDateBR(result.created[0].data)} às ${lessonForm.horaInicio}!${skippedText}`
+          : `${result.created.length} aulas (${recurrenceLabel}) agendadas às ${lessonForm.horaInicio}, de ${formatDateBR(
+              result.created[0].data
+            )} a ${formatDateBR(result.created[result.created.length - 1].data)}.${skippedText}`
+      );
+      setTimeout(() => setScheduleSuccess(''), 6000);
+    } catch (err) {
+      console.error(err);
+      setScheduleError('Erro ao salvar o agendamento.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleOpenReschedule = (lesson: Lesson) => {
+    setLessonToReschedule(lesson);
+    setRescheduleDate(lesson.data);
+    setRescheduleTime(lesson.horaInicio);
+    setRescheduleReason('');
+    setRescheduleError('');
+  };
+
+  const handleRescheduleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!lessonToReschedule) return;
+    setRescheduleError('');
+    setIsProcessing(true);
+    try {
+      const res = await db.rescheduleLessonAsync({
+        lessonId: lessonToReschedule.id,
+        novaData: rescheduleDate,
+        novaHoraInicio: rescheduleTime,
+        novaHoraFim: getEndTimeForStart(rescheduleTime),
+        motivo: rescheduleReason,
+        actor: currentUser
+      });
+      if (!res.success) {
+        setRescheduleError(res.error || 'Não foi possível remarcar a aula.');
+        return;
+      }
+      setLessonToReschedule(null);
+      setSelectedDate(rescheduleDate);
+      setSyncVersion((v) => v + 1);
+      setScheduleSuccess(
+        `Aula remarcada para ${formatDateBR(rescheduleDate)} às ${rescheduleTime}. O aluno foi notificado no portal.`
+      );
+      setTimeout(() => setScheduleSuccess(''), 5000);
+    } catch (err) {
+      console.error(err);
+      setRescheduleError('Erro ao remarcar a aula.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleCompleteLessonSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!lessonToComplete) return;
 
-    const updated: Lesson = {
-      ...lessonToComplete,
-      status: 'CONCLUIDA',
-      notaAula: completionGrade,
-      observacaoInstrutor: completionNote
-    };
-
-    db.updateLesson(updated, currentUser.id);
-
-    // Credit attended hours
-    const student = db.getStudentById(lessonToComplete.alunoId);
-    if (student) {
-      db.saveStudent(
-        {
-          ...student,
-          aulasCumpridas: student.aulasCumpridas + 1
-        },
-        currentUser.id
-      );
-    }
+    db.completeLessonWithCredit(
+      lessonToComplete,
+      { notaAula: completionGrade, observacaoInstrutor: completionNote },
+      currentUser.id
+    );
 
     setShowCompleteLessonModal(false);
     setLessonToComplete(null);
@@ -712,6 +925,14 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
         </div>
 
         <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+          <button
+            onClick={() => handleOpenScheduleForSlot(dateSlots.find((s) => !s.bloqueado)?.horaInicio || '09:00')}
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer shadow-xs"
+            title="Agendar aulas do aluno: única, semanal ou mensal, conforme o plano"
+          >
+            <Repeat className="w-4 h-4 shrink-0" />
+            <span>Agendar Aluno (Semanal / Mensal)</span>
+          </button>
           <button
             onClick={() => setShowSingleSlotModal(true)}
             className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
@@ -898,6 +1119,30 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
                         🚗 {vehicle.modelo.split(' ')[0]} ({vehicle.placa})
                       </p>
                     )}
+                    <div className="flex flex-wrap gap-1 pt-0.5">
+                      {activeLesson.recorrenciaTipo && activeLesson.recorrenciaTipo !== 'UNICA' && (
+                        <span className="px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800 text-[10px] font-bold flex items-center gap-0.5">
+                          <Repeat className="w-3 h-3" />
+                          {activeLesson.recorrenciaTipo === 'SEMANAL' ? 'Semanal' : 'Mensal'}
+                        </span>
+                      )}
+                      {(activeLesson.historicoRemarcacoes?.length || 0) > 0 && (
+                        <span
+                          className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-bold"
+                          title={activeLesson.historicoRemarcacoes!
+                            .map((h) => `De ${formatDateBR(h.dataAnterior)} ${h.horaInicioAnterior} → ${formatDateBR(h.novaData)} ${h.novaHoraInicio}`)
+                            .join('\n')}
+                        >
+                          Remarcada (antes: {formatDateBR(activeLesson.historicoRemarcacoes![activeLesson.historicoRemarcacoes!.length - 1].dataAnterior)}{' '}
+                          {activeLesson.historicoRemarcacoes![activeLesson.historicoRemarcacoes!.length - 1].horaInicioAnterior})
+                        </span>
+                      )}
+                      {activeLesson.status === 'CONCLUIDA' && activeLesson.concluidaAutomaticamente && (
+                        <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                          Registro automático
+                        </span>
+                      )}
+                    </div>
                     {activeLesson.status === 'CONCLUIDA' && activeLesson.notaAula && (
                       <p className="text-xs text-emerald-700 font-semibold">
                         Nota atribuída: {activeLesson.notaAula}/10
@@ -917,7 +1162,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
                 {/* Actions */}
                 <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs gap-2">
                   {activeLesson ? (
-                    <div className="flex items-center justify-between w-full gap-2">
+                    <div className="flex flex-wrap items-center justify-between w-full gap-2">
                       {activeLesson.status !== 'CONCLUIDA' ? (
                         <>
                           <button
@@ -928,6 +1173,15 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
                             className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-xs cursor-pointer shadow-xs"
                           >
                             Concluir & Avaliar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenReschedule(activeLesson)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                            title="Alterar a data/horário desta aula"
+                          >
+                            <CalendarClock className="w-3.5 h-3.5 shrink-0" />
+                            <span>Remarcar</span>
                           </button>
                           <button
                             type="button"
@@ -946,7 +1200,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
                       )}
                     </div>
                   ) : (
-                    <div className="flex items-center justify-between w-full gap-2">
+                    <div className="flex flex-wrap items-center justify-between w-full gap-2">
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleOpenScheduleForSlot(slot.horaInicio)}
@@ -980,6 +1234,81 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
           })}
         </div>
       )}
+
+      {/* ========================================================================= */}
+      {/* REGISTRO DE AULAS REALIZADAS (instrutor) — mesmo registro aparece ao aluno */}
+      {/* ========================================================================= */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <ClipboardCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Registro de Aulas Realizadas ({completedLessonsRegistry.length})</span>
+            </h2>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              Ao término do horário, as aulas agendadas que não foram desmarcadas são registradas automaticamente e
+              creditadas no plano do aluno. O aluno visualiza este mesmo registro no portal dele.
+            </p>
+          </div>
+          <select
+            value={registryStudentFilter}
+            onChange={(e) => setRegistryStudentFilter(e.target.value)}
+            className="px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-medium"
+          >
+            <option value="TODOS">Todos os alunos</option>
+            {students.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.nome} ({s.aulasCumpridas}/{s.totalAulasContratadas})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {completedLessonsRegistry.length === 0 ? (
+          <p className="text-xs text-slate-500 italic p-3 bg-slate-50 rounded-xl">
+            Nenhuma aula realizada registrada ainda.
+          </p>
+        ) : (
+          <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+            {completedLessonsRegistry.slice(0, 100).map(({ lesson: l, student: st, numero, total }) => (
+              <div
+                key={l.id}
+                className="p-3 rounded-xl border border-emerald-100 bg-emerald-50/40 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
+              >
+                <div className="min-w-0 space-y-0.5">
+                  <p className="font-bold text-slate-900">
+                    {st?.nome || 'Aluno'} · Aula {numero}
+                    {total > 0 ? ` de ${total}` : ''}
+                  </p>
+                  <p className="text-slate-600">
+                    {formatDateBR(l.data)} · {l.horaInicio} - {l.horaFim} · {l.topico}
+                  </p>
+                  {l.observacaoInstrutor && !l.observacaoInstrutor.startsWith('[DESMARCADA') && (
+                    <p className="text-slate-500 italic truncate">“{l.observacaoInstrutor}”</p>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1 shrink-0">
+                  {(l.historicoRemarcacoes?.length || 0) > 0 && (
+                    <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-bold">Remarcada</span>
+                  )}
+                  {l.recorrenciaTipo && l.recorrenciaTipo !== 'UNICA' && (
+                    <span className="px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 text-[10px] font-bold">
+                      {l.recorrenciaTipo === 'SEMANAL' ? 'Semanal' : 'Mensal'}
+                    </span>
+                  )}
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      l.concluidaAutomaticamente ? 'bg-emerald-600 text-white' : 'bg-blue-600 text-white'
+                    }`}
+                  >
+                    {l.concluidaAutomaticamente ? '✓ Registro automático' : `✓ Avaliada${l.notaAula ? ` (nota ${l.notaAula})` : ''}`}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* ========================================================================= */}
       {/* MODAL: LIBERAR AGENDA (DIA, PERÍODO, SEMANAL, MENSAL, ANUAL)              */}
@@ -1557,9 +1886,38 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
                 </div>
               )}
 
-              <div className="p-3 bg-indigo-50/60 rounded-xl border border-indigo-200 space-y-1 text-slate-700">
-                <p>Data: <strong className="text-indigo-900">{formatDateBR(selectedDate)}</strong></p>
-                <p>Horário: <strong className="text-indigo-900 font-mono">{lessonForm.horaInicio} até {lessonForm.horaFim}</strong></p>
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Data (início) *</label>
+                  <input
+                    type="date"
+                    required
+                    value={lessonStartDate}
+                    onChange={(e) => {
+                      setLessonStartDate(e.target.value);
+                      if (lessonRecurrence !== 'SEMANAL' && e.target.value) {
+                        setLessonWeekdays([new Date(`${e.target.value}T12:00:00`).getDay()]);
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Horário *</label>
+                  <select
+                    value={lessonForm.horaInicio}
+                    onChange={(e) =>
+                      setLessonForm({ ...lessonForm, horaInicio: e.target.value, horaFim: getEndTimeForStart(e.target.value) })
+                    }
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-mono"
+                  >
+                    {ALL_PERMITTED_HOURS.map((h) => (
+                      <option key={h} value={h}>
+                        {h} - {getEndTimeForStart(h)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div>
@@ -1575,6 +1933,141 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
                     </option>
                   ))}
                 </select>
+              </div>
+
+              {/* Plano do aluno */}
+              {selectedPlanBalance && (
+                <div
+                  className={`p-3 rounded-xl border space-y-1 ${
+                    selectedPlanBalance.saldo > 0 ? 'bg-emerald-50/70 border-emerald-200' : 'bg-amber-50 border-amber-300'
+                  }`}
+                >
+                  <p className="font-bold text-slate-900">
+                    Plano: {selectedStudentForLesson?.pacoteNome || 'Plano padrão'}
+                  </p>
+                  <div className="grid grid-cols-4 gap-1.5 text-center">
+                    <div className="bg-white rounded-lg p-1.5 border border-slate-200">
+                      <span className="block text-[10px] text-slate-500">Contratadas</span>
+                      <strong className="text-sm text-slate-900">{selectedPlanBalance.total}</strong>
+                    </div>
+                    <div className="bg-white rounded-lg p-1.5 border border-slate-200">
+                      <span className="block text-[10px] text-slate-500">Realizadas</span>
+                      <strong className="text-sm text-emerald-700">{selectedPlanBalance.cumpridas}</strong>
+                    </div>
+                    <div className="bg-white rounded-lg p-1.5 border border-slate-200">
+                      <span className="block text-[10px] text-slate-500">Agendadas</span>
+                      <strong className="text-sm text-blue-700">{selectedPlanBalance.agendadas}</strong>
+                    </div>
+                    <div className="bg-white rounded-lg p-1.5 border border-slate-200">
+                      <span className="block text-[10px] text-slate-500">Saldo</span>
+                      <strong className={`text-sm ${selectedPlanBalance.saldo > 0 ? 'text-emerald-700' : 'text-amber-700'}`}>
+                        {selectedPlanBalance.saldo}
+                      </strong>
+                    </div>
+                  </div>
+                  {selectedPlanBalance.saldo <= 0 && (
+                    <p className="text-[11px] text-amber-800 font-semibold">
+                      Sem saldo no plano. Adicione um pacote ou aulas avulsas na ficha do aluno, ou autorize exceder o plano abaixo.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Recorrência */}
+              <div className="space-y-2">
+                <label className="block font-semibold text-slate-700">Frequência do agendamento</label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {(
+                    [
+                      { v: 'UNICA', l: 'Aula única' },
+                      { v: 'SEMANAL', l: 'Semanal' },
+                      { v: 'MENSAL', l: 'Mensal' }
+                    ] as { v: LessonRecurrenceType; l: string }[]
+                  ).map((opt) => (
+                    <button
+                      key={opt.v}
+                      type="button"
+                      onClick={() => handleChangeRecurrence(opt.v)}
+                      className={`px-2 py-2 rounded-xl border font-bold cursor-pointer transition-colors ${
+                        lessonRecurrence === opt.v
+                          ? 'bg-indigo-600 text-white border-indigo-600'
+                          : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      {opt.l}
+                    </button>
+                  ))}
+                </div>
+
+                {lessonRecurrence === 'SEMANAL' && (
+                  <div>
+                    <span className="block text-[11px] font-semibold text-slate-600 mb-1">Dias da semana</span>
+                    <div className="flex flex-wrap gap-1">
+                      {WEEKDAYS_LIST.map((w) => (
+                        <button
+                          key={w.day}
+                          type="button"
+                          onClick={() => toggleWeekday(w.day, lessonWeekdays, setLessonWeekdays)}
+                          className={`px-2 py-1 rounded-lg border text-[11px] font-bold cursor-pointer ${
+                            lessonWeekdays.includes(w.day)
+                              ? 'bg-indigo-100 text-indigo-800 border-indigo-300'
+                              : 'bg-white text-slate-600 border-slate-200'
+                          }`}
+                        >
+                          {w.short}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {lessonRecurrence !== 'UNICA' && (
+                  <div className="space-y-1.5">
+                    <label className="block text-[11px] font-semibold text-slate-600">
+                      Quantidade de aulas a agendar
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={lessonQuantity}
+                      onChange={(e) => setLessonQuantity(e.target.value.replace(/\D/g, '').slice(0, 3))}
+                      className="w-24 px-3 py-1.5 border border-slate-300 rounded-xl font-mono"
+                    />
+                    {selectedPlanBalance && !allowExceedPlan && (parseInt(lessonQuantity, 10) || 0) > selectedPlanBalance.saldo && (
+                      <p className="text-[11px] text-amber-700">
+                        Limitado ao saldo do plano: serão agendadas {selectedPlanBalance.saldo} aula(s).
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <label className="flex items-center gap-2 text-[11px] text-slate-600 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={allowExceedPlan}
+                    onChange={(e) => setAllowExceedPlan(e.target.checked)}
+                    className="w-3.5 h-3.5"
+                  />
+                  Agendar mesmo excedendo o plano do aluno
+                </label>
+
+                {plannedLessonDates.length > 0 && (
+                  <div className="p-2.5 bg-indigo-50/60 rounded-xl border border-indigo-200">
+                    <span className="block text-[11px] font-bold text-indigo-900 mb-1">
+                      {plannedLessonDates.length} aula(s) prevista(s) às {lessonForm.horaInicio}:
+                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {plannedLessonDates.slice(0, 24).map((d) => (
+                        <span key={d} className="px-1.5 py-0.5 rounded bg-white border border-indigo-200 text-[10px] font-mono text-indigo-800">
+                          {formatDateBR(d)}
+                        </span>
+                      ))}
+                      {plannedLessonDates.length > 24 && (
+                        <span className="text-[10px] text-indigo-700">+{plannedLessonDates.length - 24}</span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -1614,9 +2107,112 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold cursor-pointer shadow-xs w-full sm:w-auto"
+                  disabled={isProcessing}
+                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl font-semibold cursor-pointer shadow-xs w-full sm:w-auto"
                 >
-                  Confirmar Agendamento
+                  {isProcessing
+                    ? 'Agendando...'
+                    : plannedLessonDates.length > 1
+                    ? `Confirmar ${plannedLessonDates.length} Aulas`
+                    : 'Confirmar Agendamento'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: REMARCAR AULA (ALTERAR DATA / HORÁRIO MARCADO)                     */}
+      {/* ========================================================================= */}
+      {lessonToReschedule && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/70 backdrop-blur-sm p-0 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+          <div className="bg-white rounded-t-3xl sm:rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-slate-200 max-h-[92vh] sm:max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <CalendarClock className="w-5 h-5 text-amber-600" />
+                Remarcar Aula
+              </h3>
+              <button onClick={() => setLessonToReschedule(null)} className="text-slate-400 hover:text-slate-700 p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleRescheduleSubmit} className="mt-4 space-y-3.5 text-xs overflow-y-auto flex-1 pr-0.5">
+              {rescheduleError && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                  <span>{rescheduleError}</span>
+                </div>
+              )}
+
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-0.5">
+                <p className="font-bold text-slate-900 text-sm">
+                  {allOrgStudents.find((s) => s.id === lessonToReschedule.alunoId)?.nome || 'Aluno'}
+                </p>
+                <p className="text-slate-600">
+                  Marcada para <strong>{formatDateBR(lessonToReschedule.data)}</strong> às{' '}
+                  <strong className="font-mono">{lessonToReschedule.horaInicio}</strong>
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Nova data *</label>
+                  <input
+                    type="date"
+                    required
+                    value={rescheduleDate}
+                    onChange={(e) => setRescheduleDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Novo horário *</label>
+                  <select
+                    value={rescheduleTime}
+                    onChange={(e) => setRescheduleTime(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-mono"
+                  >
+                    {ALL_PERMITTED_HOURS.map((h) => (
+                      <option key={h} value={h}>
+                        {h} - {getEndTimeForStart(h)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Motivo (opcional)</label>
+                <input
+                  type="text"
+                  value={rescheduleReason}
+                  onChange={(e) => setRescheduleReason(e.target.value)}
+                  placeholder="Ex: Aluno pediu para trocar o dia"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl"
+                />
+              </div>
+
+              <div className="p-3 bg-amber-50 text-amber-900 rounded-xl text-[11px]">
+                A aula original deixa de valer na data antiga e passa a contar no novo horário. O aluno é notificado no
+                portal e a aula será registrada como realizada ao término do novo horário.
+              </div>
+
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setLessonToReschedule(null)}
+                  className="px-4 py-2 border border-slate-300 rounded-xl font-semibold cursor-pointer w-full sm:w-auto"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isProcessing}
+                  className="px-5 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-xl font-semibold cursor-pointer shadow-xs w-full sm:w-auto"
+                >
+                  {isProcessing ? 'Salvando...' : 'Salvar Remarcação'}
                 </button>
               </div>
             </form>

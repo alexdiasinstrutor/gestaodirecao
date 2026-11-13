@@ -1178,8 +1178,8 @@ Abaixo estão registradas todas as melhorias estruturais, correções de sincron
   3. **Sanitização de Slots na Agenda de Aulas (`ScheduleView.tsx`)**: Comparação segura `(a.horaInicio || '').localeCompare(b.horaInicio || '')` prevenindo exceções com horários nulos ou incompletos;
   4. **Proteção Contra Divisão por Zero no Portal do Aluno (`StudentPortal.tsx`)**: Cálculo da barra de progresso com validação estrita de `totalAulasContratadas > 0`.
 
-### 14.18 Suite de 25 Testes Automatizados Rigorosos (`run_automated_tests.mjs`)
-- Suite automatizada com **25 baterias de testes (`T01` a `T25`)** cobrindo confidencialidade de instrutores, exibição de pacotes, geolocalização Haversine 5–40 km, filtros do mapa, demanda reversa, sanitização de telefone, agenda por período com notificação ao aluno, persistência da ficha do aluno, blindagem de pacotes, gestão e exclusão definitiva de veículos dos instrutores com botão de salvar alterações da frota (`T17`), digitação completa de número de aulas, upload de assinatura digital, redimensionamento/posicionamento interativo da assinatura no recibo com blindagem contra ReferenceError, validação com autocompletar de cidades por estado (IBGE), persistência fiel ao desmarcar tipos de veículos na área de atendimento, adição de pacotes adicionais, aulas avulsas, pacotes personalizados e emissão flexível de recibos (`T23`), blindagem global contra tela branca com ErrorBoundary (`T24`), e **gestão administrativa de demandas reversas com edição de dados, exclusão definitiva sincronizada e direcionamento inteligente de alunos para instrutores por categoria CNH (`T25`)** (**25/25 aprovados — 100% de conformidade e sem quebras**).
+### 14.18 Suite de 26 Testes Automatizados Rigorosos (`run_automated_tests.mjs`)
+- Suite automatizada com **26 baterias de testes (`T01` a `T26`)** cobrindo confidencialidade de instrutores, exibição de pacotes, geolocalização Haversine 5–40 km, filtros do mapa, demanda reversa, sanitização de telefone, agenda por período com notificação ao aluno, persistência da ficha do aluno, blindagem de pacotes, gestão e exclusão definitiva de veículos dos instrutores com botão de salvar alterações da frota (`T17`), digitação completa de número de aulas, upload de assinatura digital, redimensionamento/posicionamento interativo da assinatura no recibo com blindagem contra ReferenceError, validação com autocompletar de cidades por estado (IBGE), persistência fiel ao desmarcar tipos de veículos na área de atendimento, adição de pacotes adicionais, aulas avulsas, pacotes personalizados e emissão flexível de recibos (`T23`), blindagem global contra tela branca com ErrorBoundary (`T24`), gestão administrativa de demandas reversas (`T25`), e **agendamento recorrente (semanal e mensal), remarcação de aulas com histórico/notificação e registro automático e auditável de aulas realizadas conforme o plano do aluno (`T26`)** (**26/26 aprovados — 100% de conformidade e sem quebras**).
 
 ### 14.19 Gestão Administrativa de Demandas Reversas: Edição, Exclusão e Direcionamento por Categoria CNH (`AdminStudentLeadsView.tsx`, `EditStudentLeadModal.tsx`, `DirectStudentLeadModal.tsx` & `storage.ts`)
 - **Problema de Negócio Solucionado**:
@@ -1208,6 +1208,30 @@ Abaixo estão registradas todas as melhorias estruturais, correções de sincron
     - **Matrícula Automática Opcional**: Opção de matricular o aluno imediatamente na organização do instrutor selecionado (`Student`), criando a ficha com a CNH desejada, 20 aulas contratadas padrão e status `EM_ANDAMENTO`;
     - **Comunicação Imediata via WhatsApp**: Tela de conclusão com links diretos e mensagens pré-formatadas para avisar o instrutor (com os dados completos do aluno) e para avisar o aluno (informando qual instrutor foi designado).
 
+### 14.20 Agendamento Recorrente (Semanal e Mensal), Remarcação com Histórico e Registro Automático de Aulas Realizadas (`ScheduleView.tsx`, `StudentPortal.tsx`, `storage.ts` & `supabaseAdapter.ts`)
+- **Problema de Negócio Solucionado**:
+  - O agendamento de aulas práticas exigia marcação individual dia a dia. Alunos com planos fechados (ex: 20 aulas) necessitavam de uma rotina fixa semanal ou mensal, com possibilidade de alterar horários marcados para outras datas quando imprevistos surgissem, sem perder a contabilidade do plano contratado. Além disso, ao término natural do horário da aula (caso não tivesse sido desmarcada ou alterada), o sistema precisava registrar automaticamente a aula como realizada e creditar a carga horária na ficha do aluno, refletindo instantaneamente tanto para o instrutor quanto para o aluno.
+- **Controle de Saldo do Plano do Aluno em Tempo Real (`getStudentPlanBalance`)**:
+  - O sistema calcula dinamicamente: Total Contratado, Aulas Cumpridas (realizadas), Aulas Agendadas (futuras) e Saldo Disponível de Aulas.
+  - No modal de agendamento, o instrutor visualiza o painel do plano do aluno. O número de aulas a agendar é limitado por padrão ao saldo restante, com opção explícita de autorização para agendamentos extras caso acordado.
+- **Agendamento Recorrente (Semanal e Mensal) com Gerador de Datas Inteligente**:
+  - **Aula Única (`UNICA`)**: Agendamento pontual na data e horário selecionados.
+  - **Semanal (`SEMANAL`)**: O instrutor seleciona os dias da semana (ex: Segundas, Quartas e Sextas) e a quantidade de aulas. O sistema projeta a série cronológica completa no mesmo horário.
+  - **Mensal (`MENSAL`)**: Projeta as aulas mensalmente na mesma data de cada mês subsequente (com ajuste automático para o último dia em meses com menos dias, como fevereiro).
+  - **Tratamento de Conflitos e Criação de Slots**: O método atômico `db.createLessonSeriesAsync` verifica conflitos de horário do instrutor e aluno, cria slots disponíveis caso ainda não existissem na grade e ignora datas com conflito, reportando o resumo com precisão.
+- **Remarcação de Aulas Marcadas com Histórico e Notificação ao Aluno (`rescheduleLessonAsync`)**:
+  - Em qualquer aula agendada, o instrutor pode clicar em **"Remarcar"**.
+  - O modal de remarcação permite escolher nova data, novo horário e motivo.
+  - A aula é remanejada sem criar duplicidade, preservando o histórico de alterações (`historicoRemarcacoes: [{ dataAnterior, horaInicioAnterior, novaData, novaHoraInicio, motivo, alteradoEm }]`).
+  - Uma notificação automática (`StudentNotification`) é enviada imediatamente para o portal do aluno informando da remarcação.
+- **Registro Automático de Aulas Realizadas ao Término do Horário (`autoCompleteElapsedLessons`)**:
+  - Tanto na visão do instrutor quanto no portal do aluno, um monitor ativo verifica periodicamente aulas agendadas cujo horário de término (`horaFim`) já passou e que não foram desmarcadas.
+  - A aula é transicionada para status `CONCLUIDA` com a marcação `concluidaAutomaticamente: true`.
+  - **Crédito Idempotente no Plano (`completeLessonWithCredit`)**: Um livro de registros (`CREDITED_LESSONS_KEY`) garante que cada aula seja creditada estritamente uma única vez no total de `aulasCumpridas` do aluno, prevenindo contagens duplas mesmo com recargas e sincronizações em múltiplos navegadores.
+- **Painel de Registro de Aulas Realizadas Transparente para Instrutor e Aluno**:
+  - **No Instrutor (`ScheduleView.tsx`)**: Seção dedicada com listagem de todas as aulas concluídas numeradas (ex: *"Aula 12 de 20"*), filtro por aluno, badges de remarcação e conclusão automática.
+  - **No Aluno (`StudentPortal.tsx`)**: O aluno acompanha sua barra de progresso oficial e a lista detalhada de aulas já realizadas com data, horário, tema e número sequencial correspondente ao seu plano.
+
 ---
 
 ## 15. TERMO DE HOMOLOGAÇÃO E DECLARAÇÃO DE INTEGRIDADE
@@ -1216,7 +1240,7 @@ Este Dossiê constitui o registro definitivo e exaustivo de todas as funcionalid
 
 *Homologado para produção e operação contínua.*  
 *Administração Master: cassiordcosta@gmail.com*  
-*Versão do Sistema: v7.7 Estável, Com Gestão Administrativa de Demandas Reversas (Edição, Exclusão Definitiva e Direcionamento por Categoria CNH com Matrícula e WhatsApp), Blindagem Global Anti-Crash (ErrorBoundary), Fallback de Organização, Adição de Pacotes Adicionais ao Aluno, Aulas Avulsas, Pacote Personalizado, Emissão Flexível de Recibos (Por Pacote e Aulas Ministradas), Exclusão Definitiva de Veículos e Botão Salvar Alterações da Frota, Correção no Modal de Recibos, Correção de Desmarcação de Veículos, Validação e Autocompletar de Cidades por Estado (IBGE), Posicionamento e Redimensionamento da Assinatura no Recibo, Assinatura Digital do Instrutor (2MB), Digitação Completa de Aulas, Mapa Geográfico (5–40 km), Blindagem Cloud Vault de Pacotes, Gestão de Veículos dos Instrutores, Auditada (25/25 Testes) e Sincronizada em Tempo Real no Supabase*
+*Versão do Sistema: v7.8 Estável, Com Agendamento Recorrente (Semanal e Mensal), Remarcação de Aulas com Histórico e Notificação, Registro Automático de Aulas Realizadas ao Término do Horário com Crédito Idempotente no Plano do Aluno (Visível para Instrutor e Aluno), Gestão Administrativa de Demandas Reversas (Edição, Exclusão Definitiva e Direcionamento por Categoria CNH), Blindagem Global Anti-Crash (ErrorBoundary), Fallback de Organização, Adição de Pacotes Adicionais ao Aluno, Aulas Avulsas, Pacote Personalizado, Emissão Flexível de Recibos (Por Pacote e Aulas Ministradas), Exclusão Definitiva de Veículos e Botão Salvar Alterações da Frota, Correção no Modal de Recibos, Correção de Desmarcação de Veículos, Validação e Autocompletar de Cidades por Estado (IBGE), Posicionamento e Redimensionamento da Assinatura no Recibo, Assinatura Digital do Instrutor (2MB), Digitação Completa de Aulas, Mapa Geográfico (5–40 km), Blindagem Cloud Vault de Pacotes, Gestão de Veículos dos Instrutores, Auditada (26/26 Testes) e Sincronizada em Tempo Real no Supabase*
 
 
 

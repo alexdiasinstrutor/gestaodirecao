@@ -272,7 +272,23 @@ function rowToVehicle(r: any): Vehicle {
   };
 }
 
+// Metadados de agenda (recorrência, remarcações, registro automático) são persistidos
+// dentro de competencias_trabalhadas com o prefixo abaixo, evitando migração de schema.
+const LESSON_META_PREFIX = '__agd_meta__:';
+
 function lessonToRow(l: Lesson): Record<string, any> {
+  const competencias = (l.competenciasTrabalhadas || []).filter(
+    (c) => typeof c === 'string' && !c.startsWith(LESSON_META_PREFIX)
+  );
+  const meta: Record<string, any> = {};
+  if (l.recorrenciaId) meta.recorrenciaId = l.recorrenciaId;
+  if (l.recorrenciaTipo) meta.recorrenciaTipo = l.recorrenciaTipo;
+  if (l.historicoRemarcacoes && l.historicoRemarcacoes.length > 0) meta.historicoRemarcacoes = l.historicoRemarcacoes;
+  if (l.concluidaAutomaticamente) meta.concluidaAutomaticamente = true;
+  if (l.concluidaEm) meta.concluidaEm = l.concluidaEm;
+  if (Object.keys(meta).length > 0) {
+    competencias.push(LESSON_META_PREFIX + JSON.stringify(meta));
+  }
   return {
     id: l.id,
     organizacao_id: l.organizacaoId,
@@ -286,12 +302,33 @@ function lessonToRow(l: Lesson): Record<string, any> {
     status: l.status,
     nota_aula: l.notaAula || null,
     observacao_instrutor: l.observacaoInstrutor || null,
-    competencias_trabalhadas: l.competenciasTrabalhadas || [],
+    competencias_trabalhadas: competencias,
     criado_em: l.criadoEm || new Date().toISOString(),
   };
 }
 
 function rowToLesson(r: any): Lesson {
+  let rawComp: any = r.competencias_trabalhadas;
+  if (typeof rawComp === 'string') {
+    try {
+      rawComp = JSON.parse(rawComp);
+    } catch {
+      rawComp = [];
+    }
+  }
+  const compList: string[] = Array.isArray(rawComp) ? rawComp.filter((c: any) => typeof c === 'string') : [];
+  let meta: Record<string, any> = {};
+  const competencias = compList.filter((c) => {
+    if (c.startsWith(LESSON_META_PREFIX)) {
+      try {
+        meta = { ...meta, ...JSON.parse(c.slice(LESSON_META_PREFIX.length)) };
+      } catch {
+        // ignora metadado corrompido
+      }
+      return false;
+    }
+    return true;
+  });
   return {
     id: r.id,
     organizacaoId: r.organizacao_id,
@@ -305,8 +342,13 @@ function rowToLesson(r: any): Lesson {
     status: r.status,
     notaAula: r.nota_aula,
     observacaoInstrutor: r.observacao_instrutor,
-    competenciasTrabalhadas: r.competencias_trabalhadas,
+    competenciasTrabalhadas: competencias,
     criadoEm: r.criado_em,
+    recorrenciaId: meta.recorrenciaId,
+    recorrenciaTipo: meta.recorrenciaTipo,
+    historicoRemarcacoes: Array.isArray(meta.historicoRemarcacoes) ? meta.historicoRemarcacoes : undefined,
+    concluidaAutomaticamente: meta.concluidaAutomaticamente === true ? true : undefined,
+    concluidaEm: meta.concluidaEm,
   };
 }
 
