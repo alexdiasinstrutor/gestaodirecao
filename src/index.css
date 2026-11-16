@@ -228,3 +228,9 @@
 .legal-document .legal-party { text-align: left; }
 .legal-reader-body > section { display: flex; flex-direction: column; gap: 12px; }
 .legal-reader-body > section > button { align-self: flex-start; max-width: 100%; }
+
+.legal-reader-footer { display: grid; grid-template-columns: minmax(0,1fr); gap: 10px; background: #fff; }
+.legal-reader-footer > p { min-width: 0; overflow-wrap: anywhere; margin: 0; }
+.legal-export-actions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; min-width: 0; }
+.legal-export-actions button { min-width: 0; min-height: 44px; font-size: 12px; line-height: 1.4; padding: 8px; }
+@media(min-width:640px) { .legal-reader-footer { grid-template-columns: minmax(0,1fr) auto; align-items: center; } .legal-export-actions { grid-template-columns: repeat(2,minmax(145px,auto)); } }

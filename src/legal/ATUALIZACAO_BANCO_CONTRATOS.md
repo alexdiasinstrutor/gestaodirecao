@@ -33,3 +33,6 @@ Execute supabase_migracao_dados_cadastrais_contratos_20261116.sql após a migra�
 
 ## Identificação por CPF
 Execute supabase_migracao_contratos_cpf_20261116.sql após as migrações jurídicas anteriores para usar o modelo 1.0.1, sem RG obrigatório. Contratos já registrados mantêm seu conteúdo e seus hashes. O cadastro continua usando CPF completo e vínculo por identidade para as partes.
+
+## Coluna de contratos detalhados
+Execute supabase_migracao_coluna_contratos_pacotes_20261116.sql. A consulta de metadados identificou students.contratos_pacotes ausente, apesar de ser usada no adaptador e nas funções jurídicas. O comando apenas acrescenta a coluna JSONB, sem gerar contratos ou aceites. Depois, o instrutor deve conferir o aluno e o pacote e registrar a versão no fluxo existente. O aluno recebe a versão publicada para leitura e confirmação.

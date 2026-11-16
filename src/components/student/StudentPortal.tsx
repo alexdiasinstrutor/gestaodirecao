@@ -1,3 +1,5 @@
+import { ContractReminder } from '../legal/ContractReminder';
+import { resolveStudentIdentity } from '../../legal/studentIdentity';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Car,
@@ -102,9 +104,8 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
   const students = useMemo(() => db.getStudents(orgId), [orgId, portalVersion]);
   const student = useMemo(
     () =>
-      students.find((s) => (s.email || '').toLowerCase() === currentUser.email.toLowerCase()) ||
-      students.find((s) => s.id === currentUser.id),
-    [students, currentUser.email, currentUser.id]
+      resolveStudentIdentity(students,currentUser),
+    [students, currentUser]
   );
 
   const instructor = useMemo(
@@ -495,6 +496,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
 
   return (
     <div className="space-y-6">
+      <ContractReminder student={student} user={currentUser} />
       {/* Student Welcome Card */}
       <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 text-white rounded-2xl p-6 shadow-xl border border-slate-800">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

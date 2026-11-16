@@ -55,4 +55,4 @@ export const scenes = [...simple,...appScenes,
  extra('Header','perfil',[{css:'header button',hasText:'Carlos'}]),
  extra('DataUpdateBar','historico',[button('Histórico e backups')])
 ];
-export const primitives = ['ContractConditionsFields.tsx','LegalDocument.tsx','RegistrationTerms.tsx','Logo.tsx','SmartScrollNav.tsx','ErrorBoundary.tsx'];
+export const primitives = ['ContractReminder.tsx','ContractConditionsFields.tsx','LegalDocument.tsx','RegistrationTerms.tsx','Logo.tsx','SmartScrollNav.tsx','ErrorBoundary.tsx'];

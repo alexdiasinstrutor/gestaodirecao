@@ -57,3 +57,9 @@ Antes da matriz, o detector executa um autoteste: precisa rejeitar um modal prop
 Execute node tests/legal-contracts.mjs para testar pacote com locação, dados exibidos e dois aceites em quatro resoluções, com serviços interceptados. Execute node tests/legal-documents.mjs para os 12 cenários de documentos. A migração pode ser validada por node tests/legal-database.mjs usando @electric-sql/pglite em ambiente isolado e LEGAL_PGLITE_PATH apontando para a pasta do pacote. A migração de produção e o vínculo users.auth_user_id são etapas administrativas descritas em src/legal/ATUALIZACAO_BANCO_CONTRATOS.md.
 
 Execute node tests/registration-consent.mjs para verificar os cadastros completos de instrutor e aluno, caixas desmarcadas, bloqueio sem confirmação e evidências anexadas ao perfil. Nova coluna depende de supabase_migracao_aceites_cadastro_20261116.sql.
+
+Execute node tests/contract-reminder.mjs para verificar o aviso persistente em quatro resoluções, recarga, assinatura confirmada pelo banco, hash incorreto, erro de permissão e agendamento disponível com contrato pendente.
+
+Execute node tests/legacy-contract-loading.mjs para reproduzir matrículas legadas sem contratos detalhados e validar o carregamento por cobrança histórica e aceite de versão publicada.
+
+A suíte legal-documents.mjs verifica o botão Exportar minuta como download PDF e a ação Exportar dados (JSON) com conferência de hash.

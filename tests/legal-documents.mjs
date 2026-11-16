@@ -17,7 +17,8 @@ try {
    const content=await page.getByLabel('Conteúdo do documento jurídico').innerText();assert.ok(content.length>2000);assert.ok(!content.includes('{{'));if(code==='TERMOS_DE_USO'){assert.ok(content.includes('Stark Light Save'));assert.ok(content.includes('23.659.019/0001-40'));assert.ok(content.includes('Betim/MG'));}if(code==='POLITICA_PRIVACIDADE_LGPD')assert.ok(content.includes('cassiodiniz@uol.com.br'));
    const geometry=await dialog.evaluate(el=>{const r=el.getBoundingClientRect(),f=el.querySelector('footer').getBoundingClientRect();return {top:r.top,bottom:r.bottom,footer:f.bottom,height:innerHeight,width:document.documentElement.scrollWidth,viewport:innerWidth};});
    assert.ok(geometry.top>=0&&geometry.bottom<=geometry.height+1&&geometry.footer<=geometry.height+1);assert.ok(geometry.width<=geometry.viewport);
-   const downloadPromise=page.waitForEvent('download');await page.getByRole('button',{name:'Exportar minuta',exact:true}).click();const download=await downloadPromise;const snapshot=JSON.parse(await fs.readFile(await download.path(),'utf8'));
+   const pdfPromise=page.waitForEvent('download');await page.getByRole('button',{name:'Exportar minuta',exact:true}).click();const pdfDownload=await pdfPromise;assert.ok(pdfDownload.suggestedFilename().endsWith('.pdf'));const pdfBytes=await fs.readFile(await pdfDownload.path());assert.equal(pdfBytes.subarray(0,4).toString(),'%PDF');assert.ok(pdfBytes.length>2000);
+   const downloadPromise=page.waitForEvent('download');await page.getByRole('button',{name:'Exportar dados (JSON)',exact:true}).click();const download=await downloadPromise;const snapshot=JSON.parse(await fs.readFile(await download.path(),'utf8'));
    assert.equal(snapshot.status,'MINUTA_SEM_ACEITE');assert.equal(snapshot.sha256,createHash('sha256').update(snapshot.conteudo).digest('hex'));
    results.push({viewport,code,status:'PASS'});
   }

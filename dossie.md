@@ -1446,3 +1446,34 @@ Validação da seção 18.10: 19 verificações de PostgreSQL aprovadas com RG n
 
 ### 18.11 Execução da migração de CPF informada
 Responsável informou execução de supabase_migracao_contratos_cpf_20261116.sql. Verificação somente de leitura do modelo 1.0.1 na API retornou HTTP 401. A consulta anônima não permite confirmar o conteúdo/versão por causa das permissões da tabela jurídica. Nenhum contrato ou aceite real foi criado ou alterado. Execução registrada como informação do responsável; confirmação funcional do modelo depende de sessão autenticada autorizada.
+
+### 18.12 Solicitação de bloqueio de agenda por contrato
+Solicitado pelo responsável gerar contratos para pacotes ativos antigos, avisar o aluno e impedir novas marcações até seu aceite. Implementação de servidor e migração ficaram pendentes após bloqueio da ferramenta por filtro de conteúdo. A integração incompleta do bloqueio foi retirada para manter a aplicação compilável. Foi mantida a correção independente de vínculo legado: portal e leitor jurídico usam resolução única na mesma organização por ID, fingerprint ou e-mail, rejeitando ambiguidade. A exigência de assinatura para agendamento ainda não está implementada nesta revisão. Nenhum novo commit, push ou alteração de banco de produção.
+
+### 18.13 Lembrete persistente, sem bloqueio de agendamento
+Responsável substituiu a exigência de bloqueio por notificação persistente. Adicionado ContractReminder no portal do aluno, com botão Ler e aceitar contrato. O aviso não possui ação de dispensar e é reconsultado no banco a cada acesso, a cada 15 segundos quando a página está visível, ao recuperar foco, mudar sessão ou confirmar aceite. Não altera os controles ou a gravação de agendamentos.
+
+O lembrete só desaparece após confirmar recibo do próprio aluno, duas ciências verdadeiras e hash correspondente à versão mais recente dos pacotes ativos. Para pacotes legados sem contrato discriminado, consulta a versão mais recente vinculada à matrícula. Contratos sem versão disponível mostram orientação para o instrutor disponibilizá-la. Falhas de rede/permissão mantêm o aviso. Nenhum aceite é presumido por fechar o documento ou por valor de localStorage. Usa as tabelas jurídicas existentes e não requer nova migração para o aviso. A autenticação configurada no banco continua necessária para consultar/gravar aceites.
+
+Validação da seção 18.13: quatro resoluções aprovadas com aviso persistente, recarga, erro de permissão, conferência de hash e confirmação do aceite. Foi realizado agendamento pela interface com contrato pendente em base fictícia, comprovando que o aviso não bloqueia a marcação. Regras adicionais verificam múltiplos contratos e rejeitam comprovante de outra pessoa. TypeScript e build aprovados. Sem nova migração, commit ou push nesta etapa.
+
+### 18.14 Contratos legados e coluna ausente
+Nova captura revelou seletor de pacote sem opções e sem acesso ao aceite. Verificação REST de metadados retornou 42703 para students.contratos_pacotes. Consulta somente de leitura, consolidada por contagens sem expor cadastros, identificou oito matrículas com pacote vinculado e sem contratos detalhados. Preparada migração aditiva supabase_migracao_coluna_contratos_pacotes_20261116.sql para adicionar a coluna usada pelo adaptador e pelas funções existentes. Não executada em produção.
+
+O leitor agora resolve minutas legadas pelo pacote vinculado e por uma cobrança única não cancelada do mesmo aluno/pacote/organização, usando o valor histórico da cobrança. Em casos ambíguos, informa a necessidade de conferência. Versões publicadas são consultadas automaticamente ao abrir pelo aluno; quando pertencem a um único pacote, a versão é selecionada e os checkboxes ficam disponíveis. Sem versão publicada, exibe a minuta e a orientação de disponibilização pelo instrutor. O instrutor pode registrar a projeção legada usando o fluxo de publicação existente, após completar os dados e a coluna estar disponível. Não há aceite automático ou redução de permissões.
+
+Testes em quatro resoluções reproduzem cadastro sem contratos detalhados, carregamento por cobrança histórica e aceite de uma versão publicada, com serviços fictícios. Tests/legacy-contract-loading.mjs registra esses casos. A consulta real de metadados confirmou também disponibilidade dos campos de CPF, registro DETRAN, condições do pacote e valores financeiros. Autenticação vinculada continua necessária para gravar aceites reais.
+
+Validação da seção 18.14: quatro resoluções aprovadas reproduzindo matrícula sem contratos detalhados, valor histórico, seleção automática da versão publicada e confirmação do aceite com os dois checkboxes. Regressões dos contratos e do lembrete aprovadas; TypeScript e build aprovados. Prévia funcional aberta no Chrome com dados fictícios. O banco real continua aguardando a adição da coluna e a disponibilidade de uma versão publicada/autenticação autorizada. Nenhum novo commit ou push.
+
+### 18.15 Exportação da minuta
+Revisada a ação que anteriormente exportava apenas JSON e podia ficar desabilitada sem explicação no perfil do aluno. Exportar minuta passa a gerar um PDF A4 com tipografia formal, margens, quebra de páginas, versão e paginação. Os dados estruturados com conteúdo e hash continuam disponíveis em Exportar dados (JSON). O link temporário é anexado ao DOM para iniciar o download e a URL permanece disponível por 60 segundos. A interface informa que o download foi iniciado e orienta quando falta selecionar um pacote/versão. Exportação de versão registrada usa seu conteúdo e versão originais. O PDF identifica a minuta ou orienta consultar os comprovantes de aceite, sem declarar assinatura inexistente.
+
+Os testes de documentos validam downloads PDF reais (cabeçalho %PDF e tamanho), JSON e hash em quatro resoluções para os três documentos. Alterações locais, sem novo commit ou push.
+
+Validação da seção 18.15: 12 cenários de download PDF/JSON aprovados, regressões de contratos e legados aprovadas, TypeScript e build aprovados. A exportação PDF não exige nova migração de banco.
+
+A regressão de celular identificou sobreposição após incluir o segundo formato de exportação. O rodapé foi ajustado para grid responsivo, com botões de largura controlada e espaço próprio para a mensagem. Os quatro fluxos completos de contrato/aceite passaram após o ajuste.
+
+### 18.16 Verificação da coluna de contratos
+Responsável informou execução da migração da coluna. Consulta REST somente de metadados, select=id,contratos_pacotes com limit=0, retornou HTTP 200 no projeto configurado. Coluna students.contratos_pacotes confirmada na API. Nenhuma matrícula ou contrato real foi criado ou alterado. Essa confirmação verifica o esquema; não publica versões nem registra aceites.
