@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { X, Send, Copy, Check, MessageSquare, Link, Share2, Sparkles, Mail, Ticket, AlertCircle } from 'lucide-react';
 import { buildWhatsAppLink } from '../../lib/whatsapp';
 import { db } from '../../lib/storage';
@@ -19,6 +20,27 @@ export const StudentInviteModal: React.FC<StudentInviteModalProps> = ({
   onClose,
   onSimulateOpenInvite
 }) => {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const fieldId = useId();
+  const [copyError, setCopyError] = useState('');
+  const [token] = useState(() => `inv_${instructor.id.slice(-6)}_${Date.now().toString(36)}`);
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    dialogRef.current?.querySelector<HTMLButtonElement>('[aria-label="Fechar convite"]')?.focus();
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { event.preventDefault(); onClose(); return; }
+      if (event.key !== 'Tab') return;
+      const controls = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]') || []).filter(el => el.getClientRects().length);
+      const first = controls[0], last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    document.addEventListener('keydown', keydown);
+    return () => { document.body.style.overflow = overflow; document.removeEventListener('keydown', keydown); previous?.focus(); };
+  }, [onClose]);
   const [copied, setCopied] = useState<boolean>(false);
   const [studentPhone, setStudentPhone] = useState<string>('');
   const [phoneError, setPhoneError] = useState<string>('');
@@ -33,7 +55,6 @@ export const StudentInviteModal: React.FC<StudentInviteModalProps> = ({
 
   const [selectedCouponCode, setSelectedCouponCode] = useState<string>('');
 
-  const token = `inv_${instructor.id.slice(-6)}_${Date.now().toString(36)}`;
   const referralCode = instructor.id.replace('usr_', '').toUpperCase();
 
   const couponParam = selectedCouponCode ? `&cupom=${encodeURIComponent(selectedCouponCode)}` : '';
@@ -45,11 +66,15 @@ export const StudentInviteModal: React.FC<StudentInviteModalProps> = ({
 
   const inviteMessage = `Olá${studentName ? `, ${studentName}` : ''}! 🚗💨\n\nAqui é o instrutor *${instructor.nome}* da *${org.nome}*.\n\nPara agilizar a sua matrícula e liberar o seu agendamento de aulas práticas de direção, clique no link abaixo para realizar seu auto-cadastro:\n\n👉 ${inviteUrl}\n\nCódigo de Indicação do Instrutor: *${referralCode}*${couponBonusText}\n\n*(Lembrete: obrigatório ter mais de 18 anos completos e portar documento de identidade / CPF)*. Te aguardo nas aulas!`;
 
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(inviteUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+  const copy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyError(''); setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch { setCopyError('Não foi possível copiar. Selecione o link ou a mensagem e copie manualmente.'); }
   };
+  const handleCopyLink = () => copy(inviteUrl);
+  const handleCopyMessage = () => copy(inviteMessage);
 
   const handleSendWhatsApp = () => {
     const digits = cleanPhoneDigits(studentPhone);
@@ -77,6 +102,7 @@ export const StudentInviteModal: React.FC<StudentInviteModalProps> = ({
   };
 
   const handleSendEmail = () => {
+    if (studentEmail && !emailRef.current?.checkValidity()) { emailRef.current?.reportValidity(); return; }
     const subject = encodeURIComponent(`Convite de Matrícula - Aulas Práticas com ${instructor.nome}`);
     const body = encodeURIComponent(inviteMessage);
     if (studentEmail) {
@@ -88,9 +114,9 @@ export const StudentInviteModal: React.FC<StudentInviteModalProps> = ({
     setTimeout(() => setEmailSentNotice(false), 4000);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/70 backdrop-blur-sm p-0 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh]">
+  return createPortal(
+    <div className="invite-overlay fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-3 sm:p-4">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={`${fieldId}-title`} className="invite-dialog bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col min-w-0">
         {/* Header */}
         <div className="bg-slate-900 text-white p-4 sm:p-5 flex items-center justify-between border-b border-slate-800 shrink-0">
           <div className="flex items-center gap-3">
@@ -98,26 +124,26 @@ export const StudentInviteModal: React.FC<StudentInviteModalProps> = ({
               <Share2 className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-white">Link de Convite do Aluno</h2>
+              <h2 id={`${fieldId}-title`} className="text-base sm:text-lg font-bold text-white">Link de Convite do Aluno</h2>
               <p className="text-xs text-slate-300">Vinculação direta por link ou código de indicação</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white p-1 rounded-lg cursor-pointer">
+          <button type="button" onClick={onClose} aria-label="Fechar convite" className="text-slate-300 hover:text-white min-h-11 min-w-11 flex items-center justify-center rounded-lg cursor-pointer shrink-0">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-4 sm:p-5 space-y-4 text-xs text-slate-700 overflow-y-auto flex-1">
+        <div className="invite-scroll p-4 sm:p-5 space-y-4 text-sm text-slate-700 min-h-0 min-w-0 flex-1" tabIndex={0} role="region" aria-label="Dados e mensagem do convite">
           {/* Instructor Referral Badge */}
-          <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between">
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex flex-wrap items-start justify-between gap-3 min-w-0">
             <div>
               <p className="text-xs font-bold text-blue-900">Instrutor Responsável</p>
               <p className="text-xs font-semibold text-slate-800">{instructor.nome}</p>
             </div>
-            <div className="text-right">
+            <div className="sm:text-right min-w-0">
               <span className="text-xs uppercase font-bold font-bold text-slate-400 block">Código para o Aluno</span>
-              <span className="font-mono font-extrabold text-blue-700 text-xs px-2.5 py-1 rounded bg-blue-100 border border-blue-200 inline-block">
+              <span className="font-mono font-extrabold text-blue-700 text-xs px-2.5 py-1 rounded bg-blue-100 border border-blue-200 inline-block break-all max-w-full">
                 {referralCode}
               </span>
             </div>
@@ -130,7 +156,9 @@ export const StudentInviteModal: React.FC<StudentInviteModalProps> = ({
                 <Ticket className="w-3.5 h-3.5 text-purple-600" />
                 <span>Incluir Cupom de Desconto no Convite? (Opcional)</span>
               </div>
-              <select
+              <label htmlFor={`${fieldId}-coupon`} className="sr-only">Cupom de desconto do convite</label>
+              <select aria-label="Cupom de desconto do convite"
+                id={`${fieldId}-coupon`}
                 value={selectedCouponCode}
                 onChange={(e) => setSelectedCouponCode(e.target.value)}
                 className="w-full px-3 py-2 bg-white border border-purple-200 rounded-xl text-xs font-medium focus:outline-none focus:border-purple-600"
@@ -152,26 +180,26 @@ export const StudentInviteModal: React.FC<StudentInviteModalProps> = ({
 
           <div className="space-y-3">
             <div>
-              <label className="block font-medium text-slate-700 mb-1">Nome do Aluno (Opcional)</label>
-              <input
+              <label htmlFor={`${fieldId}-name`} className="block font-medium text-slate-700 mb-1">Nome do Aluno (Opcional)</label>
+              <input aria-label="Nome do Aluno (Opcional)"
                 type="text"
-                placeholder="Ex: Beatriz Mendes"
+                id={`${fieldId}-name`} placeholder="Ex: Beatriz Mendes"
                 value={studentName}
                 onChange={(e) => setStudentName(e.target.value)}
                 className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none"
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="invite-contact-grid grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block font-bold text-slate-700 mb-1 flex items-center justify-between">
-                  <span>Telefone WhatsApp do Aluno *</span>
-                  <span className="text-[10px] uppercase font-bold text-red-600 bg-red-50 px-1.5 py-0.2 rounded">Obrigatório</span>
+                <label htmlFor={`${fieldId}-phone`} className="font-semibold text-slate-700 mb-1 flex items-center justify-between gap-2">
+                  <span>WhatsApp do Aluno *</span>
+                  <span className="whitespace-nowrap shrink-0 text-[10px] uppercase font-bold text-red-600 bg-red-50 px-1.5 py-0.2 rounded">Obrigatório</span>
                 </label>
-                <input
+                <input aria-label="Telefone WhatsApp do Aluno * Obrigatório"
                   type="text"
                   required
-                  placeholder="(11) 98765-4321"
+                  id={`${fieldId}-phone`} inputMode="tel" aria-invalid={!!phoneError} aria-describedby={phoneError ? `${fieldId}-phone-error` : undefined} placeholder="(11) 98765-4321"
                   value={studentPhone}
                   onChange={(e) => {
                     setStudentPhone(maskPhoneInput(e.target.value));
@@ -185,7 +213,7 @@ export const StudentInviteModal: React.FC<StudentInviteModalProps> = ({
                   }`}
                 />
                 {phoneError && (
-                  <p className="text-[11px] font-semibold text-red-600 mt-1 flex items-center gap-1">
+                  <p id={`${fieldId}-phone-error`} role="alert" className="text-xs font-semibold text-red-600 mt-1 flex items-center gap-1">
                     <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                     <span>{phoneError}</span>
                   </p>
@@ -193,9 +221,9 @@ export const StudentInviteModal: React.FC<StudentInviteModalProps> = ({
               </div>
 
               <div>
-                <label className="block font-medium text-slate-700 mb-1">E-mail do Aluno (Opcional)</label>
-                <input
-                  type="email"
+                <label htmlFor={`${fieldId}-email`} className="block font-medium text-slate-700 mb-1">E-mail do Aluno (Opcional)</label>
+                <input aria-label="E-mail do Aluno (Opcional)"
+                  ref={emailRef} id={`${fieldId}-email`} type="email"
                   placeholder="aluno@email.com.br"
                   value={studentEmail}
                   onChange={(e) => setStudentEmail(e.target.value)}
@@ -213,11 +241,12 @@ export const StudentInviteModal: React.FC<StudentInviteModalProps> = ({
 
           {/* Link box */}
           <div>
-            <label className="block font-medium text-slate-700 mb-1">Link Exclusivo com Vínculo do Instrutor</label>
+            <label htmlFor={`${fieldId}-link`} className="block font-medium text-slate-700 mb-1">Link Exclusivo com Vínculo do Instrutor</label>
             <div className="flex items-center gap-2">
-              <input
+              <input aria-label="Link Exclusivo com Vínculo do Instrutor"
                 type="text"
                 readOnly
+                id={`${fieldId}-link`}
                 value={inviteUrl}
                 className="w-full min-w-0 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-600 font-mono text-xs select-all truncate"
               />
@@ -237,16 +266,19 @@ export const StudentInviteModal: React.FC<StudentInviteModalProps> = ({
               <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
               Mensagem Pronta para Envio
             </p>
-            <p className="text-xs text-slate-600 whitespace-pre-line leading-relaxed font-sans bg-white p-2.5 rounded-lg border border-slate-100">
+            <p data-testid="invite-message" tabIndex={0} role="region" aria-label="Mensagem pronta para envio" className="invite-message text-sm text-slate-600 whitespace-pre-wrap [overflow-wrap:anywhere] leading-relaxed font-sans bg-white p-3 rounded-lg border border-slate-100">
               {inviteMessage}
             </p>
           </div>
 
-          {/* Action Buttons */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2">
+          {copyError && <p role="alert" className="rounded-lg bg-amber-50 p-3 text-amber-900">{copyError}</p>}
+        </div>
+        <footer className="shrink-0 border-t border-slate-200 bg-white p-3 sm:px-5">
+          <p className="text-xs text-slate-500 mb-3">Enviar convite ao aluno</p>
+          <div className="grid grid-cols-3 gap-2">
             <button
               onClick={handleSendWhatsApp}
-              className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold cursor-pointer transition-colors shadow-sm"
+              className="flex flex-wrap items-center justify-center gap-1.5 px-2 py-2.5 min-h-11 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold cursor-pointer transition-colors shadow-sm"
             >
               <Send className="w-4 h-4" />
               <span>WhatsApp</span>
@@ -259,15 +291,16 @@ export const StudentInviteModal: React.FC<StudentInviteModalProps> = ({
               <span>E-mail</span>
             </button>
             <button
-              onClick={handleCopyLink}
+              onClick={handleCopyMessage}
               className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold cursor-pointer transition-colors shadow-sm"
             >
               <Copy className="w-4 h-4" />
               <span>Copiar Texto</span>
             </button>
           </div>
-        </div>
+        </footer>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

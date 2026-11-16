@@ -371,8 +371,8 @@ export const FinancialHealthView: React.FC<FinancialHealthViewProps> = ({
               <label className="block text-xs font-bold text-slate-700 mb-1">
                 Simule um Pacote de Aulas (R$):
               </label>
-              <div className="flex items-center gap-2">
-                <input
+              <div className="flex flex-wrap items-center gap-2 min-w-0">
+                <input aria-label="Simule um Pacote de Aulas (R$):"
                   type="number"
                   value={valorPacoteSim}
                   onChange={(e) => setValorPacoteSim(parseFloat(e.target.value) || 0)}
@@ -543,7 +543,7 @@ export const FinancialHealthView: React.FC<FinancialHealthViewProps> = ({
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-2.5 text-slate-400 font-mono">R$</span>
-                <input
+                <input aria-label="Preço do Litro do Combustível (R$)"
                   type="number"
                   step="0.01"
                   value={simPrecoCombustivel}
@@ -557,7 +557,7 @@ export const FinancialHealthView: React.FC<FinancialHealthViewProps> = ({
               <label className="block font-semibold text-slate-700 mb-1">
                 Consumo Médio em Instrução Urbana (km/l)
               </label>
-              <input
+              <input aria-label="Consumo Médio em Instrução Urbana (km/l)"
                 type="number"
                 step="0.1"
                 value={simConsumoKmLitro}
@@ -571,7 +571,7 @@ export const FinancialHealthView: React.FC<FinancialHealthViewProps> = ({
               <label className="block font-semibold text-slate-700 mb-1">
                 Quilometragem Média por Aula de 50 min (km)
               </label>
-              <input
+              <input aria-label="Quilometragem Média por Aula de 50 min (km)"
                 type="number"
                 value={simKmPorAula}
                 onChange={(e) => setSimKmPorAula(parseFloat(e.target.value) || 0)}
@@ -586,7 +586,7 @@ export const FinancialHealthView: React.FC<FinancialHealthViewProps> = ({
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-2.5 text-slate-400 font-mono">R$</span>
-                <input
+                <input aria-label="Preço Cobrado por Aula Prática (R$) *"
                   type="number"
                   value={simPrecoCobradoAula}
                   onChange={(e) => setSimPrecoCobradoAula(parseFloat(e.target.value) || 0)}
@@ -599,7 +599,7 @@ export const FinancialHealthView: React.FC<FinancialHealthViewProps> = ({
               <label className="block font-semibold text-slate-700 mb-1">
                 Seguro, IPVA e Manutenção Fixa Mensal (R$)
               </label>
-              <input
+              <input aria-label="Seguro, IPVA e Manutenção Fixa Mensal (R$)"
                 type="number"
                 value={simSeguroManutencaoMensal}
                 onChange={(e) => setSimSeguroManutencaoMensal(parseFloat(e.target.value) || 0)}
@@ -611,7 +611,7 @@ export const FinancialHealthView: React.FC<FinancialHealthViewProps> = ({
               <label className="block font-semibold text-slate-700 mb-1">
                 Média de Aulas Ministradas no Mês
               </label>
-              <input
+              <input aria-label="Média de Aulas Ministradas no Mês"
                 type="number"
                 min={1}
                 max={500}

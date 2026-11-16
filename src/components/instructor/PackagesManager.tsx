@@ -50,6 +50,8 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
   const packages = db.getPackages(orgId, targetInstructorId);
   const students = db.getStudents(orgId, targetInstructorId);
 
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [showModal, setShowModal] = useState<boolean>(false);
   const [editingPackage, setEditingPackage] = useState<PackageOffer | null>(null);
   const [feedbackMsg, setFeedbackMsg] = useState<string>('');
@@ -77,6 +79,7 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
   });
 
   const handleOpenNew = () => {
+    setSaveError('');
     setEditingPackage(null);
     setForm({
       nome: '',
@@ -93,6 +96,7 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
   };
 
   const handleOpenEdit = (pkg: PackageOffer) => {
+    setSaveError('');
     setEditingPackage(pkg);
     setForm({
       nome: pkg.nome,
@@ -110,11 +114,14 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.nome.trim()) return;
+    if (isSaving || !form.nome.trim()) return;
+    setSaveError('');
 
     const valorCentavos = Math.round(parseFloat(form.valorReais || '0') * 100);
     if (isNaN(valorCentavos) || valorCentavos <= 0) return;
 
+    setIsSaving(true);
+    try {
     if (editingPackage) {
       const updated: PackageOffer = {
         ...editingPackage,
@@ -158,10 +165,14 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
 
     setShowModal(false);
     setTimeout(() => setFeedbackMsg(''), 3500);
+    } catch (error) {
+      setSaveError('Alteração preservada neste dispositivo. O banco não confirmou o salvamento. Confira a conexão e tente salvar novamente.');
+    } finally { setIsSaving(false); }
   };
 
   const handleToggleStatus = async (pkg: PackageOffer) => {
-    await db.togglePackageStatusAsync(pkg.id, currentUser.id);
+    try { await db.togglePackageStatusAsync(pkg.id, currentUser.id); }
+    catch { setSaveError('Status preservado neste dispositivo; sincronização pendente.'); return; }
     setFeedbackMsg(`Status do pacote "${pkg.nome}" alterado para ${!pkg.ativo ? 'ATIVO' : 'PAUSADO'}.`);
     setTimeout(() => setFeedbackMsg(''), 3000);
   };
@@ -218,6 +229,7 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
         </div>
       )}
 
+      {saveError && <p role="alert" className="p-4 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 text-sm">{saveError}</p>}
       {/* Packages Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {packages.map((pkg) => {
@@ -380,7 +392,7 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
             <form onSubmit={handleSave} className="p-5 overflow-y-auto space-y-4 text-xs">
               <div>
                 <label className="block font-bold text-slate-800 mb-1">Nome do Pacote *</label>
-                <input
+                <input aria-label="Nome do Pacote *"
                   type="text"
                   required
                   value={form.nome}
@@ -393,7 +405,7 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-slate-800 mb-1">Categoria CNH *</label>
-                  <select
+                  <select aria-label="Categoria CNH *"
                     value={form.categoriaCnh}
                     onChange={(e) => setForm({ ...form, categoriaCnh: e.target.value as CnhCategory })}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none bg-white font-semibold"
@@ -408,7 +420,7 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
 
                 <div>
                   <label className="block font-bold text-slate-800 mb-1">Quantidade de Aulas *</label>
-                  <input
+                  <input aria-label="Quantidade de Aulas *"
                     type="number"
                     min="1"
                     max="100"
@@ -433,7 +445,7 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
                   <label className="block font-bold text-slate-800 mb-1">Valor Total (R$) *</label>
                   <div className="relative">
                     <span className="absolute left-3 top-2 font-bold text-slate-400">R$</span>
-                    <input
+                    <input aria-label="Valor Total (R$) *"
                       type="number"
                       step="0.01"
                       min="1"
@@ -448,7 +460,7 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
 
                 <div>
                   <label className="block font-bold text-slate-800 mb-1">Forma de Pagamento Aceita *</label>
-                  <select
+                  <select aria-label="Forma de Pagamento Aceita *"
                     value={form.formaPagamento}
                     onChange={(e) => setForm({ ...form, formaPagamento: e.target.value as any })}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none bg-white font-semibold"
@@ -466,7 +478,7 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-blue-50/60 rounded-xl border border-blue-200">
                   <div>
                     <label className="block font-semibold text-blue-950 mb-1">Máx. de Parcelas no Cartão</label>
-                    <select
+                    <select aria-label="Máx. de Parcelas no Cartão"
                       value={form.maxParcelas}
                       onChange={(e) => setForm({ ...form, maxParcelas: parseInt(e.target.value, 10) || 1 })}
                       className="w-full px-3 py-1.5 border border-blue-300 rounded-lg focus:outline-none bg-white text-xs"
@@ -479,7 +491,7 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
 
                   <div>
                     <label className="block font-semibold text-blue-950 mb-1">Desconto À Vista (%)</label>
-                    <input
+                    <input aria-label="Desconto À Vista (%)"
                       type="number"
                       min="0"
                       max="50"
@@ -493,7 +505,7 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
 
               <div>
                 <label className="block font-bold text-slate-800 mb-1">Descrição e Diferenciais do Pacote</label>
-                <textarea
+                <textarea aria-label="Descrição e diferenciais do pacote"
                   rows={2}
                   value={form.descricao}
                   onChange={(e) => setForm({ ...form, descricao: e.target.value })}
@@ -515,6 +527,7 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
                 </label>
               </div>
 
+              {saveError && <p role="alert" className="p-3 rounded-xl bg-amber-50 text-amber-800 text-sm">{saveError}</p>}
               <div className="pt-3 border-t border-slate-200 flex flex-col-reverse sm:flex-row justify-end gap-2">
                 <button
                   type="button"
@@ -525,9 +538,10 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
                 </button>
                 <button
                   type="submit"
+                  disabled={isSaving}
                   className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-sm transition-colors cursor-pointer w-full sm:w-auto"
                 >
-                  Salvar Pacote
+                  {isSaving ? 'Salvando…' : 'Salvar Pacote'}
                 </button>
               </div>
             </form>

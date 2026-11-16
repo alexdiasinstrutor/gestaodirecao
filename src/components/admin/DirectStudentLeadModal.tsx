@@ -294,7 +294,7 @@ Direcionamos você para o(a) instrutor(a) credenciado(a) ${assignedInst.nome}, e
               </p>
             </div>
           </div>
-          <button
+          <button aria-label="Fechar janela"
             type="button"
             onClick={onClose}
             className="p-1.5 rounded-lg text-purple-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
@@ -365,6 +365,7 @@ Direcionamos você para o(a) instrutor(a) credenciado(a) ${assignedInst.nome}, e
               <input
                 type="text"
                 value={searchInstructor}
+                aria-label="Pesquisar instrutor por nome, cidade ou CFC"
                 onChange={(e) => setSearchInstructor(e.target.value)}
                 placeholder="Pesquisar instrutor por nome, cidade ou CFC..."
                 className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-300 bg-white focus:outline-hidden focus:ring-2 focus:ring-purple-500"
@@ -372,7 +373,7 @@ Direcionamos você para o(a) instrutor(a) credenciado(a) ${assignedInst.nome}, e
             </div>
 
             <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700 select-none shrink-0 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200">
-              <input
+              <input aria-label="Mostrar somente instrutores compatíveis com a categoria procurada"
                 type="checkbox"
                 checked={filterOnlyCategoryMatch}
                 onChange={(e) => setFilterOnlyCategoryMatch(e.target.checked)}
@@ -524,7 +525,7 @@ Direcionamos você para o(a) instrutor(a) credenciado(a) ${assignedInst.nome}, e
           {/* Configurações Adicionais do Direcionamento */}
           <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
             <label className="flex items-start gap-2.5 cursor-pointer select-none">
-              <input
+              <input aria-label="Matricular o candidato como aluno ativo"
                 type="checkbox"
                 checked={createActiveStudent}
                 onChange={(e) => setCreateActiveStudent(e.target.checked)}
@@ -544,7 +545,7 @@ Direcionamos você para o(a) instrutor(a) credenciado(a) ${assignedInst.nome}, e
               <label className="block text-[11px] font-bold text-slate-700 mb-1">
                 Instrução do Administrador para o Instrutor (opcional)
               </label>
-              <input
+              <input aria-label="Instrução do Administrador para o Instrutor (opcional)"
                 type="text"
                 value={observacoesDirecionamento}
                 onChange={(e) => setObservacoesDirecionamento(e.target.value)}

@@ -1,3 +1,4 @@
+import { LegalDocumentsAccess } from '../legal/LegalDocumentsAccess';
 import React, { useState } from 'react';
 import {
   Car,
@@ -261,6 +262,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
   return (
     <div className="min-h-screen bg-radial-[at_top] from-slate-900 via-slate-950 to-slate-950 flex flex-col justify-center py-10 px-4 sm:px-6 lg:px-8 selection:bg-blue-600 selection:text-white relative overflow-hidden">
+      <LegalDocumentsAccess />
       {/* Decorative Automotive Ambient Glows */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute top-40 right-10 w-[300px] h-[300px] bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -340,7 +342,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               </label>
               <div className="relative">
                 <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                <input
+                <input aria-label="E-mail de Acesso"
                   type="email"
                   required
                   value={email}
@@ -366,7 +368,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               </div>
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                <input
+                <input aria-label="Senha"
                   type="password"
                   required
                   value={password}
@@ -583,7 +585,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
                       Seu Nome Completo *
                     </label>
-                    <input
+                    <input aria-label="Seu Nome Completo *"
                       type="text"
                       required
                       value={googleNome}
@@ -597,7 +599,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
                       Perfil de Acesso *
                     </label>
-                    <select
+                    <select aria-label="Perfil de Acesso *"
                       value={googleRole}
                       onChange={(e) => setGoogleRole(e.target.value as any)}
                       className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none bg-white font-medium cursor-pointer"
@@ -613,7 +615,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   E-mail da sua Conta Google *
                 </label>
-                <input
+                <input aria-label="E-mail da sua Conta Google *"
                   type="email"
                   required
                   value={googleEmail}
@@ -627,7 +629,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Senha de Acesso à Plataforma *
                 </label>
-                <input
+                <input aria-label="Senha de Acesso à Plataforma *"
                   type="password"
                   required
                   value={googlePassword}

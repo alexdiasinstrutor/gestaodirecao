@@ -102,14 +102,13 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
   const students = useMemo(() => db.getStudents(orgId), [orgId, portalVersion]);
   const student = useMemo(
     () =>
-      students.find((s) => s.email.toLowerCase() === currentUser.email.toLowerCase()) ||
-      students.find((s) => s.id === currentUser.id) ||
-      students[0],
+      students.find((s) => (s.email || '').toLowerCase() === currentUser.email.toLowerCase()) ||
+      students.find((s) => s.id === currentUser.id),
     [students, currentUser.email, currentUser.id]
   );
 
   const instructor = useMemo(
-    () => db.getUsers(orgId).find((u) => u.id === student?.instrutorId) || db.getUsers(orgId)[1],
+    () => db.getUsers(orgId).find((u) => u.id === student?.instrutorId),
     [orgId, student?.instrutorId, portalVersion]
   );
   const pixConfig = db.getEffectivePixConfig(currentOrg, instructor);
@@ -259,6 +258,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
     setScheduleError('');
     setScheduleSuccess('');
 
+    if (!student) return;
     if (!selectedSlot) {
       setScheduleError('Selecione um horário disponível para agendar sua aula.');
       return;
@@ -456,7 +456,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
   };
 
   const handleConfirmStudentReschedule = async () => {
-    if (!lessonToStudentReschedule) return;
+    if (!student || !lessonToStudentReschedule) return;
     if (!studentRescheduleDate || !studentRescheduleSlot) {
       setStudentRescheduleError('Selecione uma data e um horário disponível.');
       return;
@@ -465,9 +465,10 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
       setIsProcessingAction(true);
       setStudentRescheduleError('');
       const res = await db.rescheduleLessonAsync({
-        aulaId: lessonToStudentReschedule.id,
+        lessonId: lessonToStudentReschedule.id,
         novaData: studentRescheduleDate,
         novaHoraInicio: studentRescheduleSlot,
+        novaHoraFim: db.getSlots(orgId, student.instrutorId).find(s => s.data === studentRescheduleDate && s.horaInicio === studentRescheduleSlot)?.horaFim || lessonToStudentReschedule.horaFim,
         motivo: studentRescheduleReason.trim() || 'Remarcação realizada pelo aluno no portal (>24h)',
         actor: currentUser
       });
@@ -609,7 +610,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
           <button
             type="button"
             onClick={() => setStudentMobileTab('BOOK')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer touch-target ${studentMobileTab === 'BOOK'
+            className={`flex-none shrink-0 min-w-[120px] flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer touch-target ${studentMobileTab === 'BOOK'
                 ? 'bg-emerald-600 text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-50'
               }`}
@@ -621,7 +622,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
           <button
             type="button"
             onClick={() => setStudentMobileTab('PIX')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer touch-target ${studentMobileTab === 'PIX'
+            className={`flex-none shrink-0 min-w-[120px] flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer touch-target ${studentMobileTab === 'PIX'
                 ? 'bg-emerald-600 text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-50'
               }`}
@@ -633,7 +634,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
           <button
             type="button"
             onClick={() => setStudentMobileTab('PROGRESS')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer touch-target ${studentMobileTab === 'PROGRESS'
+            className={`flex-none shrink-0 min-w-[120px] flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer touch-target ${studentMobileTab === 'PROGRESS'
                 ? 'bg-emerald-600 text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-50'
               }`}
@@ -728,7 +729,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                 <label className="block font-semibold text-slate-700 mb-1">
                   Escolha a Data da Aula:
                 </label>
-                <input
+                <input aria-label="Escolha a Data da Aula:"
                   type="date"
                   required
                   value={scheduleDate}
@@ -801,7 +802,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                 <label className="block font-semibold text-slate-700 mb-1">
                   O que você gostaria de treinar nesta aula?
                 </label>
-                <input
+                <input aria-label="O que você gostaria de treinar nesta aula?"
                   type="text"
                   value={bookingTopic}
                   onChange={(e) => setBookingTopic(e.target.value)}
@@ -1162,7 +1163,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                   <span>Tem cupom de desconto do seu instrutor?</span>
                 </span>
                 <div className="flex gap-1.5">
-                  <input
+                  <input aria-label="Código do cupom"
                     type="text"
                     value={couponCodeInput}
                     onChange={(e) => setCouponCodeInput(e.target.value.toUpperCase())}
@@ -1454,7 +1455,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
             <div className="space-y-3">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-700 block">Nova Data:</label>
-                <input
+                <input aria-label="Nova Data:"
                   type="date"
                   min={new Date().toISOString().slice(0, 10)}
                   value={studentRescheduleDate}
@@ -1518,7 +1519,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                 <label className="text-xs font-bold text-slate-700 block">
                   Motivo da alteração (opcional):
                 </label>
-                <input
+                <input aria-label="Motivo da alteração (opcional):"
                   type="text"
                   value={studentRescheduleReason}
                   onChange={(e) => setStudentRescheduleReason(e.target.value)}

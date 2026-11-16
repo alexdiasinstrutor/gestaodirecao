@@ -292,7 +292,7 @@ export function generateReceiptPdf(data: PaymentReceiptData): jsPDF {
       const imgX = centerSignX - imgWidth / 2 + mmOffsetX;
       const imgY = blocoAssinaturaY - 2 - imgHeight + mmOffsetY;
 
-      const format = signatureImg.includes('image/jpeg') || signatureImg.includes('image/jpg') ? 'JPEG' : 'PNG';
+      const format = signatureImg.includes('image/webp') ? 'WEBP' : signatureImg.includes('image/jpeg') || signatureImg.includes('image/jpg') ? 'JPEG' : 'PNG';
       doc.addImage(signatureImg, format, imgX, imgY, imgWidth, imgHeight);
     } catch (e) {
       console.warn('Não foi possível renderizar imagem de assinatura no PDF:', e);

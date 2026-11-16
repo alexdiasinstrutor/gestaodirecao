@@ -722,7 +722,7 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 pt-1">
               <div className="sm:col-span-2 relative">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                <input
+                <input aria-label="Buscar registros"
                   type="text"
                   placeholder="Buscar por nome, CNPJ/CPF ou cidade..."
                   value={searchTerm}
@@ -732,7 +732,7 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
               </div>
 
               <div>
-                <select
+                <select aria-label="Filtrar por status"
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
                   className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white"
@@ -747,7 +747,7 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
               </div>
 
               <div>
-                <select
+                <select aria-label="Filtrar por plano"
                   value={filterPlan}
                   onChange={(e) => setFilterPlan(e.target.value)}
                   className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white"
@@ -1335,7 +1335,7 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Selecione o Novo Instrutor Responsável *
                 </label>
-                <select
+                <select aria-label="Selecione o Novo Instrutor Responsável *"
                   required
                   value={targetInstructorId}
                   onChange={(e) => setTargetInstructorId(e.target.value)}

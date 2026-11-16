@@ -147,7 +147,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ currentOrg, currentUse
 
       {/* Report Switcher Tabs (Hidden during PDF print) */}
       <div className="no-print flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-1.5 bg-slate-200/80 rounded-2xl">
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar w-full sm:w-auto shrink-0 pb-1 sm:pb-0">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar w-full min-w-0 sm:flex-1 pb-1 sm:pb-0">
           <button
             onClick={() => setReportType('PERFORMANCE')}
             className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
@@ -187,7 +187,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ currentOrg, currentUse
         {reportType === 'STUDENT_CARD' && (
           <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-xl border border-slate-300 w-full sm:w-auto">
             <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">Aluno:</span>
-            <select
+            <select aria-label="Selecionar aluno"
               value={selectedStudentId}
               onChange={(e) => setSelectedStudentId(e.target.value)}
               className="text-xs font-bold text-slate-900 bg-transparent focus:outline-none w-full"

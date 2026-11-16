@@ -1,3 +1,5 @@
+import { supabaseAdapter } from './supabaseAdapter';
+import { recordDataChange } from './dataHistory';
 import type { Organization, SaaSPlanType, User } from '../types';
 
 export interface SystemModule {
@@ -118,6 +120,7 @@ export const ALL_SYSTEM_MODULES: SystemModule[] = [
 ];
 
 export interface SaaSPlanDefinition {
+  atualizadoEm?: string;
   id: SaaSPlanType | string;
   nome: string;
   tagline: string;
@@ -256,25 +259,47 @@ export function getSaaSPlans(): Record<string, SaaSPlanDefinition> {
   } catch (e) {
     console.warn('Erro ao ler planos customizados', e);
   }
-  return DEFAULT_SAAS_PLANS;
+  return structuredClone(DEFAULT_SAAS_PLANS);
 }
 
-export function saveSaaSPlan(planId: string, planDef: SaaSPlanDefinition): void {
+export async function saveSaaSPlan(planId: string, planDef: SaaSPlanDefinition): Promise<void> {
+  const user = JSON.parse(localStorage.getItem('agd_current_user') || 'null') as User | null;
+  if (!user || user.papel !== 'SUPER_ADMIN') throw new Error('Apenas o administrador master pode editar planos.');
   const plans = getSaaSPlans();
-  plans[planId] = planDef;
-  try {
-    localStorage.setItem(STORAGE_KEY_PLANS, JSON.stringify(plans));
-  } catch (e) {
-    console.error('Erro ao salvar plano SaaS', e);
-  }
+  const updated = { ...planDef, atualizadoEm: new Date().toISOString() };
+  plans[planId] = updated;
+  const previous = localStorage.getItem(STORAGE_KEY_PLANS);
+  const next = JSON.stringify(plans);
+  localStorage.setItem(STORAGE_KEY_PLANS, next);
+  localStorage.setItem('agd_pending_saas_' + planId, updated.atualizadoEm);
+  recordDataChange(STORAGE_KEY_PLANS, previous, next);
+  await supabaseAdapter.addAuditLog({ id: 'saasplan_' + planId, organizacaoId: user.organizacaoId,
+    usuarioId: user.id, usuarioNome: user.nome, acao: 'ATUALIZAR_PLANO_SAAS', entidade: 'SaaSPlanDefinition', entidadeId: planId,
+    detalhes: JSON.stringify(updated), timestamp: updated.atualizadoEm });
+  if (localStorage.getItem('agd_pending_saas_' + planId) === updated.atualizadoEm) localStorage.removeItem('agd_pending_saas_' + planId);
 }
-
-export function resetSaaSPlans(): void {
-  try {
-    localStorage.removeItem(STORAGE_KEY_PLANS);
-  } catch (e) {
-    console.error('Erro ao resetar planos', e);
+export async function syncSaaSPlans(): Promise<void> {
+  const user = JSON.parse(localStorage.getItem('agd_current_user') || 'null') as User | null;
+  let plans = getSaaSPlans();
+  if (user?.papel === 'SUPER_ADMIN') {
+    for (const plan of Object.values(plans)) {
+      if (localStorage.getItem('agd_pending_saas_' + plan.id)) await saveSaaSPlan(plan.id, plan);
+    }
   }
+  const remote = await supabaseAdapter.getSaaSPlanAuditLogs();
+  // Re-read after the network request so that edits made while fetching win.
+  plans = getSaaSPlans();
+  for (const log of remote) {
+    try {
+      const plan = JSON.parse(log.detalhes || '{}') as SaaSPlanDefinition;
+      if (!DEFAULT_SAAS_PLANS[plan.id] || !Array.isArray(plan.modulosPermitidos)) continue;
+      if (!localStorage.getItem('agd_pending_saas_' + plan.id) && (!plans[plan.id].atualizadoEm || (plan.atualizadoEm || '') > plans[plan.id].atualizadoEm!)) plans[plan.id] = plan;
+    } catch { /* Invalid legacy records do not replace valid plans. */ }
+  }
+  localStorage.setItem(STORAGE_KEY_PLANS, JSON.stringify(plans));
+}
+export async function resetSaaSPlans(): Promise<void> {
+  for (const plan of Object.values(DEFAULT_SAAS_PLANS)) await saveSaaSPlan(plan.id, structuredClone(plan));
 }
 
 /**

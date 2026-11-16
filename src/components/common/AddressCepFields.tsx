@@ -114,7 +114,7 @@ export const AddressCepFields: React.FC<AddressCepFieldsProps> = ({
           <label className="block text-xs font-semibold text-slate-700 mb-1">
             1º Estado (UF) {required && '*'}
           </label>
-          <select
+          <select aria-label="1º Estado (UF)"
             required={required}
             value={value.estado || DEFAULT_UF}
             onChange={(e) =>
@@ -138,7 +138,7 @@ export const AddressCepFields: React.FC<AddressCepFieldsProps> = ({
             2º CEP (Preenchimento Automático) {required && '*'}
           </label>
           <div className="flex gap-1.5">
-            <input
+            <input aria-label="2º CEP (Preenchimento Automático)"
               type="text"
               required={required}
               value={value.cep || ''}
@@ -191,7 +191,7 @@ export const AddressCepFields: React.FC<AddressCepFieldsProps> = ({
           <label className="block text-xs font-semibold text-slate-700 mb-1">
             Logradouro (Rua / Avenida / Praça) {required && '*'}
           </label>
-          <input
+          <input aria-label="Logradouro (Rua / Avenida / Praça)"
             type="text"
             required={required}
             value={value.logradouro || ''}
@@ -210,7 +210,7 @@ export const AddressCepFields: React.FC<AddressCepFieldsProps> = ({
           <label className="block text-xs font-semibold text-slate-700 mb-1">
             Número {required && '*'}
           </label>
-          <input
+          <input aria-label="Número"
             ref={numeroInputRef}
             type="text"
             required={required}
@@ -233,7 +233,7 @@ export const AddressCepFields: React.FC<AddressCepFieldsProps> = ({
           <label className="block text-xs font-semibold text-slate-700 mb-1">
             Complemento <span className="text-slate-400 font-normal">(Opcional)</span>
           </label>
-          <input
+          <input aria-label="Complemento (Opcional)"
             type="text"
             value={value.complemento || ''}
             onChange={(e) =>
@@ -251,7 +251,7 @@ export const AddressCepFields: React.FC<AddressCepFieldsProps> = ({
           <label className="block text-xs font-semibold text-slate-700 mb-1">
             Bairro {required && '*'}
           </label>
-          <input
+          <input aria-label="Bairro"
             type="text"
             required={required}
             value={value.bairro || ''}
@@ -270,7 +270,7 @@ export const AddressCepFields: React.FC<AddressCepFieldsProps> = ({
           <label className="block text-xs font-semibold text-slate-700 mb-1">
             Cidade / Município {required && '*'}
           </label>
-          <input
+          <input aria-label="Cidade / Município"
             type="text"
             required={required}
             value={value.cidade || ''}

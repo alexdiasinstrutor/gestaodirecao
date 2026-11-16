@@ -22,6 +22,8 @@ import { ALL_SYSTEM_MODULES, getSaaSPlans, saveSaaSPlan, resetSaaSPlans, SaaSPla
 import { formatCurrencyBRL } from '../../lib/validation';
 
 export const SaaSPlansTableView: React.FC = () => {
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [plansMap, setPlansMap] = useState<Record<string, SaaSPlanDefinition>>(() => getSaaSPlans());
   const [editingPlan, setEditingPlan] = useState<SaaSPlanDefinition | null>(null);
   const [successMsg, setSuccessMsg] = useState<string>('');
@@ -34,20 +36,25 @@ export const SaaSPlansTableView: React.FC = () => {
     setEditingPlan({ ...plan });
   };
 
-  const handleSavePlan = (e: React.FormEvent) => {
+  const handleSavePlan = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingPlan) return;
 
-    saveSaaSPlan(editingPlan.id, editingPlan);
+    if (saving) return;
+    setSaving(true); setSaveError('');
+    try {
+    await saveSaaSPlan(editingPlan.id, editingPlan);
     refreshPlans();
     setEditingPlan(null);
     setSuccessMsg(`Plano "${editingPlan.nome}" atualizado com sucesso!`);
     setTimeout(() => setSuccessMsg(''), 4000);
+    } catch { setSaveError('Plano preservado neste dispositivo. O banco não confirmou a atualização; tente novamente.'); }
+    finally { setSaving(false); }
   };
 
-  const handleResetAll = () => {
+  const handleResetAll = async () => {
     if (window.confirm('Deseja realmente restaurar os planos originais padrão do sistema?')) {
-      resetSaaSPlans();
+      try { await resetSaaSPlans(); } catch { setSaveError('Não foi possível confirmar a restauração dos planos no banco.'); return; }
       refreshPlans();
       setSuccessMsg('Planos restaurados para o padrão original!');
       setTimeout(() => setSuccessMsg(''), 4000);
@@ -73,6 +80,7 @@ export const SaaSPlansTableView: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
+      {saveError && <p role="alert" className="p-4 bg-amber-50 text-amber-800 rounded-xl">{saveError}</p>}
       {/* Top Banner Explicativo */}
       <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white p-6 rounded-2xl shadow-md border border-purple-800/40">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -300,11 +308,12 @@ export const SaaSPlansTableView: React.FC = () => {
               </button>
             </div>
 
+            {saveError && <p role="alert" className="p-4 bg-amber-50 text-amber-800">{saveError}</p>}
             <form onSubmit={handleSavePlan} className="p-5 sm:p-6 overflow-y-auto space-y-4 text-xs flex-1">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="sm:col-span-2">
                   <label className="block font-semibold text-slate-700 mb-1">Nome do Plano *</label>
-                  <input
+                  <input aria-label="Nome do Plano *"
                     type="text"
                     required
                     value={editingPlan.nome}
@@ -315,7 +324,7 @@ export const SaaSPlansTableView: React.FC = () => {
 
                 <div className="sm:col-span-2">
                   <label className="block font-semibold text-slate-700 mb-1">Descrição / Tagline *</label>
-                  <input
+                  <input aria-label="Descrição / Tagline *"
                     type="text"
                     required
                     value={editingPlan.tagline}
@@ -326,7 +335,7 @@ export const SaaSPlansTableView: React.FC = () => {
 
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Preço Mensal (R$) *</label>
-                  <input
+                  <input aria-label="Preço Mensal (R$) *"
                     type="number"
                     step="0.01"
                     required
@@ -343,7 +352,7 @@ export const SaaSPlansTableView: React.FC = () => {
 
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Validade Padrão (Dias) *</label>
-                  <input
+                  <input aria-label="Validade Padrão (Dias) *"
                     type="number"
                     required
                     value={editingPlan.diasValidadePadrao}
@@ -359,7 +368,7 @@ export const SaaSPlansTableView: React.FC = () => {
 
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Limite de Alunos (0 = Ilimitado) *</label>
-                  <input
+                  <input aria-label="Limite de Alunos (0 = Ilimitado) *"
                     type="number"
                     required
                     value={editingPlan.limiteAlunos}
@@ -375,7 +384,7 @@ export const SaaSPlansTableView: React.FC = () => {
 
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Limite de Instrutores (0 = Ilimitado) *</label>
-                  <input
+                  <input aria-label="Limite de Instrutores (0 = Ilimitado) *"
                     type="number"
                     required
                     value={editingPlan.limiteInstrutores}
@@ -391,7 +400,7 @@ export const SaaSPlansTableView: React.FC = () => {
 
                 <div className="sm:col-span-2">
                   <label className="block font-semibold text-slate-700 mb-1">Recomendado Para</label>
-                  <input
+                  <input aria-label="Recomendado Para"
                     type="text"
                     value={editingPlan.recomendadoPara}
                     onChange={(e) => setEditingPlan({ ...editingPlan, recomendadoPara: e.target.value })}
@@ -448,7 +457,7 @@ export const SaaSPlansTableView: React.FC = () => {
                   Cancelar
                 </button>
                 <button
-                  type="submit"
+                  type="submit" disabled={saving}
                   className="flex items-center gap-1.5 px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl cursor-pointer shadow-xs"
                 >
                   <Save className="w-4 h-4" />

@@ -733,7 +733,7 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <select
+                    <select aria-label="Filtrar por nível de evento"
                       value={filterSeverity}
                       onChange={(e) => setFilterSeverity(e.target.value)}
                       className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-700 cursor-pointer"
@@ -907,7 +907,7 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                   </div>
 
                   <form onSubmit={handleCreateSnapshot} className="flex items-center gap-2 w-full sm:w-auto">
-                    <input
+                    <input aria-label="Nome do ponto de recuperação"
                       type="text"
                       placeholder="Nome do ponto..."
                       value={snapshotName}
@@ -980,7 +980,7 @@ export const SecurityAgentsModal: React.FC<SecurityAgentsModalProps> = ({
                     <label className="text-xs font-semibold text-slate-300 block mb-1">
                       Motivo / Justificativa da Alteração:
                     </label>
-                    <input
+                    <input aria-label="Motivo / Justificativa da Alteração:"
                       type="text"
                       required
                       placeholder="Ex: Ajuste de responsividade mobile e revisão de layout"

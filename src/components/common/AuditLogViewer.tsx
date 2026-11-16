@@ -73,7 +73,7 @@ export const AuditLogViewer: React.FC<AuditLogViewerProps> = ({ orgId, onClose }
               </p>
             </div>
           </div>
-          <button
+          <button aria-label="Fechar janela"
             onClick={onClose}
             className="text-slate-400 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
           >
@@ -113,7 +113,7 @@ export const AuditLogViewer: React.FC<AuditLogViewerProps> = ({ orgId, onClose }
               <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
                 <div className="relative w-full sm:w-72">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                  <input
+                  <input aria-label="Buscar registros"
                     type="text"
                     placeholder="Buscar ação, autor ou detalhe..."
                     value={searchTerm}

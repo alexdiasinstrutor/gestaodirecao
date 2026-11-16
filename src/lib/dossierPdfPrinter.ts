@@ -2,7 +2,7 @@
 
 export const DOSSIER_METADATA = {
   title: 'Dossiê Técnico Homologado - Gestão AD (Auto Direção)',
-  version: 'v6.8 Auditada, Com Mapa Geográfico (5–40 km), Blindagem Cloud Vault de Pacotes, Gestão de Veículos e Sincronização em Tempo Real no Supabase',
+  version: 'v8.0 — Revisão local de UX/UI, persistência e backups; migração confirmada',
   date: 'Novembro de 2026',
   masterAdmin: 'cassiordcosta@gmail.com',
   regulations: 'CTB, CONTRAN e LGPD (Lei 13.709/2018)'
@@ -11,6 +11,7 @@ export const DOSSIER_METADATA = {
 export function getOfficialDossierHtml(): string {
   return `
   <div class="dossier-document">
+    <section class="doc-section"><h2>Revisão de 16/11/2026 — em avaliação local</h2><p>Menu lateral e navegação móvel espaçada; gravações confirmadas e fila persistente; assinatura no cadastro; planos SaaS sincronizados; data da alteração e histórico com exportação JSON. Campos da migração SQL confirmados em 16/11/2026; homologação em produção pendente. Detalhes atuais: dossie.md, seção 16. As seções históricas abaixo descrevem versões anteriores.</p></section>
     <!-- Header Oficial de Homologação -->
     <header class="doc-header">
       <div class="header-badges">

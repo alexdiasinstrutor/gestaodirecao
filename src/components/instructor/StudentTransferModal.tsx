@@ -116,7 +116,7 @@ export const StudentTransferModal: React.FC<StudentTransferModalProps> = ({
               <p className="text-xs text-slate-300">Vínculo individual e trilha de auditoria permanente</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white p-1 rounded-lg">
+          <button aria-label="Fechar janela" onClick={onClose} className="text-slate-400 hover:text-white p-1 rounded-lg">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -178,7 +178,7 @@ export const StudentTransferModal: React.FC<StudentTransferModalProps> = ({
               </div>
             ) : (
               <div className="space-y-2">
-                <select
+                <select aria-label="Novo Instrutor Destinatário *"
                   value={selectedTargetInstructorId}
                   onChange={(e) => setSelectedTargetInstructorId(e.target.value)}
                   className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none bg-white text-xs font-semibold"
@@ -222,7 +222,7 @@ export const StudentTransferModal: React.FC<StudentTransferModalProps> = ({
               ))}
             </div>
 
-            <textarea
+            <textarea aria-label="Justificativa detalhada da transferência"
               rows={2}
               value={customReasonDetails}
               onChange={(e) => setCustomReasonDetails(e.target.value)}

@@ -508,7 +508,7 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
               </p>
             </div>
           </div>
-          <button
+          <button aria-label="Fechar janela"
             type="button"
             onClick={onClose}
             className="text-slate-400 hover:text-white p-1.5 rounded-xl hover:bg-slate-800 transition-colors cursor-pointer"
@@ -585,7 +585,7 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
                 <label className="block font-bold text-slate-700 mb-1">
                   1º Selecione o Estado (UF) *
                 </label>
-                <select
+                <select aria-label="1º Selecione o Estado (UF) *"
                   value={estadoBusca}
                   onChange={(e) => handleSelectStateFirst(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-bold text-xs focus:border-blue-600 focus:outline-none cursor-pointer"
@@ -604,7 +604,7 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
                   Seu CEP (Auto-Preenchimento)
                 </label>
                 <div className="relative">
-                  <input
+                  <input aria-label="Seu CEP (Auto-Preenchimento)"
                     type="text"
                     value={cepBusca}
                     onChange={(e) => handleCepBuscaChange(e.target.value)}
@@ -626,7 +626,7 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
                     : `Cidades (${estadoBusca} · Sua Região)`}
                 </label>
                 {cidadesListadasParaEstado.length > 0 ? (
-                  <select
+                  <select aria-label="Filtrar por cidade de atendimento"
                     value={cidadeAppFiltro !== 'TODAS' ? cidadeAppFiltro : cidadeBusca}
                     onChange={(e) => {
                       const val = e.target.value;
@@ -658,7 +658,7 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
                 <label className="block font-bold text-slate-700 mb-1">
                   Seu Bairro / Região
                 </label>
-                <input
+                <input aria-label="Seu Bairro / Região"
                   type="text"
                   value={bairroBusca}
                   onChange={(e) => {
@@ -704,7 +704,7 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
                 <label className="block font-bold text-slate-700 mb-1">
                   Filtro por Categoria CNH
                 </label>
-                <select
+                <select aria-label="Filtro por Categoria CNH"
                   value={categoriaFiltro}
                   onChange={(e) => setCategoriaFiltro(e.target.value as CnhCategory | 'TODAS')}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-medium text-xs focus:border-blue-600 focus:outline-none cursor-pointer"
@@ -722,7 +722,7 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
                 <label className="block font-bold text-slate-700 mb-1">
                   Tipo de Veículo
                 </label>
-                <select
+                <select aria-label="Tipo de Veículo"
                   value={tipoVeiculoFiltro}
                   onChange={(e) => setTipoVeiculoFiltro(e.target.value as LocatorVehicleType | 'TODOS')}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-medium text-xs focus:border-blue-600 focus:outline-none cursor-pointer"
@@ -739,7 +739,7 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
                 <label className="block font-bold text-slate-700 mb-1">
                   Tipo de Câmbio (Carro Manual / Automático)
                 </label>
-                <select
+                <select aria-label="Tipo de Câmbio (Carro Manual / Automático)"
                   value={tipoCambioFiltro}
                   onChange={(e) => setTipoCambioFiltro(e.target.value as VehicleTransmissionType | 'TODOS')}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-medium text-xs focus:border-blue-600 focus:outline-none cursor-pointer"
@@ -955,7 +955,7 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
                     <div>
                       <label className="block font-bold text-slate-700 mb-1">Seu CEP (Auto-Preenchimento) *</label>
                       <div className="relative">
-                        <input
+                        <input aria-label="Seu CEP (Auto-Preenchimento) *"
                           type="text"
                           value={leadCep}
                           onChange={(e) => handleLeadCepChange(e.target.value)}
@@ -971,7 +971,7 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
 
                     <div>
                       <label className="block font-bold text-slate-700 mb-1">Seu Nome Completo *</label>
-                      <input
+                      <input aria-label="Seu Nome Completo *"
                         type="text"
                         required
                         value={leadNome}
@@ -983,7 +983,7 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
 
                     <div>
                       <label className="block font-bold text-slate-700 mb-1">Seu WhatsApp com DDD *</label>
-                      <input
+                      <input aria-label="Seu WhatsApp com DDD *"
                         type="tel"
                         required
                         value={leadTelefone}
@@ -997,7 +997,7 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
                     <div>
                       <label className="block font-bold text-slate-700 mb-1">Cidade & UF Desejada *</label>
                       <div className="flex gap-1.5">
-                        <input
+                        <input aria-label="Cidade & UF Desejada *"
                           type="text"
                           required
                           value={leadCidade}
@@ -1005,7 +1005,7 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
                           placeholder="Ex: Betim"
                           className="flex-1 px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs focus:border-indigo-600 focus:outline-none"
                         />
-                        <select
+                        <select aria-label="Estado do candidato"
                           value={leadEstado}
                           onChange={(e) => setLeadEstado(e.target.value.toUpperCase())}
                           className="w-18 px-2 py-2 border border-slate-300 rounded-xl bg-white text-center font-mono uppercase text-xs focus:border-indigo-600 focus:outline-none cursor-pointer"
@@ -1021,7 +1021,7 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
 
                     <div>
                       <label className="block font-bold text-slate-700 mb-1">Seu Bairro *</label>
-                      <input
+                      <input aria-label="Seu Bairro *"
                         type="text"
                         required
                         value={leadBairro}
@@ -1033,7 +1033,7 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
 
                     <div>
                       <label className="block font-bold text-slate-700 mb-1">Categoria CNH Pretendida</label>
-                      <select
+                      <select aria-label="Categoria CNH Pretendida"
                         value={leadCategoria}
                         onChange={(e) => setLeadCategoria(e.target.value as CnhCategory)}
                         className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-medium focus:border-indigo-600 focus:outline-none"
@@ -1048,7 +1048,7 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
 
                     <div>
                       <label className="block font-bold text-slate-700 mb-1">Tipo de Veículo</label>
-                      <select
+                      <select aria-label="Tipo de Veículo"
                         value={leadTipoVeiculo}
                         onChange={(e) => setLeadTipoVeiculo(e.target.value as LocatorVehicleType)}
                         className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-medium focus:border-indigo-600 focus:outline-none"
@@ -1062,7 +1062,7 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
 
                     <div>
                       <label className="block font-bold text-slate-700 mb-1">Preferência de Câmbio</label>
-                      <select
+                      <select aria-label="Preferência de Câmbio"
                         value={leadTipoCambio}
                         onChange={(e) => setLeadTipoCambio(e.target.value as VehicleTransmissionType)}
                         className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-medium focus:border-indigo-600 focus:outline-none"
@@ -1075,7 +1075,7 @@ export const InstructorLocatorMapModal: React.FC<InstructorLocatorMapModalProps>
                   </div>
 
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-1">
-                    <input
+                    <input aria-label="Observações do candidato"
                       type="text"
                       value={leadObservacoes}
                       onChange={(e) => setLeadObservacoes(e.target.value)}

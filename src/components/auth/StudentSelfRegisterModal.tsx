@@ -1,3 +1,5 @@
+import { RegistrationTerms } from '../legal/RegistrationTerms';
+import { registrationConsent } from '../../legal/registrationConsent';
 import React, { useState, useEffect } from 'react';
 import {
   X,
@@ -124,7 +126,9 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [termsAccepted, setTermsAccepted] = useState<boolean>(true);
+  const [termsAccepted, setTermsAccepted] = useState<boolean>(false);
+  const [packageAccepted, setPackageAccepted] = useState(false);
+  const [clausesAccepted, setClausesAccepted] = useState(false);
 
   // Cupom de Desconto
   const [couponCodeInput, setCouponCodeInput] = useState<string>(defaultCouponCode || '');
@@ -258,6 +262,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
     }
   }, [selectedInstructor?.id, availablePackages, formData.categoriaCnh]);
 
+  useEffect(() => {setPackageAccepted(false);setClausesAccepted(false);}, [selectedPackageId, selectedInstructor?.id, couponResult?.valorFinalCentavos]);
   const chosenPackage = availablePackages.find((p) => p.id === selectedPackageId) || availablePackages[0];
 
   // Localização do instrutor por código ou digitação manual
@@ -505,8 +510,9 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
       return;
     }
 
-    if (!termsAccepted) {
-      setError('É necessário concordar com os Termos de Uso e Política de Privacidade para prosseguir.');
+    if (!chosenPackage || !selectedPackageId) {setError('Selecione o pacote antes de concluir o cadastro.');setCurrentStep(1);return;}
+    if (!termsAccepted || !packageAccepted || !clausesAccepted) {
+      setError('Aceite os termos, a política de privacidade, o pacote escolhido e as regras de cancelamento e exame para prosseguir.');
       return;
     }
 
@@ -551,6 +557,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
         totalAulasContratadas: contractedLessons,
         pacoteId: chosenPackage?.id,
         pacoteNome: chosenPackage?.nome,
+        contratosPacotes: chosenPackage ? [{id:'cnt_base_'+studentId,alunoId:studentId,organizacaoId:targetOrgId,tipo:'PACOTE_BASE',pacoteId:chosenPackage.id,nome:chosenPackage.nome,categoriaCnh:formData.categoriaCnh,quantidadeAulas:chosenPackage.totalAulas,valorCentavos:couponResult ? couponResult.valorFinalCentavos : chosenPackage.valorCentavos,valorAulasCentavos:couponResult ? couponResult.valorFinalCentavos : chosenPackage.valorCentavos,valorLocacaoExameCentavos:0,locacaoExameContratada:false,dataContratacao:new Date().toISOString().slice(0,10)}] : [],
         habilidades: {
           baliza: 0,
           controleEmbreagem: 0,
@@ -565,7 +572,9 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
         dataCadastro: new Date().toISOString().slice(0, 10)
       };
 
+      const legalConsent = await registrationConsent(termsAccepted, chosenPackage ? {id:chosenPackage.id,instructorId:activeInstructorId,name:chosenPackage.nome,lessons:chosenPackage.totalAulas,totalCents:couponResult ? couponResult.valorFinalCentavos : chosenPackage.valorCentavos} : undefined, packageAccepted, clausesAccepted);
       const newUser: User = {
+        registrationLegalConsent: legalConsent,
         id: userId,
         organizacaoId: targetOrgId,
         nome: formData.nome.trim(),
@@ -657,7 +666,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
               <p className="text-xs text-slate-300">Habilitação de direção com instrutor credenciado</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white p-1 rounded-lg cursor-pointer">
+          <button aria-label="Fechar janela" onClick={onClose} className="text-slate-400 hover:text-white p-1 rounded-lg cursor-pointer">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -787,7 +796,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
                 </p>
 
                 <div className="flex gap-2">
-                  <input
+                  <input aria-label="1. Instrutor Credenciado Responsável *"
                     type="text"
                     value={instructorCodeInput}
                     onChange={(e) => {
@@ -895,7 +904,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
                         </span>
                       </div>
                     ) : (
-                      <select
+                      <select aria-label="Categoria CNH Pretendida *"
                         value={formData.categoriaCnh}
                         onChange={(e) => {
                           const newCat = e.target.value as CnhCategory;
@@ -1043,7 +1052,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
 
                 {!appliedCoupon ? (
                   <div className="flex gap-2">
-                    <input
+                    <input aria-label="Cupom de desconto do pacote de aulas"
                       type="text"
                       value={couponCodeInput}
                       onChange={(e) => setCouponCodeInput(normalizeCouponCode(e.target.value))}
@@ -1118,7 +1127,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="sm:col-span-2">
                   <label className="block font-bold text-slate-700 mb-1">Nome Completo do Aluno *</label>
-                  <input
+                  <input aria-label="Nome Completo do Aluno *"
                     type="text"
                     required
                     value={formData.nome}
@@ -1132,7 +1141,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
                   <label className="block font-bold text-slate-700 mb-1">
                     Data de Nascimento * <span className="text-red-600 font-bold">(Mín. 18 anos)</span>
                   </label>
-                  <input
+                  <input aria-label="Data de Nascimento * (Mín. 18 anos)"
                     type="date"
                     required
                     value={formData.dataNascimento}
@@ -1151,7 +1160,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
 
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">CPF (com validação estrita) *</label>
-                  <input
+                  <input aria-label="CPF (com validação estrita) *"
                     type="text"
                     required
                     value={formData.cpf}
@@ -1164,7 +1173,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
 
                 <div className="sm:col-span-2">
                   <label className="block font-bold text-slate-700 mb-1">WhatsApp Celular *</label>
-                  <input
+                  <input aria-label="WhatsApp Celular *"
                     type="text"
                     required
                     value={formData.telefone}
@@ -1259,7 +1268,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
                   </label>
                   <div className="relative">
                     <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                    <input
+                    <input aria-label="E-mail para Login na Plataforma *"
                       type="email"
                       required
                       value={formData.email}
@@ -1280,7 +1289,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
                     </label>
                     <div className="relative">
                       <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                      <input
+                      <input aria-label="Senha de Acesso (Mín. 6 dígitos) *"
                         type={showPassword ? 'text' : 'password'}
                         required
                         value={formData.senha}
@@ -1305,7 +1314,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
                     </label>
                     <div className="relative">
                       <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                      <input
+                      <input aria-label="Confirmar Senha *"
                         type={showPassword ? 'text' : 'password'}
                         required
                         value={formData.confirmarSenha}
@@ -1317,19 +1326,10 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
                   </div>
                 </div>
 
-                {/* Termos e LGPD */}
-                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-start gap-2.5">
-                  <input
-                    type="checkbox"
-                    id="termsCheck"
-                    checked={termsAccepted}
-                    onChange={(e) => setTermsAccepted(e.target.checked)}
-                    className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                  />
-                  <label htmlFor="termsCheck" className="text-xs text-slate-600 cursor-pointer leading-snug">
-                    Declaro que li e concordo com os <strong>Termos de Uso</strong> e <strong>Política de Privacidade</strong> em conformidade com a LGPD (Lei Geral de Proteção de Dados).
-                  </label>
-                </div>
+                <RegistrationTerms accepted={termsAccepted} onChange={setTermsAccepted} />
+                <label className="flex gap-2 items-start p-3 border rounded-xl"><input type="checkbox" required checked={packageAccepted} onChange={event=>setPackageAccepted(event.target.checked)} />Aceito contratar o pacote {chosenPackage?.nome}, de {chosenPackage?.totalAulas} aulas, com {selectedInstructor?.nome}, pelo total de {formatCurrencyBRL(couponResult ? couponResult.valorFinalCentavos : chosenPackage?.valorCentavos || 0)}.</label>
+                <label className="flex gap-2 items-start p-3 border-2 border-amber-400 rounded-xl bg-amber-50"><input type="checkbox" required checked={clausesAccepted} onChange={event=>setClausesAccepted(event.target.checked)} />Estou ciente das cláusulas Quarta e Quinta sobre cancelamentos, reagendamentos e cessão de veículo para exame. Cancelamentos e reagendamentos exigem antecedência mínima de 24 horas, sob pena de débito integral do serviço contratado.</label>
+
               </div>
 
               {/* Botões Navegação Tela 3 / Finalizar */}

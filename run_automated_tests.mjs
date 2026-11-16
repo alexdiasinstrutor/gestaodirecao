@@ -1,10 +1,9 @@
+import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 
-const BASE_DIR = path.resolve(
-  'C:/Users/cassi/.gemini/antigravity/brain/0357c05a-5cbf-415b-9782-d55e3e5536a9/scratch/baseline'
-);
+const BASE_DIR = path.dirname(fileURLToPath(import.meta.url));
 
 const results = [];
 

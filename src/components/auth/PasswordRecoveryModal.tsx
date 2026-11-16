@@ -158,7 +158,7 @@ export const PasswordRecoveryModal: React.FC<PasswordRecoveryModalProps> = ({
               <p className="text-xs text-slate-300">Confirmação estrita por CPF e E-mail</p>
             </div>
           </div>
-          <button
+          <button aria-label="Fechar janela"
             onClick={onClose}
             className="text-slate-400 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
           >
@@ -195,7 +195,7 @@ export const PasswordRecoveryModal: React.FC<PasswordRecoveryModalProps> = ({
                 </label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                  <input
+                  <input aria-label="E-mail de Cadastro *"
                     type="email"
                     required
                     value={email}
@@ -213,7 +213,7 @@ export const PasswordRecoveryModal: React.FC<PasswordRecoveryModalProps> = ({
                 <label className="block font-semibold text-slate-700 mb-1">
                   CPF do Usuário (Obrigatório) *
                 </label>
-                <input
+                <input aria-label="CPF do Usuário (Obrigatório) *"
                   type="text"
                   required
                   value={cpf}
@@ -279,7 +279,7 @@ export const PasswordRecoveryModal: React.FC<PasswordRecoveryModalProps> = ({
                 <label className="block font-semibold text-slate-700 mb-1">
                   Código de Verificação de 6 Dígitos *
                 </label>
-                <input
+                <input aria-label="Código de Verificação de 6 Dígitos *"
                   type="text"
                   required
                   maxLength={6}
@@ -296,7 +296,7 @@ export const PasswordRecoveryModal: React.FC<PasswordRecoveryModalProps> = ({
                 </label>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                  <input
+                  <input aria-label="Nova Senha (Mínimo 6 dígitos) *"
                     type="password"
                     required
                     value={newPassword}
@@ -313,7 +313,7 @@ export const PasswordRecoveryModal: React.FC<PasswordRecoveryModalProps> = ({
                 </label>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                  <input
+                  <input aria-label="Confirme a Nova Senha *"
                     type="password"
                     required
                     value={confirmPassword}

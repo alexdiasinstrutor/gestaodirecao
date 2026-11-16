@@ -1,3 +1,4 @@
+import { recordDataChange } from './dataHistory';
 /**
  * ============================================================
  * CUPONS DE DESCONTO — Persistência local (offline-first)
@@ -57,12 +58,10 @@ function read<T>(key: string): T[] {
   }
 }
 
-function write<T>(key: string, items: T[]): void {
-  try {
-    localStorage.setItem(key, JSON.stringify(items));
-  } catch (e) {
-    console.error(`[Cupons] Erro ao gravar ${key}:`, e);
-  }
+function write<T>(key: string, items: T[], track = true): void {
+  const previous = localStorage.getItem(key), next = JSON.stringify(items);
+  localStorage.setItem(key, next);
+  if (track) recordDataChange(key, previous, next);
 }
 
 export interface CouponPreview {
@@ -150,8 +149,8 @@ export const couponStore = {
 
   /** Substitui a base local (usado na hidratação a partir do Supabase). */
   replaceAll(coupons: DiscountCoupon[], redemptions?: CouponRedemption[]): void {
-    write(COUPON_STORAGE_KEYS.COUPONS, coupons);
-    if (redemptions) write(COUPON_STORAGE_KEYS.REDEMPTIONS, redemptions);
+    write(COUPON_STORAGE_KEYS.COUPONS, coupons, false);
+    if (redemptions) write(COUPON_STORAGE_KEYS.REDEMPTIONS, redemptions, false);
   },
 
   getRedemptions(filter: { cupomId?: string; organizacaoId?: string; escopo?: CouponScope } = {}): CouponRedemption[] {

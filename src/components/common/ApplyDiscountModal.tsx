@@ -200,7 +200,7 @@ export const ApplyDiscountModal: React.FC<ApplyDiscountModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-slate-200 text-slate-800 space-y-4">
+      <div className="bg-white rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-slate-200 text-slate-800 space-y-4 max-h-[calc(100dvh-2rem)] overflow-y-auto min-w-0">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
@@ -214,6 +214,7 @@ export const ApplyDiscountModal: React.FC<ApplyDiscountModalProps> = ({
           </div>
           <button
             onClick={onClose}
+            aria-label="Fechar desconto"
             className="text-slate-400 hover:text-slate-700 p-1 rounded-lg transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
@@ -278,7 +279,7 @@ export const ApplyDiscountModal: React.FC<ApplyDiscountModalProps> = ({
                 <label className="text-xs font-bold text-slate-700 block">
                   Selecione um cupom ativo do seu catálogo:
                 </label>
-                <select
+                <select aria-label="Selecione um cupom ativo do seu catálogo:"
                   value={selectedCouponCode}
                   onChange={(e) => {
                     setSelectedCouponCode(e.target.value);
@@ -301,7 +302,7 @@ export const ApplyDiscountModal: React.FC<ApplyDiscountModalProps> = ({
                 <Tag className="w-3.5 h-3.5 text-purple-600" />
                 <span>Ou digite o código do cupom:</span>
               </label>
-              <input
+              <input aria-label="Ou digite o código do cupom:"
                 type="text"
                 value={customCouponInput}
                 onChange={(e) => {
@@ -358,7 +359,7 @@ export const ApplyDiscountModal: React.FC<ApplyDiscountModalProps> = ({
 
             <div className="space-y-1">
               <label className="font-bold text-slate-700 block">Motivo / Justificativa (opcional):</label>
-              <input
+              <input aria-label="Motivo / Justificativa (opcional):"
                 type="text"
                 value={manualReason}
                 onChange={(e) => setManualReason(e.target.value)}

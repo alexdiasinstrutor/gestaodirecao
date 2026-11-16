@@ -1,0 +1,13 @@
+import { chromium } from 'playwright';
+import { isolateServices } from './mock-backend.mjs';
+const browser=await chromium.launch({executablePath:process.env.AUDIT_CHROME||'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:false,args:['--start-maximized']});
+const context=await browser.newContext({viewport:null});await isolateServices(context);
+const page=await context.newPage();await page.goto('http://localhost:3000/tests/ui/harness.html?scene=App%3Aconvite');await page.waitForFunction(()=>window.__UI_AUDIT_READY__);
+await page.getByRole('button',{name:'Convidar Aluno',exact:true}).first().click();await page.getByRole('dialog',{name:'Link de Convite do Aluno'}).waitFor();
+await page.evaluate(()=>document.title='Convite corrigido — prévia com dados fictícios e envios simulados');
+const geometry=await page.getByRole('dialog',{name:'Link de Convite do Aluno'}).evaluate(el=>{const r=el.getBoundingClientRect(),f=el.querySelector('footer').getBoundingClientRect();return {viewport:{width:innerWidth,height:innerHeight},dialog:{top:r.top,bottom:r.bottom},footerBottom:f.bottom};});
+if(geometry.dialog.top<0||geometry.footerBottom>geometry.viewport.height)throw new Error('Rodapé fora da janela real: '+JSON.stringify(geometry));
+await page.screenshot({path:'review-artifacts/ui-audit/convite-janela-real.png'});console.log(JSON.stringify(geometry));
+const report=await context.newPage();await report.goto('http://localhost:3000/review-artifacts/ui-audit/report.html');await page.bringToFront();
+console.log('PRÉVIA ABERTA: convite corrigido; relatório na segunda aba; dados fictícios e envios simulados.');
+await new Promise(()=>{});

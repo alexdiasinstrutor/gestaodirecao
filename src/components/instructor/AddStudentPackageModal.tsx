@@ -67,7 +67,7 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
 
   const instructorPackages = useMemo<PackageOffer[]>(() => {
     try {
-      const all = db.getPackageOffers(orgId);
+      const all = db.getPackages(orgId, student?.instrutorId || currentUser?.id);
       return (all || []).filter((pkg) => {
         const matchOwner =
           !pkg.instrutorId ||
@@ -119,6 +119,9 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
   });
   const [formaPagamento, setFormaPagamento] = useState<string>('PIX');
   const [gerarFatura, setGerarFatura] = useState<boolean>(true);
+
+  const [locacaoExameContratada, setLocacaoExameContratada] = useState(false);
+  const [locacaoBRL, setLocacaoBRL] = useState(0);
 
   // Cálculos dinâmicos de resumo
   const previewData = useMemo(() => {
@@ -181,6 +184,7 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
     e.preventDefault();
     setErrorMsg('');
 
+    if (!Number.isFinite(locacaoBRL) || locacaoBRL < 0 || !Number.isSafeInteger(Math.round(locacaoBRL * 100))) { setErrorMsg('Informe um valor válido para a locação.'); return; }
     if (previewData.qtdAulas < 1) {
       setErrorMsg('A quantidade de aulas adicionais deve ser de no mínimo 1 aula.');
       return;
@@ -196,7 +200,10 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
           nome: previewData.nome,
           categoriaCnh: previewData.categoria,
           quantidadeAulas: previewData.qtdAulas,
-          valorCentavos: previewData.valorCentavos,
+          valorCentavos: previewData.valorCentavos + (locacaoExameContratada ? Math.round(locacaoBRL * 100) : 0),
+          valorAulasCentavos: previewData.valorCentavos,
+          locacaoExameContratada,
+          valorLocacaoExameCentavos: locacaoExameContratada ? Math.round(locacaoBRL * 100) : 0,
           formaPagamento,
           observacoes:
             activeTab === 'SINGLE_CLASSES'
@@ -248,7 +255,7 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
               </p>
             </div>
           </div>
-          <button
+          <button aria-label="Fechar janela"
             type="button"
             onClick={onClose}
             className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
@@ -391,7 +398,7 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
                       Selecione o Pacote Adicional para o Aluno:
                     </label>
                     {instructorPackages.length > 0 ? (
-                      <select
+                      <select aria-label="Selecione o Pacote Adicional para o Aluno:"
                         value={selectedCatalogPkgId}
                         onChange={(e) => setSelectedCatalogPkgId(e.target.value)}
                         className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-semibold bg-white focus:outline-none focus:border-blue-600 cursor-pointer"
@@ -432,7 +439,7 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
                       <label className="block text-xs font-bold text-slate-900 mb-1">
                         Quantidade de Aulas Avulsas:
                       </label>
-                      <input
+                      <input aria-label="Quantidade de Aulas Avulsas:"
                         type="number"
                         min={1}
                         max={50}
@@ -446,7 +453,7 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
                       <label className="block text-xs font-bold text-slate-900 mb-1">
                         Valor Unitário por Aula (R$):
                       </label>
-                      <input
+                      <input aria-label="Valor Unitário por Aula (R$):"
                         type="number"
                         min={0}
                         step="5"
@@ -461,7 +468,7 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
                     <label className="block text-xs font-bold text-slate-900 mb-1">
                       Descrição / Finalidade das Aulas Avulsas:
                     </label>
-                    <input
+                    <input aria-label="Descrição / Finalidade das Aulas Avulsas:"
                       type="text"
                       value={singleClassDesc}
                       onChange={(e) => setSingleClassDesc(e.target.value)}
@@ -479,7 +486,7 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
                     <label className="block text-xs font-bold text-slate-900 mb-1">
                       Nome do Pacote Personalizado:
                     </label>
-                    <input
+                    <input aria-label="Nome do Pacote Personalizado:"
                       type="text"
                       value={customPkgName}
                       onChange={(e) => setCustomPkgName(e.target.value)}
@@ -493,7 +500,7 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
                       <label className="block text-xs font-bold text-slate-900 mb-1">
                         Total de Aulas Extras:
                       </label>
-                      <input
+                      <input aria-label="Total de Aulas Extras:"
                         type="number"
                         min={1}
                         max={100}
@@ -507,7 +514,7 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
                       <label className="block text-xs font-bold text-slate-900 mb-1">
                         Valor Total (R$):
                       </label>
-                      <input
+                      <input aria-label="Valor Total (R$):"
                         type="number"
                         min={0}
                         step="10"
@@ -521,7 +528,7 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
                       <label className="block text-xs font-bold text-slate-900 mb-1">
                         Categoria CNH:
                       </label>
-                      <select
+                      <select aria-label="Categoria CNH:"
                         value={customPkgCategory}
                         onChange={(e) => setCustomPkgCategory(e.target.value as CnhCategory)}
                         className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-bold bg-white focus:outline-none focus:border-blue-600 cursor-pointer"
@@ -539,7 +546,7 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
                     <label className="block text-xs font-bold text-slate-900 mb-1">
                       Observações Pedagógicas:
                     </label>
-                    <input
+                    <input aria-label="Observações Pedagógicas:"
                       type="text"
                       value={customPkgObs}
                       onChange={(e) => setCustomPkgObs(e.target.value)}
@@ -562,7 +569,7 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
                     <label className="block text-xs font-semibold text-slate-600 mb-1">
                       Forma de Pagamento Combinada:
                     </label>
-                    <select
+                    <select aria-label="Forma de Pagamento Combinada:"
                       value={formaPagamento}
                       onChange={(e) => setFormaPagamento(e.target.value)}
                       className="w-full px-3 py-1.5 border border-slate-300 rounded-lg bg-white text-xs font-medium"
@@ -578,7 +585,7 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
                     <label className="block text-xs font-semibold text-slate-600 mb-1">
                       Data de Vencimento da Fatura:
                     </label>
-                    <input
+                    <input aria-label="Data de Vencimento da Fatura:"
                       type="date"
                       value={dataVencimento}
                       onChange={(e) => setDataVencimento(e.target.value)}
@@ -600,6 +607,7 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
                 </label>
               </div>
 
+              <section className="border rounded-xl p-4 space-y-3"><label className="flex gap-2 items-center"><input type="checkbox" checked={locacaoExameContratada} onChange={event => setLocacaoExameContratada(event.target.checked)} />Incluir locação do carro para exame no pacote</label>{locacaoExameContratada && <label className="block text-sm font-semibold">Valor da locação para exame (R$)<input aria-label="Valor da locação para exame (R$)" type="number" min="0" step="0.01" required value={locacaoBRL} onChange={event => setLocacaoBRL(Number(event.target.value))} className="block w-full border rounded-lg p-3" /></label>}<p className="text-sm">Aulas {formatCurrencyBRL(previewData.valorCentavos)} · Locação {formatCurrencyBRL(locacaoExameContratada ? Math.round(locacaoBRL*100) : 0)} · Total {formatCurrencyBRL(previewData.valorCentavos + (locacaoExameContratada ? Math.round(locacaoBRL*100) : 0))}</p></section>
               {/* CARD DE RESUMO DINÂMICO ANTES DE SALVAR */}
               <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-2xl space-y-2">
                 <div className="flex items-center justify-between border-b border-emerald-200/80 pb-1.5">
@@ -630,7 +638,7 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
                   <div>
                     <span className="text-slate-500 text-[11px] block">Valor a Pagar</span>
                     <span className="font-extrabold font-mono text-slate-900 text-sm">
-                      {formatCurrencyBRL(previewData.valorCentavos)}
+                      {formatCurrencyBRL(previewData.valorCentavos + (locacaoExameContratada ? Math.round(locacaoBRL * 100) : 0))}
                     </span>
                   </div>
                 </div>

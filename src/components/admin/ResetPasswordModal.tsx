@@ -78,7 +78,7 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
               <p className="text-xs text-slate-300">{targetUser.nome} ({targetUser.email})</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white p-1 cursor-pointer">
+          <button aria-label="Fechar janela" onClick={onClose} className="text-slate-400 hover:text-white p-1 cursor-pointer">
             <X className="w-5 h-5" />
           </button>
         </div>

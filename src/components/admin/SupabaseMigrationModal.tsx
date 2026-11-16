@@ -163,7 +163,7 @@ export const SupabaseMigrationModal: React.FC<SupabaseMigrationModalProps> = ({
               </p>
             </div>
           </div>
-          <button
+          <button aria-label="Fechar janela"
             onClick={onClose}
             className="text-slate-400 hover:text-white p-1.5 rounded-xl hover:bg-slate-800 transition-colors cursor-pointer"
           >
@@ -253,7 +253,7 @@ export const SupabaseMigrationModal: React.FC<SupabaseMigrationModalProps> = ({
                   </label>
                   <div className="relative">
                     <Globe className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                    <input
+                    <input aria-label="URL do Projeto Supabase (Project URL) *"
                       type="url"
                       placeholder="https://abcdefghijklmnop.supabase.co"
                       value={config.projectUrl}
@@ -272,7 +272,7 @@ export const SupabaseMigrationModal: React.FC<SupabaseMigrationModalProps> = ({
                   </label>
                   <div className="relative">
                     <Key className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                    <input
+                    <input aria-label="Chave de Acesso (API Key: anon ou service_role) *"
                       type={showApiKey ? 'text' : 'password'}
                       placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
                       value={config.apiKey}

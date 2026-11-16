@@ -155,3 +155,51 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* Workspace navigation: generous targets, stable position and clear active state. */
+.workspace-layout { display: grid; gap: 24px; align-items: start; }
+.workspace-sidebar { background: white; border: 1px solid #e2e8f0; border-radius: 20px; padding: 8px; box-shadow: 0 4px 24px #0f172a04; min-width: 0; }
+.workspace-nav { display: flex; gap: 10px; padding: 4px; }
+.workspace-nav-item { display: flex; align-items: center; justify-content: flex-start; gap: 12px; min-height: 48px; padding: 12px 16px; border-radius: 12px; font-size: 13px; font-weight: 600; white-space: nowrap; flex-shrink: 0; cursor: pointer; transition: background .15s, color .15s; }
+.workspace-nav-active { background: #eff6ff; color: #1d4ed8; box-shadow: inset 3px 0 #2563eb; }
+.workspace-nav-active svg { color: #2563eb; }
+.workspace-nav-item:focus-visible, button:focus-visible { outline: 3px solid #60a5fa; outline-offset: 3px; }
+@media (min-width: 1024px) {
+  .workspace-layout { grid-template-columns: 240px minmax(0, 1fr); gap: 28px; }
+  .workspace-sidebar { position: sticky; top: 88px; }
+  .workspace-nav { flex-direction: column; gap: 8px; overflow: visible; }
+  .workspace-nav-item { width: 100%; }
+}
+@media print { .workspace-layout { display: block; } }
+
+@media (min-width: 1024px) { .workspace-sidebar { max-height: calc(100dvh - 104px); overflow-y: auto; } }
+
+@media (max-width: 639px) { .header-brand > div:last-child { display: none; } }
+
+/* A dialog scroll area must remain usable on short screens, zoom and touch. */
+.invite-dialog { max-height: calc(100vh - 1.5rem); max-height: calc(100dvh - 1.5rem); }
+.invite-scroll { overflow-y: scroll; overflow-x: hidden; overscroll-behavior: contain; scrollbar-gutter: stable; scrollbar-width: auto; -webkit-overflow-scrolling: touch; }
+.invite-scroll::-webkit-scrollbar { width: 12px; }
+.invite-scroll::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 8px; }
+.invite-scroll::-webkit-scrollbar-thumb { background: #64748b; border: 2px solid #e2e8f0; border-radius: 8px; }
+
+.invite-dialog footer button { min-width: 0; font-size: .75rem; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: .375rem; padding: .625rem .375rem; line-height: 1.25; min-height: 44px; }
+.invite-dialog footer button svg { flex-shrink: 0; }
+@media (min-width: 640px) { .invite-dialog footer button { flex-direction: row; } }
+
+/* Minimum hit area for compact controls; explicit larger touch targets remain unchanged. */
+@layer base { button:not([data-map-marker]) { min-height: 32px; } button:not([data-map-marker]):has(> svg:only-child) { min-width: 32px; } }
+
+@layer base { p, h1, h2, h3, h4, label { overflow-wrap: anywhere; } }
+.invite-scroll:focus-visible { outline: 2px solid #60a5fa; outline-offset: -2px; }
+
+/* Convite: limites da janela, campos alinhados e mensagem com rolagem própria. */
+.invite-dialog { height: min(760px, calc(100dvh - 24px)); min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
+.invite-dialog input, .invite-dialog select { min-height: 44px; }
+.invite-contact-grid > div { min-width: 0; }
+@media (min-width: 640px) { .invite-contact-grid label { min-height: 40px; display: flex; align-items: center; } }
+.invite-message { max-height: clamp(120px, 24dvh, 220px); overflow-y: scroll; overscroll-behavior: contain; scrollbar-gutter: stable; scrollbar-width: auto; }
+.invite-message::-webkit-scrollbar { width: 12px; }
+.invite-message::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 8px; }
+.invite-message::-webkit-scrollbar-thumb { background: #64748b; border: 2px solid #e2e8f0; border-radius: 8px; }
+.invite-dialog footer > p { font-weight: 600; color: #334155; margin-bottom: 8px; }

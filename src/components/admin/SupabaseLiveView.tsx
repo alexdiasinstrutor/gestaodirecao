@@ -167,7 +167,7 @@ export const SupabaseLiveView: React.FC = () => {
       <div className="bg-slate-900 border border-slate-800 text-white rounded-2xl p-4 sm:p-5 shadow-lg relative overflow-hidden">
         <div className="absolute top-0 right-0 w-80 h-32 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 relative z-10">
+        <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 relative z-10">
           <div className="flex items-center gap-3.5">
             <div className={`p-3 rounded-xl border ${
               connectionStatus.connected
@@ -200,7 +200,7 @@ export const SupabaseLiveView: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 w-full lg:w-auto flex-wrap sm:flex-nowrap">
+          <div className="flex items-center gap-2 w-full xl:w-auto flex-wrap shrink-0">
             <button
               onClick={fetchLiveSupabaseData}
               disabled={loading || isPushing}
@@ -377,7 +377,7 @@ export const SupabaseLiveView: React.FC = () => {
 
           <div className="relative w-full sm:w-64 shrink-0">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
-            <input
+            <input aria-label="Buscar registros"
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -692,8 +692,8 @@ export const SupabaseLiveView: React.FC = () => {
 
       {/* Modal Rápido de Alteração de Senha no Banco */}
       {userToReset && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto animate-in fade-in">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[calc(100dvh-1.5rem)] min-w-0">
             <div className="bg-slate-900 text-white p-4 flex items-center justify-between border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <Key className="w-5 h-5 text-purple-400" />
@@ -707,7 +707,7 @@ export const SupabaseLiveView: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleConfirmPasswordChange} className="p-5 space-y-4 text-xs">
+            <form onSubmit={handleConfirmPasswordChange} className="p-5 space-y-4 text-xs overflow-y-auto min-h-0">
               <div>
                 <p className="text-slate-600 font-medium">
                   Defina a nova senha para o usuário <strong className="text-slate-900">{userToReset.nome}</strong> ({userToReset.email}):
@@ -716,7 +716,7 @@ export const SupabaseLiveView: React.FC = () => {
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Nova Senha</label>
-                <input
+                <input aria-label="Nova Senha"
                   type="text"
                   required
                   value={newPasswordInput}

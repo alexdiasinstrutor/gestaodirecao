@@ -85,7 +85,7 @@ export const OrganizationAccessKeyModal: React.FC<OrganizationAccessKeyModalProp
               <p className="text-xs text-slate-300">{organization.nome}</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white p-1 cursor-pointer">
+          <button aria-label="Fechar janela" onClick={onClose} className="text-slate-400 hover:text-white p-1 cursor-pointer">
             <X className="w-5 h-5" />
           </button>
         </div>

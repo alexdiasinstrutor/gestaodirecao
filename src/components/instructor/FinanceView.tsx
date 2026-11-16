@@ -402,9 +402,9 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0">
       {/* Top Header and Sub-tabs */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col gap-4 min-w-0">
         <div>
           <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
             Gestão Financeira & DRE
@@ -415,7 +415,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
         </div>
 
         {/* Actions & Sub-tab navigation */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full min-w-0">
           <button
             onClick={() => window.print()}
             className="no-print hidden sm:flex items-center justify-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer touch-target shrink-0"
@@ -425,7 +425,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             <span>Exportar PDF</span>
           </button>
 
-          <div className="flex items-center gap-1.5 p-1 bg-slate-200/80 rounded-xl overflow-x-auto no-scrollbar w-full sm:w-auto shrink-0">
+          <div className="flex items-center gap-1.5 p-1 bg-slate-200/80 rounded-xl overflow-x-auto no-scrollbar w-full min-w-0 sm:flex-1">
             <button
               onClick={() => setActiveSubTab('RECEIVABLES')}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer shrink-0 ${
@@ -1551,7 +1551,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Valor do Pagamento (R$) *</label>
-                <input
+                <input aria-label="Valor do Pagamento (R$) *"
                   type="number"
                   step="0.01"
                   required
@@ -1563,7 +1563,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Método de Pagamento *</label>
-                <select
+                <select aria-label="Método de Pagamento *"
                   value={paymentForm.metodo}
                   onChange={(e) => setPaymentForm({ ...paymentForm, metodo: e.target.value as any })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-emerald-600 focus:outline-none bg-white font-medium"
@@ -1578,7 +1578,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
               {paymentForm.metodo === 'CARTAO_CREDITO' && (
                 <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl space-y-2">
                   <label className="block font-semibold text-blue-900">Número de Parcelas</label>
-                  <select
+                  <select aria-label="Número de Parcelas"
                     value={paymentForm.parcelas}
                     onChange={(e) => setPaymentForm({ ...paymentForm, parcelas: parseInt(e.target.value, 10) })}
                     className="w-full px-3 py-1.5 border border-blue-300 rounded-lg bg-white"
@@ -1617,7 +1617,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Observações do Recibo</label>
-                <input
+                <input aria-label="Observações do Recibo"
                   type="text"
                   placeholder="Ex: Pago via comprovante enviado no WhatsApp"
                   value={paymentForm.observacao}
@@ -1660,7 +1660,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             <form onSubmit={handleCreateExpense} className="mt-4 space-y-3.5 text-xs overflow-y-auto flex-1 pr-0.5">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Descrição do Gasto *</label>
-                <input
+                <input aria-label="Descrição do Gasto *"
                   type="text"
                   required
                   placeholder="Ex: Abastecimento Gasolina Comum 45L"
@@ -1673,7 +1673,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Categoria *</label>
-                  <select
+                  <select aria-label="Categoria *"
                     value={expenseForm.categoria}
                     onChange={(e) => setExpenseForm({ ...expenseForm, categoria: e.target.value as any })}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white"
@@ -1690,7 +1690,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
 
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Valor (R$) *</label>
-                  <input
+                  <input aria-label="Valor (R$) *"
                     type="number"
                     step="0.01"
                     required
@@ -1704,7 +1704,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Veículo Relacionado</label>
-                <select
+                <select aria-label="Veículo Relacionado"
                   value={expenseForm.veiculoId}
                   onChange={(e) => setExpenseForm({ ...expenseForm, veiculoId: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white"
@@ -1721,7 +1721,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Data Vencimento</label>
-                  <input
+                  <input aria-label="Data Vencimento"
                     type="date"
                     required
                     value={expenseForm.dataVencimento}
@@ -1731,7 +1731,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                 </div>
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Status</label>
-                  <select
+                  <select aria-label="Status"
                     value={expenseForm.status}
                     onChange={(e) => setExpenseForm({ ...expenseForm, status: e.target.value as any })}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white"
@@ -1776,7 +1776,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             <form onSubmit={handleCreateInvestment} className="mt-4 space-y-3.5 text-xs overflow-y-auto flex-1 pr-0.5">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Título do Objetivo *</label>
-                <input
+                <input aria-label="Título do Objetivo *"
                   type="text"
                   required
                   placeholder="Ex: Aquisição do 2º Onix Duplo Comando"
@@ -1788,7 +1788,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Categoria de Investimento *</label>
-                <select
+                <select aria-label="Categoria de Investimento *"
                   value={investmentForm.categoria}
                   onChange={(e) => setInvestmentForm({ ...investmentForm, categoria: e.target.value as any })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white"
@@ -1804,7 +1804,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Valor Meta (R$) *</label>
-                  <input
+                  <input aria-label="Valor Meta (R$) *"
                     type="number"
                     step="0.01"
                     required
@@ -1816,7 +1816,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                 </div>
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Aporte Mensal (R$) *</label>
-                  <input
+                  <input aria-label="Aporte Mensal (R$) *"
                     type="number"
                     step="0.01"
                     required
@@ -1871,7 +1871,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             <form onSubmit={handleUpdateInvestment} className="mt-4 space-y-3.5 text-xs overflow-y-auto flex-1 pr-0.5">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Título do Objetivo *</label>
-                <input
+                <input aria-label="Título do Objetivo *"
                   type="text"
                   required
                   placeholder="Ex: Aquisição do 2º Onix Duplo Comando"
@@ -1883,7 +1883,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Categoria de Investimento *</label>
-                <select
+                <select aria-label="Categoria de Investimento *"
                   value={investmentForm.categoria}
                   onChange={(e) => setInvestmentForm({ ...investmentForm, categoria: e.target.value as any })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white"
@@ -1899,7 +1899,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Valor Meta (R$) *</label>
-                  <input
+                  <input aria-label="Valor Meta (R$) *"
                     type="number"
                     step="0.01"
                     required
@@ -1911,7 +1911,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                 </div>
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Valor Já Acumulado (R$) *</label>
-                  <input
+                  <input aria-label="Valor Já Acumulado (R$) *"
                     type="number"
                     step="0.01"
                     required
@@ -1926,7 +1926,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Aporte Mensal (R$) *</label>
-                  <input
+                  <input aria-label="Aporte Mensal (R$) *"
                     type="number"
                     step="0.01"
                     required
@@ -1938,7 +1938,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                 </div>
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Data Previsão / Conclusão</label>
-                  <input
+                  <input aria-label="Data Previsão / Conclusão"
                     type="date"
                     value={investmentForm.dataPrevisao}
                     onChange={(e) => setInvestmentForm({ ...investmentForm, dataPrevisao: e.target.value })}
@@ -1984,7 +1984,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             <form onSubmit={handleCreateAccount} className="mt-4 space-y-3.5 text-xs overflow-y-auto flex-1 pr-0.5">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Selecione o Aluno *</label>
-                <select
+                <select aria-label="Selecione o Aluno *"
                   value={accountForm.alunoId}
                   onChange={(e) => setAccountForm({ ...accountForm, alunoId: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white"
@@ -1999,7 +1999,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Descrição do Pacote / Serviço *</label>
-                <input
+                <input aria-label="Descrição do Pacote / Serviço *"
                   type="text"
                   required
                   value={accountForm.descricao}
@@ -2011,7 +2011,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Valor Total (R$) *</label>
-                  <input
+                  <input aria-label="Valor Total (R$) *"
                     type="number"
                     step="0.01"
                     required
@@ -2022,7 +2022,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                 </div>
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Data Vencimento *</label>
-                  <input
+                  <input aria-label="Data Vencimento *"
                     type="date"
                     required
                     value={accountForm.dataVencimento}

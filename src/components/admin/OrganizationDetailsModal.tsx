@@ -50,7 +50,7 @@ export const OrganizationDetailsModal: React.FC<OrganizationDetailsModalProps> =
         {/* Cabeçalho */}
         <div className="bg-gradient-to-r from-slate-900 via-purple-950 to-slate-900 text-white p-5 sm:p-6 flex items-start justify-between shrink-0">
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="p-1.5 rounded-lg bg-white/10 text-purple-300">
                 <Building className="w-5 h-5" />
               </span>
@@ -66,7 +66,7 @@ export const OrganizationDetailsModal: React.FC<OrganizationDetailsModalProps> =
             <p className="text-xs text-slate-300 font-mono">{organization.cnpjCpf} · {organization.cidade}/{organization.estado}</p>
           </div>
 
-          <button
+          <button aria-label="Fechar janela"
             onClick={onClose}
             className="text-slate-400 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
           >
@@ -115,11 +115,11 @@ export const OrganizationDetailsModal: React.FC<OrganizationDetailsModalProps> =
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-2">
               <span className="font-bold text-slate-900 block text-xs">Informações de Contato</span>
               <div className="space-y-1.5 text-slate-600">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Phone className="w-3.5 h-3.5 text-slate-400" />
                   <span>{organization.telefone || 'Não informado'}</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Mail className="w-3.5 h-3.5 text-slate-400" />
                   <span>{organization.email || 'Não informado'}</span>
                 </div>
@@ -160,9 +160,9 @@ export const OrganizationDetailsModal: React.FC<OrganizationDetailsModalProps> =
 
             <div className="border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100">
               {users.map((u) => (
-                <div key={u.id} className="p-3 flex items-center justify-between gap-3 hover:bg-slate-50">
+                <div key={u.id} className="p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:bg-slate-50">
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="font-bold text-slate-900">{u.nome}</span>
                       <span className="px-1.5 py-0.2 rounded bg-purple-100 text-purple-800 text-xs font-bold">
                         {u.papel}
@@ -234,7 +234,7 @@ export const OrganizationDetailsModal: React.FC<OrganizationDetailsModalProps> =
             Criada em: {formatDateBR(organization.criadoEm)}
           </span>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
             <button
               onClick={() => onOpenKeyModal(organization)}
               className="flex-1 sm:flex-none px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold rounded-xl cursor-pointer text-xs flex items-center justify-center gap-1"

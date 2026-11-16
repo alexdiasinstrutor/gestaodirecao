@@ -1,4 +1,6 @@
 # DOSSIÊ COMPLETO DO SISTEMA — GESTÃO AD (AUTO DIREÇÃO)
+
+> **Revisão de 16/11/2026 — v8.0 em avaliação local.** Veja a seção 16 para melhorias, testes e limitações atuais. Migração SQL confirmada em 16/11/2026; homologação de produção pendente. Nenhum commit ou deploy realizado.
 **Documento Oficial de Registro Técnico, Arquitetura de Software, Interface Adaptativa, Mapa Geográfico (5–40 km), Blindagem Cloud Vault, Frota de Veículos, Pacotes Adicionais e Aulas Extras, Recibos Flexíveis, Blindagem Global Anti-Crash (ErrorBoundary), Regras de Negócio e Agentes de Segurança**  
 *Data de Homologação: Novembro de 2026 | Versão da Plataforma: v7.6 Auditada, Com Blindagem Global Anti-Crash (ErrorBoundary), Fallback de Organização, Tolerância JSON em Contratos, Adição de Pacotes Adicionais, Aulas Avulsas, Pacotes Personalizados, Emissão de Recibos por Pacote e Aulas Ministradas, Exclusão Definitiva de Veículos e Sincronização em Tempo Real no Supabase*
 
@@ -1263,3 +1265,154 @@ Este Dossiê constitui o registro definitivo e exaustivo de todas as funcionalid
 
 
 
+
+## 16. REVISÃO DE UX/UI, PERSISTÊNCIA E BACKUPS — 16/11/2026
+
+### 16.1 Estado e autorização
+Revisão implementada na cópia de trabalho a pedido do responsável, sem commit, push ou deploy. Apresentação no navegador precede qualquer aprovação para Git. Estado: avaliação local, com homologação de produção pendente. As declarações anteriores de homologação são registros históricos das versões anteriores.
+
+### 16.2 Menu e tela principal
+- Menu lateral a partir de 1024 px, com largura de 240 px, intervalos entre opções, alvos de pelo menos 48 px, indicação azul da tela ativa e foco visível por teclado.
+- Menu estável: removido o deslocamento automático ao aproximar o mouse. Rolagem horizontal deliberada, toque e botões permanecem disponíveis.
+- Cabeçalho compacto no celular e menu inferior com opções de pelo menos 80 px, evitando rótulos colados. Eliminada a barra redundante de modos; alternância permanece no cabeçalho/perfil.
+- Topo mostra data/hora da última alteração registrada por usuário, no fuso America/Sao_Paulo, situação do ponto de recuperação e acesso ao histórico.
+
+### 16.3 Falhas identificadas e integridade das gravações
+- O adaptador anteriormente registrava erros no console e resolvia a promessa como sucesso. O Cloud Vault também não verificava todas as respostas. Agora as falhas são propagadas; uma operação não confirmada permanece pendente.
+- Nova fila agd_cloud_outbox_v1 guarda tabela, operação, registro e revisão antes do envio. Gravações do mesmo registro são serializadas neste navegador. A confirmação de uma revisão antiga não remove uma revisão mais recente.
+- Leituras consideram alterações pendentes. A sincronização tenta reenviar a fila antes de hidratar a base, protegendo edições locais contra versões remotas antigas.
+- O botão de sincronização deixou de apenas simular espera e limpar a fila: agora executa operações reais e mantém as pendências quando há falha.
+- Planos aguardam confirmação, mantêm os dados locais quando há falha e mostram aviso. O botão de salvar evita envios duplicados enquanto aguarda resposta.
+- A limpeza por prefixo de ID não remove planos editados ou vinculados a instrutor. Mantida a proteção de exclusões da frota contra restauração indevida pelo seed.
+
+### 16.4 Planos comerciais SaaS
+Planos personalizados passaram a ter versão no Supabase, usando registros SaaSPlanDefinition na auditoria existente, com data de atualização. A sincronização recupera as configurações em outro dispositivo, preservando edições locais pendentes. Apenas SUPER_ADMIN edita esses planos. Corrigida também a mutação acidental dos valores padrão compartilhados em memória.
+
+### 16.5 Assinatura do instrutor e migração obrigatória
+Imagem e configuração (escala e deslocamentos) são mapeadas para public.users.assinatura_url e public.users.assinatura_config. Edições gerais do perfil preservam a assinatura já cadastrada. O recibo só confirma o salvamento após resposta de sucesso; em falha, exibe aviso e mantém a versão local pendente.
+
+A consulta inicial somente de metadados ao Supabase confirmou ausência de campos usados pelo código, incluindo users.assinatura_url e package_offers.instrutor_nome. O responsável informou ter executado supabase_migracao_persistencia_20261116.sql em 16/11/2026. Após essa informação, consultas de verificação retornaram HTTP 200 para os cinco campos previstos, confirmando sua disponibilidade na API. A migração é aditiva e idempotente; não apaga dados nem altera políticas de acesso. A execução no SQL Editor foi realizada pelo responsável, não pelo agente.
+
+### 16.6 Pontos de recuperação
+- Banco local agd-data-history no IndexedDB, separado do localStorage principal. Cada ponto tem ID único, coleção, autor, organização, data e valores anteriores/posteriores dos registros alterados.
+- Cobertura: organizações, perfis/assinaturas, alunos, veículos, planos, agenda, aulas, contas, pagamentos, despesas, investimentos, cupons, notificações, cobertura e créditos de aulas. Hidratação remota e renovação de sessão não geram datas artificiais de edição.
+- Cópia no Supabase via auditoria/cofre existente como DataCheckpoint. Falhas ficam pendentes e permitem reenvio. O histórico local pode ser aberto sem aguardar confirmação da rede.
+- Histórico com exportação JSON para futura restauração técnica. O arquivo contém diferenças de uma alteração, não uma imagem transacional completa do banco. Não há restauração automática nesta revisão.
+- Data separada por usuário; histórico filtrado por usuário/organização, com visão global do SUPER_ADMIN. Só são versionados os registros alterados, evitando incluir cadastros alheios à operação.
+- Limites: limpar os dados do navegador remove a cópia local; IndexedDB depende da quota disponível. O cofre legado limita auditoria a 600 eventos compartilhados. Isso não substitui backup administrativo/PITR do PostgreSQL ou retenção ilimitada. Restaurações financeiras devem conferir entidades relacionadas e o livro de créditos de aulas.
+- A fila protege contra falhas e respostas antigas neste cliente. Conflitos simultâneos entre dispositivos continuam sujeitos à arquitetura existente; esta revisão não implementa transação distribuída ou garantia absoluta de ausência de conflitos.
+
+### 16.7 Correções funcionais adicionais
+- Pacote adicional consulta getPackages e usa o método existente de persistência da conta a receber.
+- Remarcação do aluno envia lessonId e o término do slot escolhido, mantendo a validação de antecedência de 24 horas.
+- Indicadores de progresso tratam a quantidade de aulas em edição sem operações aritméticas sobre texto.
+- Frota usa tiposVeiculo no perfil de atendimento e value no seletor CNH.
+- Matrícula por demanda reversa inicializa os campos reais de StudentSkills.
+- Portal do aluno não usa mais o primeiro aluno ou instrutor da lista como substituto de vínculo ausente. E-mails vazios são tratados; sem matrícula correspondente, o sistema informa que o perfil não foi localizado.
+
+### 16.8 Verificações e limites da homologação
+- TypeScript aprovado; build de produção aprovado, com aviso de bundle grande já relacionado à arquitetura do projeto.
+- run_automated_tests.mjs: 27/27 aprovados; caminho absoluto de outro computador substituído pelo diretório do próprio checkout. A suíte inclui verificações de código e regras e não substitui o banco real.
+- tests/browser-review.mjs: navegação nas nove áreas principais, oito áreas administrativas e modal de integração, abas financeiras, portal do aluno e recuperação de senha; criação de pacote pela interface; assinatura e plano mantidos após sincronização/recarga.
+- Verificados: escrita rejeitada mantém pendência; plano SaaS recuperado da nuvem simulada após limpar cache; quota local não confirma salvamento; aluno sem vínculo não acessa outra ficha; resoluções de 320, 390 e 1440 px sem transbordamento horizontal.
+- Toda escrita de teste foi interceptada em base fictícia. Não foram inseridos, editados ou excluídos cadastros de produção pelos testes.
+- A migração SQL teve os campos confirmados. Autenticação, serviços externos reais (mensagens, geocodificação e pagamentos) e ciclo de produção ainda exigem homologação específica. Não se declara o sistema 100% homologado apenas com testes locais.
+- Ambiente: dependências incompletas e erros de escrita no Google Drive exigiram uma cópia temporária local para compilação e Chrome. A ferramenta de controle de navegador falhou ao iniciar; a revisão visual usou automação de testes no Chrome instalado.
+
+### 16.9 Arquivos centrais
+src/App.tsx, src/index.css, Header.tsx, SmartScrollNav.tsx, DataUpdateBar.tsx, src/lib/dataHistory.ts, cloudOutbox.ts, storage.ts, supabaseAdapter.ts, saasPlans.ts, couponStore.ts, useOnlineStatus.ts, telas e testes citados, além da migração SQL aditiva.
+
+#### Complemento da seção 16.5 — tamanho da assinatura
+A assinatura não é duplicada na sessão: é recuperada do perfil persistido. Arquivos de entrada continuam limitados a 2 MB; imagens grandes são preparadas para recibos em até 1200 × 500 px, com fundo branco e compressão JPEG limitada a 240 KB de URL codificada. PNG/JPG/WEBP pequenos permanecem no formato original. O PDF reconhece WEBP. Imagens inválidas ou que não possam ser preparadas recebem erro explícito. O teste do navegador cobre a redução de uma imagem grande sem acessar produção.
+
+#### Complemento da seção 16.8 — cobertura ampliada
+A revisão do Chrome também abriu cadastro de instrutor, auto-cadastro do aluno, mapa público, tela de duas etapas com seis campos e recibo carregando a assinatura persistida. Uma despesa criada durante falha simulada foi reenviada e recuperada. A otimização de uma imagem grande de assinatura foi verificada. Testes de cupons: 9/9 aprovados, além da suíte de regressão 27/27. Essas verificações usam serviços interceptados; não comprovam entrega real de códigos de autenticação, mensagens ou pagamentos.
+O teste final também verifica que a inicialização/limpeza preserva planos padrão posteriormente editados ou vinculados ao instrutor, mesmo quando conservam o ID legado de demonstração.
+
+
+### 16.10 Confirmação da migração pelo responsável — 16/11/2026
+O responsável comunicou “migração executada”. Verificação posterior, somente de leitura e sem retornar cadastros, usou consultas REST com limit=0:
+- public.users: id, assinatura_url e assinatura_config — HTTP 200.
+- public.package_offers: id, instrutor_id, instrutor_nome e atualizado_em — HTTP 200.
+Os cinco campos adicionados estão disponíveis. Isso confirma o esquema necessário; não equivale a um teste de gravação e recuperação de assinatura ou plano em produção. Nenhum cadastro real foi criado, alterado ou excluído nesta verificação. A revisão visual, a homologação funcional com dados reais e a aprovação de commit/deploy continuam pendentes.
+
+## 17. CORREÇÃO DO CONVITE E AUDITORIA AUTOMATIZADA DAS TELAS — 16/11/2026
+
+### 17.1 Falha relatada e causa observada
+O responsável relatou conteúdo do convite inacessível por falta de rolagem visível. A regressão inicial confirmou também um link longo ultrapassando a área da mensagem: em notebook, 787 px de conteúdo dentro de 442 px; em celular pequeno, 791 px dentro de 258 px. A rolagem programática isolada não era suficiente para comprovar a experiência real. A suíte anterior verificava abertura/ausência de crash, mas não a acessibilidade de todos os controles por rolagem.
+
+### 17.2 Correção do convite
+- Altura limitada à área útil dinâmica da janela, corpo com min-height:0, rolagem vertical explícita e trilha/barra de maior contraste e largura.
+- Cabeçalho e rodapé não encolhem. WhatsApp, e-mail e cópia permanecem visíveis; mensagem e campos ficam na região rolável.
+- Links longos quebram dentro da mensagem sem corte lateral; identificação do instrutor e código adaptam-se à largura.
+- Diálogo identificado para tecnologias assistivas, rótulos associados, foco contido, Escape para fechar e restauração do foco anterior. O fundo não rola com o modal aberto.
+- Token do convite permanece estável ao digitar. “Copiar Texto” copia a mensagem inteira, enquanto “Copiar” copia o link. Confirmação só ocorre após sucesso da área de transferência; falhas mostram aviso. E-mail inválido não inicia o compartilhamento.
+
+### 17.3 Novos testes
+A suíte tests/ui-audit.mjs renderiza os componentes reais, com inventário em tests/ui/scenes.mjs e isolamento de serviços em tests/ui/mock-backend.mjs. O conjunto contém 105 telas/estados em sete áreas úteis de janela (735 combinações), incluindo 12 estados da aplicação completa com menu lateral, formulários internos, abas de relatórios e versões simplificadas. App.tsx e seus fluxos integrados continuam cobertos por tests/browser-review.mjs. Componentes de infraestrutura Logo, SmartScrollNav e ErrorBoundary são utilizados pelos cenários; o inventário os identifica como primitivas, não como telas independentes.
+
+A execução registra campos, botões, alcance após rolagem, controles encobertos, cortes horizontais, contêineres roláveis, erros de renderização e JavaScript, além de sondagens de edição na resolução desktop. O convite tem testes de mouse, teclado, clipboard, validação e compartilhamento interceptado. As saídas são HTML, JSON e imagens em review-artifacts/ui-audit. Instruções e limitações constam em tests/README.md. Novas telas sem cenário explícito são detectadas pelo inventário.
+
+### 17.4 Outras correções encontradas pela auditoria
+- Troca de senha Master e troca rápida de senha do painel do banco receberam limites de altura e rolagem interna.
+- A barra de ferramentas do dossiê deixa de fixar-se, permitindo alcançar todas as ações também em janelas baixas e em paisagem.
+- Seletor CNH da ficha do aluno, simulador de divisão do pacote e navegação financeira receberam limites de largura/reflow adequados.
+- Abas simplificadas do aluno não encolhem até sobrepor rótulos/ícones.
+- Menu de perfil recebeu altura máxima e rolagem para telas baixas.
+- Mapas oferecem uma lista selecionável com os pontos completos, inclusive quando os marcadores geométricos se sobrepõem ou estão fora da janela cartográfica. Não se alteram as coordenadas reais.
+- Campos com rótulos estáticos receberam nomes acessíveis equivalentes, sem alteração das regras de gravação.
+
+### 17.5 Estado e limites
+A rodada diagnóstica inicial de desktop/celular identificou 20 ocorrências em 176 combinações; elas incluíam cortes reais, marcadores sobrepostos, reticências intencionais e um seletor incorreto do próprio teste. Foram diferenciadas falhas do produto e expectativas inadequadas do teste antes da nova execução.
+
+A matriz consolidada registrou 735/735 combinações aprovadas, sem falhas e sem telas do inventário sem cenário. Foram registrados 2.296 exames de campos e 8.838 de botões, contando repetições por resolução. Após a execução completa, foram reexecutados os cenários afetados pelas correções; o JSON registra a origem e as quantidades reaproveitadas em cada revalidação. O comando padrão continua executando toda a matriz.
+
+Chrome foi iniciado preservando barras nativas (o padrão headless as oculta). A análise geométrica respeita elementos fixos na janela e verifica o alvo real de clique. Além das correções acima, foram tratados textos extensos em áreas estreitas e a ordem de camadas da lista do mapa. O relatório final preserva 123 avisos de reticências intencionais, sem avisos de rótulos não associados, e detalha os limites da inspeção de campos. A última revalidação executou 21 combinações e preservou 714 anteriormente aprovadas. Build, TypeScript, regressão integrada, 27 testes de regras e 9 testes de cupons aprovados. O build mantém aviso de bundle grande.
+
+PASS não garante ausência de todos os defeitos. Serviços externos continuam interceptados; não há escrita de teste em produção. Pagamentos, mensagens, autenticação e conflitos entre dispositivos requerem homologação específica. Nenhum commit, push ou deploy autorizado ou realizado.
+
+### 17.6 Refinamento após nova captura do responsável
+O responsável informou que o rodapé ainda aparecia fora da janela e que os campos estavam desalinhados. O convite passou a ser renderizado por portal diretamente no body, com três linhas de grid (cabeçalho, corpo rolável e rodapé) e altura limitada ao menor valor entre 760 px e a janela disponível. A mensagem ganhou rolagem própria e altura de 120 a 220 px conforme a janela; o texto completo continua disponível para cópia e compartilhamento. Telefone e e-mail usam a mesma altura e linha de rótulo; o aviso Obrigatório não quebra. O rodapé identifica explicitamente as ações de envio.
+
+A prévia visual passou de viewport artificial fixo de 1280×900 para o tamanho real da janela do Chrome, maximizada. A prévia verifica a geometria do rodapé antes de ser apresentada. A suíte passou a verificar também o rodapé imediatamente na abertura, a rolagem interna da mensagem e o alinhamento vertical/altura dos campos. Serviços reais permanecem interceptados. Sem commit, push ou deploy.
+
+Resultado do refinamento: 28 combinações afetadas reexecutadas e aprovadas; 707 casos anteriores preservados, total consolidado de 735/735. TypeScript e build aprovados. Na janela real da prévia (1707×825), o rodapé termina em y=792, dentro da área útil. Captura: review-artifacts/ui-audit/convite-janela-real.png.
+
+### 17.7 Auditoria ampliada de layout das demais telas
+Solicitada nova inspeção das demais telas para botões cortados, alinhamento e rolagem. O executor ganhou verificação inicial de limites de modais, detecção de deslocamento programático em áreas com overflow hidden e corte do conteúdo interno dos botões. A geometria inicial de modais e rodapés é registrada no relatório. Um autoteste exige detectar um modal propositalmente cortado e aceitar um modal rolável válido antes de executar a matriz. A execução desta rodada é completa, sem reaproveitamento de casos anteriores; resultados serão registrados após conclusão. Incluída também a variante de desconto manual no inventário para verificação adicional.
+
+Resultado da auditoria ampliada: rodada completa de 735 combinações identificou 21 falhas, incluindo 14 cenários de agenda afetados pela conclusão automática por horário. Corrigidos reflow de ações do Supabase, abas do mapa, ações dos usuários da organização e largura do botão Exportar. Relógio fixado às 09h nos cenários de agenda. Resultado da revalidação consta em review-artifacts/layout-final/results.json, com reaproveitamento explícito dos casos aprovados e inclusão do desconto manual.
+
+## 18. DOCUMENTOS JURÍDICOS — INTEGRAÇÃO INICIAL EM 16/11/2026
+Lidos README, schema e os três modelos fornecidos em src/legal/documentos_juridicos_plataforma. Integrados leitura e preenchimento dos termos, política e contrato por acesso no login/cabeçalho. Modelos originais preservados. Variáveis desconhecidas aparecem como pendências, sem dados jurídicos inventados. Dados públicos da provedora configuráveis por ambiente VITE_LEGAL_*. Alunos sugeridos limitados ao vínculo do instrutor/gestor. Exportação JSON inclui conteúdo integral, versão, SHA-256, data UTC e status MINUTA_SEM_ACEITE.
+
+Validação inicial: 12/12 cenários dos três documentos em 1440×900, 390×844, 320×568 e 844×390. Verificados leitura, rodapé dentro da janela, ausência de transbordamento horizontal, fechamento e exportação. Hash conferido contra Node crypto no teste. TypeScript e build aprovados na revisão inicial.
+
+Pendente para formalização: dados oficiais da provedora/DPO, associação da minuta ao pacote efetivamente contratado, coleta dos dois checkboxes pelo aluno e assinatura de cada parte, armazenamento durável de evidências em tabela própria e captura de IP em servidor autenticado. Nenhum aceite jurídico foi criado. A etapa atual permite revisar minutas e não conclui a formalização eletrônica solicitada pelas orientações. Sem commit ou deploy.
+
+### 18.1 Dados da provedora e individualização
+Responsável informou Stark Light Save, CNPJ 23.659.019/0001-40, Rua São Cristóvão, 36, Brasileia, Betim/MG, CEP 32600-280, e-mail cassiodiniz@uol.com.br. Integrados como padrões públicos dos termos e privacidade. UF da sede separada dos dados do instrutor. Minutas usam o instrutor do vínculo do aluno e o contrato/pacote efetivamente selecionado, com quantidade, valor, categoria e pagamento próprios. Trocar aluno/pacote reinicializa os campos para evitar resíduos de outra minuta. Campos ausentes no cadastro permanecem pendentes. Corrigida a expressão de substituição dos placeholders, acrescentando teste que rejeita variáveis não substituídas. Aceites e captura de IP continuam pendentes conforme seção 18.
+
+### 18.2 Contratos, locação e aceites — atualização preparada
+Incluídos valorAulasCentavos, valorLocacaoExameCentavos e locacaoExameContratada no contrato de pacote do aluno. A contratação permite discriminar a locação e soma aulas + locação na fatura e no total. Registros legados mantêm o valor original e locação zero. O armazenamento valida valores inteiros em centavos e igualdade do total antes de gerar a cobrança. A minuta apresenta valor unitário das aulas, subtotal, locação e total individualizados.
+
+Preparada supabase_migracao_contratos_aceites_20261116.sql, com legal_templates, legal_contract_versions e legal_acceptances, RLS e RPCs prepare_legal_contract/accept_legal_contract. Versões são renderizadas e calculadas no servidor, conferem os valores contra o pacote no banco e preservam conteúdo, variáveis, hash e partes. Cada parte confirma seus dois checkboxes em sua própria sessão; repetição retorna o comprovante anterior. A interface só confirma sucesso após resposta do banco, mantendo erro visível para tentativa posterior. O cofre de auditoria de 600 registros não é usado para esses documentos.
+
+Requisito de implantação: aplicar a migração, vincular users.auth_user_id à conta real Supabase Authentication do instrutor e do aluno e usar sessão Auth. Login legado baseado em dados locais não autentica a pessoa para essas funções. O contexto x-forwarded-for fica marcado como não verificado; ip_address depende de captura confiável pelo gateway. Guia em src/legal/ATUALIZACAO_BANCO_CONTRATOS.md. Migração de produção não executada nesta etapa.
+
+Testes executados: fluxo de contratação/locação e aceite em quatro resoluções, incluindo falha e reenvio; documentos jurídicos em 12 cenários; migração e políticas em PostgreSQL isolado. Evidências em review-artifacts/legal-contracts. Esses testes não enviaram contratos ou aceites à produção.
+
+Resultado final da seção 18.2: 17 verificações de PostgreSQL/RLS/RPC aprovadas; quatro fluxos completos de interface com locação e aceites aprovados; 12 cenários de documentos aprovados; 28/28 cenários de layout aprovados, sem avisos. TypeScript e build aprovados. A matriz de layout abre explicitamente a seção recolhida de campos antes de inspecioná-los. Capturas e resultados em review-artifacts/legal-contracts e review-artifacts/legal-layout. A migração ainda depende de execução no Supabase de produção.
+
+### 18.3 Aceites obrigatórios nos cadastros
+Instrutor confirma Termos de Uso e Política de Privacidade no último passo do cadastro. Aluno confirma os mesmos documentos, a oferta individual de pacote e as regras destacadas de cancelamento/reagendamento/exame. Removido o aceite previamente marcado do aluno. Todas as caixas iniciam desmarcadas, há validação no envio e a troca de oferta/instrutor/preço reinicia os reconhecimentos específicos. Documentos disponíveis para leitura no próprio formulário.
+
+Conteúdo, versão e SHA-256 dos termos/privacidade e oferta ficam no perfil em registrationLegalConsent, mapeado para users.registration_legal_consent. Essa evidência inicial é marcada DECLARADO_NO_CADASTRO, com data e user-agent do cliente. Aceites autenticados bilaterais continuam separados em legal_acceptances. A declaração original é preservada ao atualizar o perfil. Nova migração aditiva supabase_migracao_aceites_cadastro_20261116.sql precisa ser executada antes da disponibilização. A pré-verificação da coluna ocorre antes das gravações do cadastro. O cadastro do aluno também cria seu contrato PACOTE_BASE, permitindo a posterior preparação de versão autenticada.
+
+Validação da seção 18.3: testes completos dos dois cadastros aprovados, incluindo ausência inicial de marcações, bloqueio sem aceite, submissão com evidências e pacote vinculado no aluno. Capturas em review-artifacts/registration-consent. TypeScript e build aprovados. Nenhum cadastro de produção foi criado pelos testes. RegistrationTerms é componente compartilhado exercitado nos cenários de cadastro e classificado como primitiva no inventário de layout.
+
+### 18.4 Verificação após execução informada do SQL
+O responsável informou ter executado o SQL. Consulta REST somente de metadados, com limit=0 e configuração efetiva do projeto ozizhwejagjlhmaygvlf, retornou HTTP 400 / PostgreSQL 42703: column users.registration_legal_consent does not exist. A coluna de declaração no cadastro ainda não foi confirmada. Consultas anônimas às tabelas jurídicas retornaram acesso negado, coerente com o acesso restrito previsto. Nenhum cadastro foi alterado nesta verificação. Necessário conferir a execução de supabase_migracao_aceites_cadastro_20261116.sql e o COMMIT no projeto correto.
+
+### 18.5 Coluna de aceite de cadastro confirmada
+Após nova execução do SQL informada pelo responsável, consulta REST somente de metadados com select=id,registration_legal_consent e limit=0 retornou HTTP 200 no projeto configurado. A coluna está disponível na API. Nenhum cadastro real foi criado ou alterado. A confirmação refere-se ao esquema; não foi realizado cadastro ou aceite de produção.

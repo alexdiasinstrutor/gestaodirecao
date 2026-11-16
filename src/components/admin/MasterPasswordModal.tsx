@@ -71,10 +71,10 @@ export const MasterPasswordModal: React.FC<MasterPasswordModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[calc(100dvh-1.5rem)] min-w-0">
         {/* Header */}
-        <div className="bg-gradient-to-r from-purple-900 via-slate-900 to-purple-950 text-white p-5 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-purple-900 via-slate-900 to-purple-950 text-white p-5 flex items-center justify-between shrink-0 gap-2">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-purple-500/20 text-purple-300 rounded-xl border border-purple-400/30">
               <KeyRound className="w-5 h-5 text-purple-300" />
@@ -98,14 +98,14 @@ export const MasterPasswordModal: React.FC<MasterPasswordModalProps> = ({
         </div>
 
         {/* Informações do Usuário Master */}
-        <div className="p-5 space-y-4">
-          <div className="p-3 bg-purple-50/70 border border-purple-200/80 rounded-xl flex items-center justify-between text-xs">
+        <div className="p-5 space-y-4 min-h-0 overflow-y-auto">
+          <div className="p-3 bg-purple-50/70 border border-purple-200/80 rounded-xl flex flex-wrap items-start justify-between gap-2 text-xs">
             <div>
               <span className="text-xs font-bold uppercase tracking-wider text-purple-700 block">
                 Usuário Master
               </span>
               <p className="font-bold text-slate-900">{user.nome}</p>
-              <p className="text-slate-600 font-mono text-xs">{user.email}</p>
+              <p className="text-slate-600 font-mono text-xs break-all">{user.email}</p>
             </div>
             <span className="px-2 py-0.5 rounded-md bg-purple-600 text-white text-xs font-bold">
               SUPER_ADMIN
@@ -127,7 +127,7 @@ export const MasterPasswordModal: React.FC<MasterPasswordModalProps> = ({
               </label>
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                <input
+                <input aria-label="Nova Senha de Acesso *"
                   type={showPassword ? 'text' : 'password'}
                   required
                   value={newPassword}
@@ -153,7 +153,7 @@ export const MasterPasswordModal: React.FC<MasterPasswordModalProps> = ({
               </label>
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                <input
+                <input aria-label="Confirmar Nova Senha *"
                   type={showPassword ? 'text' : 'password'}
                   required
                   value={confirmPassword}

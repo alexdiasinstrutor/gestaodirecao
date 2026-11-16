@@ -1,3 +1,4 @@
+import type { RegistrationConsent } from '../legal/registrationConsent';
 // Domain Types for Auto Gestão de Direção
 
 export type UserRole = 'SUPER_ADMIN' | 'ADMIN_ORG' | 'INSTRUTOR' | 'ALUNO';
@@ -57,6 +58,7 @@ export interface Organization {
 }
 
 export interface User {
+  registrationLegalConsent?: RegistrationConsent;
   id: string;
   organizacaoId: string;
   nome: string;
@@ -141,6 +143,9 @@ export type StudentContractType =
   | 'PACOTE_PERSONALIZADO';
 
 export interface StudentPackageContract {
+  valorAulasCentavos?: number;
+  valorLocacaoExameCentavos?: number;
+  locacaoExameContratada?: boolean;
   id: string;
   alunoId: string;
   organizacaoId: string;

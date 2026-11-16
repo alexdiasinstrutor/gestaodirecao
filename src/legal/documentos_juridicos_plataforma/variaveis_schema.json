@@ -1,0 +1,67 @@
+{
+  "documentos": [
+    {
+      "codigo": "CONTRATO_AULA_PRATICA",
+      "arquivo": "01_contrato_prestacao_servicos.md",
+      "versao": "1.0.0",
+      "variaveis": [
+        "NOME_PLATAFORMA",
+        "NOME_INSTRUTOR",
+        "CPF_CNPJ_INSTRUTOR",
+        "UF",
+        "REGISTRO_DETRAN",
+        "CIDADE_UF_INSTRUTOR",
+        "NOME_ALUNO",
+        "CPF_ALUNO",
+        "RG_ALUNO",
+        "CIDADE_UF_ALUNO",
+        "CATEGORIA_CNH",
+        "MODALIDADE_CONTRATO",
+        "QTD_AULAS",
+        "DURACAO_MINUTOS",
+        "FORMA_PAGAMENTO_ACORDADA",
+        "VALOR_UNITARIO",
+        "SUBTOTAL_AULAS",
+        "STATUS_EXAME",
+        "VALOR_ALUGUEL_EXAME",
+        "VALOR_TOTAL",
+        "VALOR_EXTENSO",
+        "DIAS_AVISO_EXAME",
+        "PRAZO_VALIDADE_DIAS",
+        "PERCENTUAL_MULTA",
+        "CIDADE_UF",
+        "DATA_ACEITE_EXTENSO",
+        "HASH_INSTRUTOR",
+        "HASH_ALUNO",
+        "IP_ALUNO"
+      ],
+      "checkboxes_obrigatorios": [
+        "Li e concordo com os termos do Contrato de Prestação de Serviços.",
+        "Estou ciente e concordo especificamente com as Cláusulas Quarta e Quinta: cancelamentos ou reagendamentos devem ser feitos com no mínimo 24 horas de antecedência, sob pena de débito integral da aula ou da cessão do veículo para exame."
+      ]
+    },
+    {
+      "codigo": "TERMOS_DE_USO",
+      "arquivo": "02_termos_de_uso_plataforma.md",
+      "versao": "1.0.0",
+      "variaveis": [
+        "NOME_PLATAFORMA",
+        "DATA_ATUALIZACAO",
+        "RAZAO_SOCIAL_EMPRESA",
+        "CNPJ_EMPRESA",
+        "ENDERECO_EMPRESA",
+        "CIDADE_SEDE_EMPRESA",
+        "UF"
+      ]
+    },
+    {
+      "codigo": "POLITICA_PRIVACIDADE_LGPD",
+      "arquivo": "03_politica_privacidade_lgpd.md",
+      "versao": "1.0.0",
+      "variaveis": [
+        "RAZAO_SOCIAL_EMPRESA",
+        "EMAIL_DPO_PRIVACIDADE"
+      ]
+    }
+  ]
+}

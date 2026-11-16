@@ -1,3 +1,4 @@
+import { prepareSignatureImage } from '../../lib/signatureImage';
 import React, { useState, useRef, useEffect } from 'react';
 import {
   X,
@@ -189,10 +190,11 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
 
     setSignatureFileError('');
     const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = reader.result as string;
-      setSignatureImage(base64);
+    reader.onload = async () => {
+      try { setSignatureImage(await prepareSignatureImage(reader.result as string)); }
+      catch (error) { setSignatureFileError(error instanceof Error ? error.message : 'Imagem inválida.'); }
     };
+    reader.onerror = () => setSignatureFileError('Não foi possível ler o arquivo.');
     reader.readAsDataURL(file);
   };
 
@@ -208,7 +210,8 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
       }
     } catch (err) {
       console.error('Erro ao salvar assinatura no perfil:', err);
-      alert('Não foi possível salvar a assinatura no perfil.');
+      setSignatureSavedToProfile(false);
+      setSignatureFileError(err instanceof Error ? err.message : 'Não foi possível confirmar o salvamento no banco.');
     } finally {
       setIsSavingSignature(false);
     }
@@ -297,6 +300,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
           <button
             type="button"
             onClick={onClose}
+            aria-label="Fechar recibo"
             className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
@@ -329,7 +333,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                 <label className="block text-xs font-semibold text-slate-600 mb-1">
                   Modalidade do Recibo
                 </label>
-                <select
+                <select aria-label="Modalidade do Recibo"
                   value={receiptData.tipoRecibo}
                   onChange={(e) =>
                     setReceiptData({
@@ -354,7 +358,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                     <label className="block text-xs font-semibold text-slate-600 mb-1">
                       Nome do Pacote Contratado
                     </label>
-                    <input
+                    <input aria-label="Nome do Pacote Contratado"
                       type="text"
                       value={receiptData.pacoteReferente || receiptData.descricaoServico}
                       onChange={(e) =>
@@ -372,7 +376,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                     <label className="block text-xs font-semibold text-slate-600 mb-1">
                       Total de Aulas do Pacote
                     </label>
-                    <input
+                    <input aria-label="Total de Aulas do Pacote"
                       type="number"
                       min={1}
                       value={receiptData.totalAulasContratadas || ''}
@@ -395,7 +399,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                     <label className="block text-xs font-semibold text-slate-600 mb-1">
                       Total de Aulas Ministradas
                     </label>
-                    <input
+                    <input aria-label="Total de Aulas Ministradas"
                       type="number"
                       min={1}
                       value={receiptData.totalAulasMinistradas || ''}
@@ -415,7 +419,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                     <label className="block text-xs font-semibold text-slate-600 mb-1">
                       Período das Aulas Realizadas
                     </label>
-                    <input
+                    <input aria-label="Período das Aulas Realizadas"
                       type="text"
                       value={receiptData.periodoReferente || ''}
                       onChange={(e) =>
@@ -436,7 +440,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                   <label className="block text-xs font-semibold text-slate-600 mb-1">
                     Identificação da Parcela
                   </label>
-                  <input
+                  <input aria-label="Identificação da Parcela"
                     type="text"
                     value={receiptData.parcelaReferente || ''}
                     onChange={(e) =>
@@ -456,7 +460,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                   <label className="block text-xs font-semibold text-slate-600 mb-1">
                     Período Referente
                   </label>
-                  <input
+                  <input aria-label="Período Referente"
                     type="text"
                     value={receiptData.periodoReferente || ''}
                     onChange={(e) =>
@@ -475,7 +479,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                 <label className="block text-xs font-semibold text-slate-600 mb-1">
                   Forma de Pagamento
                 </label>
-                <select
+                <select aria-label="Forma de Pagamento"
                   value={receiptData.metodo}
                   onChange={(e) =>
                     setReceiptData({
@@ -500,7 +504,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                 <label className="block text-xs font-semibold text-slate-600 mb-1">
                   Descrição do Serviço Prestado
                 </label>
-                <input
+                <input aria-label="Descrição do Serviço Prestado"
                   type="text"
                   value={receiptData.descricaoServico}
                   onChange={(e) =>
@@ -517,7 +521,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                 <label className="block text-xs font-semibold text-slate-600 mb-1">
                   Observações no Recibo (Opcional)
                 </label>
-                <input
+                <input aria-label="Observações no Recibo (Opcional)"
                   type="text"
                   value={receiptData.observacoes || ''}
                   onChange={(e) =>
@@ -644,7 +648,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                           </button>
                         </div>
                       </div>
-                      <input
+                      <input aria-label="Tamanho: %"
                         type="range"
                         min="50"
                         max="200"

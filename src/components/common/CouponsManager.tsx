@@ -388,7 +388,7 @@ export const CouponsManager: React.FC<CouponsManagerProps> = ({ scope, currentUs
               <div>
                 <label className="block font-medium text-slate-700 mb-1">Código do Cupom *</label>
                 <div className="flex gap-2">
-                  <input
+                  <input aria-label="Código do Cupom *"
                     type="text"
                     required
                     value={form.codigo}
@@ -460,7 +460,7 @@ export const CouponsManager: React.FC<CouponsManagerProps> = ({ scope, currentUs
                   <label className="block font-medium text-slate-700 mb-1">
                     Percentual de desconto {isPlatform ? 'na mensalidade' : 'no pacote'} (%) *
                   </label>
-                  <input
+                  <input aria-label="Percentual de desconto (%) *"
                     type="number"
                     min={1}
                     max={100}
@@ -478,7 +478,7 @@ export const CouponsManager: React.FC<CouponsManagerProps> = ({ scope, currentUs
                   <label className="block font-medium text-slate-700 mb-1">
                     Valor do desconto {isPlatform ? 'na mensalidade' : 'no pacote'} (R$) *
                   </label>
-                  <input
+                  <input aria-label="Valor do desconto (R$) *"
                     type="number"
                     min={0.01}
                     step="0.01"
@@ -493,7 +493,7 @@ export const CouponsManager: React.FC<CouponsManagerProps> = ({ scope, currentUs
               {isPlatform && form.tipoDesconto !== 'PERIODO_GRATIS' && (
                 <div>
                   <label className="block font-medium text-slate-700 mb-1">Duração do desconto (meses, 0 = permanente)</label>
-                  <input
+                  <input aria-label="Duração do desconto (meses, 0 = permanente)"
                     type="number"
                     min={0}
                     value={form.duracaoMeses}
@@ -506,7 +506,7 @@ export const CouponsManager: React.FC<CouponsManagerProps> = ({ scope, currentUs
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-medium text-slate-700 mb-1">Usar até (data)</label>
-                  <input
+                  <input aria-label="Usar até (data)"
                     type="date"
                     value={form.validoAte}
                     onChange={(e) => setForm({ ...form, validoAte: e.target.value })}
@@ -515,7 +515,7 @@ export const CouponsManager: React.FC<CouponsManagerProps> = ({ scope, currentUs
                 </div>
                 <div>
                   <label className="block font-medium text-slate-700 mb-1">Limite de usos (0 = ∞)</label>
-                  <input
+                  <input aria-label="Limite de usos (0 = ∞)"
                     type="number"
                     min={0}
                     value={form.limiteUsos}
@@ -551,7 +551,7 @@ export const CouponsManager: React.FC<CouponsManagerProps> = ({ scope, currentUs
 
               <div>
                 <label className="block font-medium text-slate-700 mb-1">Descrição interna (opcional)</label>
-                <input
+                <input aria-label="Descrição interna (opcional)"
                   type="text"
                   value={form.descricao}
                   onChange={(e) => setForm({ ...form, descricao: e.target.value })}

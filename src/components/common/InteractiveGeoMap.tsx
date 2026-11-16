@@ -174,13 +174,25 @@ export const InteractiveGeoMap: React.FC<InteractiveGeoMapProps> = ({
 
   return (
     <div className="relative w-full rounded-2xl overflow-hidden border border-slate-300 bg-slate-900 shadow-inner select-none">
+      {pins.some(pin => pin.type !== 'USER_ORIGIN') && (
+        <details data-map-points className="relative z-40 bg-white border-b border-slate-200 text-slate-800">
+          <summary className="cursor-pointer px-4 py-3 text-sm font-semibold">Lista de pontos do mapa ({pins.filter(pin => pin.type !== 'USER_ORIGIN').length})</summary>
+          <div className="max-h-56 overflow-y-auto grid gap-2 p-3 pt-0">
+            {pins.filter(pin => pin.type !== 'USER_ORIGIN').map(pin => <button key={pin.id} type="button" data-map-choice={pin.id} onClick={() => onSelectPin?.(pin)} aria-pressed={pin.id === selectedPinId} className="min-h-11 w-full rounded-lg border border-slate-200 px-3 py-2 text-left text-xs hover:bg-blue-50 focus-visible:ring-2 focus-visible:ring-blue-500">
+              <span className="font-semibold break-words">{pin.title}</span>
+              {pin.distanceKm !== undefined && <span className="ml-2 text-slate-500">{pin.distanceKm} km</span>}
+              {pin.subtitle && <span className="block mt-1 text-slate-500 break-words">{pin.subtitle}</span>}
+            </button>)}
+          </div>
+        </details>
+      )}
       {/* Container Interativo do Mapa */}
       <div
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
-        className={`relative w-full ${heightClass} overflow-hidden ${
+        className={`relative z-0 w-full ${heightClass} overflow-hidden ${
           isDragging ? 'cursor-grabbing' : 'cursor-grab'
         }`}
         style={{
@@ -314,6 +326,9 @@ export const InteractiveGeoMap: React.FC<InteractiveGeoMapProps> = ({
             return (
               <button
                 key={pin.id}
+                data-map-marker={pin.id}
+                aria-hidden="true"
+                tabIndex={-1}
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();

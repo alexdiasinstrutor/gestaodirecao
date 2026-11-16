@@ -990,7 +990,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
         <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
           <div className="flex items-center gap-1.5 min-w-0">
             <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 shrink-0" />
-            <input
+            <input aria-label="Data da agenda"
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
@@ -1250,7 +1250,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
               creditadas no plano do aluno. O aluno visualiza este mesmo registro no portal dele.
             </p>
           </div>
-          <select
+          <select aria-label="Filtrar aulas realizadas por aluno"
             value={registryStudentFilter}
             onChange={(e) => setRegistryStudentFilter(e.target.value)}
             className="px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-medium"
@@ -1370,7 +1370,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
                   <label className="block font-semibold text-slate-700 mb-1">
                     {releaseScope === 'DIA' ? 'Data para Liberação:' : 'Data Inicial:'}
                   </label>
-                  <input
+                  <input aria-label="Data para liberar horários"
                     type="date"
                     value={releaseSlotsDate}
                     onChange={(e) => setReleaseSlotsDate(e.target.value)}
@@ -1380,7 +1380,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
                 {releaseScope === 'PERIODO' && (
                   <div>
                     <label className="block font-semibold text-slate-700 mb-1">Data Final do Período:</label>
-                    <input
+                    <input aria-label="Data Final do Período:"
                       type="date"
                       min={releaseSlotsDate}
                       value={releaseEndDate}
@@ -1619,7 +1619,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
                   <label className="block font-semibold text-slate-700 mb-1">
                     {removeScope === 'DIA' ? 'Data do Horário:' : 'A partir da Data:'}
                   </label>
-                  <input
+                  <input aria-label="Data inicial da remoção de horários"
                     type="date"
                     value={removeBaseDate}
                     onChange={(e) => setRemoveBaseDate(e.target.value)}
@@ -1629,7 +1629,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
                 {removeScope === 'PERIODO' && (
                   <div>
                     <label className="block font-semibold text-slate-700 mb-1">Até a Data Final:</label>
-                    <input
+                    <input aria-label="Até a Data Final:"
                       type="date"
                       min={removeBaseDate}
                       value={removeEndDate}
@@ -1815,7 +1815,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
                 <label className="block font-semibold text-slate-700 mb-1">
                   Selecione o Horário (Faixa das 06h às 00h):
                 </label>
-                <select
+                <select aria-label="Selecione o Horário (Faixa das 06h às 00h):"
                   value={singleSlotTime}
                   onChange={(e) => setSingleSlotTime(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-mono font-bold text-sm"
@@ -1832,7 +1832,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
                 <label className="block font-semibold text-slate-700 mb-1">
                   Aplicar este Horário para:
                 </label>
-                <select
+                <select aria-label="Aplicar este Horário para:"
                   value={singleSlotScope}
                   onChange={(e) => setSingleSlotScope(e.target.value as SchedulePeriodScope)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-semibold"
@@ -1889,7 +1889,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
               <div className="grid grid-cols-2 gap-2.5">
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Data (início) *</label>
-                  <input
+                  <input aria-label="Data (início) *"
                     type="date"
                     required
                     value={lessonStartDate}
@@ -1904,7 +1904,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
                 </div>
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Horário *</label>
-                  <select
+                  <select aria-label="Horário *"
                     value={lessonForm.horaInicio}
                     onChange={(e) =>
                       setLessonForm({ ...lessonForm, horaInicio: e.target.value, horaFim: getEndTimeForStart(e.target.value) })
@@ -1922,7 +1922,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Selecione o Aluno *</label>
-                <select
+                <select aria-label="Selecione o Aluno *"
                   value={lessonForm.alunoId}
                   onChange={(e) => setLessonForm({ ...lessonForm, alunoId: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-medium"
@@ -2026,7 +2026,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
                     <label className="block text-[11px] font-semibold text-slate-600">
                       Quantidade de aulas a agendar
                     </label>
-                    <input
+                    <input aria-label="Quantidade de aulas a agendar"
                       type="text"
                       inputMode="numeric"
                       value={lessonQuantity}
@@ -2072,7 +2072,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Veículo de Instrução *</label>
-                <select
+                <select aria-label="Veículo de Instrução *"
                   value={lessonForm.veiculoId}
                   onChange={(e) => setLessonForm({ ...lessonForm, veiculoId: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white"
@@ -2087,7 +2087,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Tema / Conteúdo da Aula *</label>
-                <input
+                <input aria-label="Tema / Conteúdo da Aula *"
                   type="text"
                   required
                   value={lessonForm.topico}
@@ -2159,7 +2159,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
               <div className="grid grid-cols-2 gap-2.5">
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Nova data *</label>
-                  <input
+                  <input aria-label="Nova data *"
                     type="date"
                     required
                     value={rescheduleDate}
@@ -2169,7 +2169,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
                 </div>
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Novo horário *</label>
-                  <select
+                  <select aria-label="Novo horário *"
                     value={rescheduleTime}
                     onChange={(e) => setRescheduleTime(e.target.value)}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-mono"
@@ -2185,7 +2185,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Motivo (opcional)</label>
-                <input
+                <input aria-label="Motivo (opcional)"
                   type="text"
                   value={rescheduleReason}
                   onChange={(e) => setRescheduleReason(e.target.value)}
@@ -2249,7 +2249,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
                   <label className="font-semibold text-slate-700">Nota de Desempenho (0 a 10)</label>
                   <span className="font-bold font-mono text-base text-indigo-600">{completionGrade}</span>
                 </div>
-                <input
+                <input aria-label="Nota de Desempenho (0 a 10)"
                   type="range"
                   min="1"
                   max="10"
@@ -2264,7 +2264,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
                 <label className="block font-semibold text-slate-700 mb-1">
                   Parecer e Feedback para o Aluno
                 </label>
-                <textarea
+                <textarea aria-label="Parecer e feedback para o aluno"
                   rows={3}
                   value={completionNote}
                   onChange={(e) => setCompletionNote(e.target.value)}

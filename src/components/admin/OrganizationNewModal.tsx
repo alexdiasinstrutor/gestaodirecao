@@ -158,7 +158,7 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
               <p className="text-xs text-slate-600 font-medium">Cadastre a empresa, defina o plano e gere a chave de acesso</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white p-1 cursor-pointer">
+          <button aria-label="Fechar janela" onClick={onClose} className="text-slate-400 hover:text-white p-1 cursor-pointer">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -179,7 +179,7 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="sm:col-span-2">
                 <label className="block font-semibold text-slate-700 mb-1">Nome Fantasia / Razão Social *</label>
-                <input
+                <input aria-label="Nome Fantasia / Razão Social *"
                   type="text"
                   required
                   placeholder="Ex: Autoescola Aliança ou Instrutor Roberto Silva"
@@ -191,7 +191,7 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Modalidade *</label>
-                <select
+                <select aria-label="Modalidade *"
                   value={tipo}
                   onChange={(e) => setTipo(e.target.value as any)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white"
@@ -203,7 +203,7 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">CNPJ ou CPF *</label>
-                <input
+                <input aria-label="CNPJ ou CPF *"
                   type="text"
                   required
                   placeholder="00.000.000/0001-00"
@@ -215,7 +215,7 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Telefone / WhatsApp *</label>
-                <input
+                <input aria-label="Telefone / WhatsApp *"
                   type="text"
                   required
                   placeholder="(11) 98888-7777"
@@ -231,7 +231,7 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">E-mail Institucional *</label>
-                <input
+                <input aria-label="E-mail Institucional *"
                   type="email"
                   required
                   placeholder="contato@autoescola.com"
@@ -261,7 +261,7 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Plano Inicial *</label>
-                <select
+                <select aria-label="Plano Inicial *"
                   value={plano}
                   onChange={(e) => setPlano(e.target.value as SaaSPlanType)}
                   className="w-full px-3 py-2 border border-purple-400 rounded-xl bg-purple-50 font-bold text-purple-900"
@@ -275,7 +275,7 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Período de Validade Inicial</label>
-                <select
+                <select aria-label="Período de Validade Inicial"
                   value={diasValidade}
                   onChange={(e) => setDiasValidade(parseInt(e.target.value) || 30)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white"
@@ -304,7 +304,7 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Tipo de Chave PIX</label>
-                <select
+                <select aria-label="Tipo de Chave PIX"
                   value={tipoChavePix}
                   onChange={(e) => setTipoChavePix(e.target.value as PixKeyType)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white"
@@ -319,7 +319,7 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Chave PIX</label>
-                <input
+                <input aria-label="Chave PIX"
                   type="text"
                   value={chavePix}
                   onChange={(e) => setChavePix(e.target.value)}
@@ -330,7 +330,7 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Nome do Beneficiário</label>
-                <input
+                <input aria-label="Nome do Beneficiário"
                   type="text"
                   value={beneficiarioPix}
                   onChange={(e) => setBeneficiarioPix(e.target.value)}
@@ -342,7 +342,7 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Cidade do Beneficiário</label>
-                <input
+                <input aria-label="Cidade do Beneficiário"
                   type="text"
                   value={cidadePix}
                   onChange={(e) => setCidadePix(e.target.value)}
@@ -375,7 +375,7 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-200">
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Nome do Responsável *</label>
-                  <input
+                  <input aria-label="Nome do Responsável *"
                     type="text"
                     required={criarUsuarioInicial}
                     placeholder="Nome completo do instrutor ou gestor"
@@ -386,7 +386,7 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
                 </div>
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">E-mail de Login *</label>
-                  <input
+                  <input aria-label="E-mail de Login *"
                     type="email"
                     required={criarUsuarioInicial}
                     placeholder="email@autoescola.com"
@@ -397,7 +397,7 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
                 </div>
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">WhatsApp do Responsável</label>
-                  <input
+                  <input aria-label="WhatsApp do Responsável"
                     type="text"
                     placeholder="(11) 98888-7777"
                     value={userTelefone}
@@ -411,7 +411,7 @@ export const OrganizationNewModal: React.FC<OrganizationNewModalProps> = ({
                 </div>
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">CPF do Responsável</label>
-                  <input
+                  <input aria-label="CPF do Responsável"
                     type="text"
                     placeholder="000.000.000-00"
                     value={userCpf}

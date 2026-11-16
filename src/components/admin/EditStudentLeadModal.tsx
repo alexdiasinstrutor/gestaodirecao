@@ -98,7 +98,7 @@ export const EditStudentLeadModal: React.FC<EditStudentLeadModalProps> = ({
               </p>
             </div>
           </div>
-          <button
+          <button aria-label="Fechar janela"
             type="button"
             onClick={onClose}
             className="p-1.5 rounded-lg text-purple-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
@@ -121,7 +121,7 @@ export const EditStudentLeadModal: React.FC<EditStudentLeadModalProps> = ({
               <label className="block text-xs font-bold text-slate-700 mb-1">
                 Nome Completo *
               </label>
-              <input
+              <input aria-label="Nome Completo *"
                 type="text"
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
@@ -135,7 +135,7 @@ export const EditStudentLeadModal: React.FC<EditStudentLeadModalProps> = ({
               <label className="block text-xs font-bold text-slate-700 mb-1">
                 Telefone / WhatsApp *
               </label>
-              <input
+              <input aria-label="Telefone / WhatsApp *"
                 type="text"
                 value={telefone}
                 onChange={(e) => setTelefone(e.target.value)}
@@ -149,7 +149,7 @@ export const EditStudentLeadModal: React.FC<EditStudentLeadModalProps> = ({
               <label className="block text-xs font-bold text-slate-700 mb-1">
                 E-mail (opcional)
               </label>
-              <input
+              <input aria-label="E-mail (opcional)"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -162,7 +162,7 @@ export const EditStudentLeadModal: React.FC<EditStudentLeadModalProps> = ({
               <label className="block text-xs font-bold text-slate-700 mb-1">
                 Status da Solicitação
               </label>
-              <select
+              <select aria-label="Status da Solicitação"
                 value={status}
                 onChange={(e) => setStatus(e.target.value as StudentLeadRequest['status'])}
                 className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white focus:outline-hidden focus:ring-2 focus:ring-purple-500 font-semibold"
@@ -186,7 +186,7 @@ export const EditStudentLeadModal: React.FC<EditStudentLeadModalProps> = ({
                 <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">
                   Cidade *
                 </label>
-                <input
+                <input aria-label="Cidade *"
                   type="text"
                   value={cidade}
                   onChange={(e) => setCidade(e.target.value)}
@@ -200,7 +200,7 @@ export const EditStudentLeadModal: React.FC<EditStudentLeadModalProps> = ({
                 <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">
                   Estado (UF) *
                 </label>
-                <input
+                <input aria-label="Estado (UF) *"
                   type="text"
                   maxLength={2}
                   value={estado}
@@ -215,7 +215,7 @@ export const EditStudentLeadModal: React.FC<EditStudentLeadModalProps> = ({
                 <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">
                   CEP
                 </label>
-                <input
+                <input aria-label="CEP"
                   type="text"
                   value={cep}
                   onChange={(e) => setCep(e.target.value)}
@@ -228,7 +228,7 @@ export const EditStudentLeadModal: React.FC<EditStudentLeadModalProps> = ({
                 <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">
                   Bairro
                 </label>
-                <input
+                <input aria-label="Bairro"
                   type="text"
                   value={bairro}
                   onChange={(e) => setBairro(e.target.value)}
@@ -273,7 +273,7 @@ export const EditStudentLeadModal: React.FC<EditStudentLeadModalProps> = ({
                 <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                   Tipo de Veículo
                 </label>
-                <select
+                <select aria-label="Tipo de Veículo"
                   value={tipoVeiculo}
                   onChange={(e) => setTipoVeiculo(e.target.value as LocatorVehicleType)}
                   className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 bg-white"
@@ -289,7 +289,7 @@ export const EditStudentLeadModal: React.FC<EditStudentLeadModalProps> = ({
                 <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                   Tipo de Câmbio
                 </label>
-                <select
+                <select aria-label="Tipo de Câmbio"
                   value={tipoCambio}
                   onChange={(e) => setTipoCambio(e.target.value as VehicleTransmissionType)}
                   className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 bg-white"
@@ -307,7 +307,7 @@ export const EditStudentLeadModal: React.FC<EditStudentLeadModalProps> = ({
             <label className="block text-xs font-bold text-slate-700 mb-1">
               Observações / Detalhes da Solicitação
             </label>
-            <textarea
+            <textarea aria-label="Observações e detalhes da solicitação"
               rows={3}
               value={observacoes}
               onChange={(e) => setObservacoes(e.target.value)}

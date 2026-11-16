@@ -88,7 +88,7 @@ export const PixQrCodeModal: React.FC<PixQrCodeModalProps> = ({
             </span>
             <h3 className="text-base font-bold text-slate-900">Pagamento Instantâneo PIX</h3>
           </div>
-          <button
+          <button aria-label="Fechar janela"
             type="button"
             onClick={onClose}
             className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"

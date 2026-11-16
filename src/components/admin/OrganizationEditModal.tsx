@@ -148,7 +148,7 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
               <p className="text-xs text-slate-600 font-medium">Configure plano, vigência e permissões granulares de menus</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white p-1 cursor-pointer">
+          <button aria-label="Fechar janela" onClick={onClose} className="text-slate-400 hover:text-white p-1 cursor-pointer">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -170,7 +170,7 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Nome / Razão Social *</label>
-                <input
+                <input aria-label="Nome / Razão Social *"
                   type="text"
                   required
                   value={nome}
@@ -180,7 +180,7 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
               </div>
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Modalidade *</label>
-                <select
+                <select aria-label="Modalidade *"
                   value={tipo}
                   onChange={(e) => setTipo(e.target.value as any)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white"
@@ -191,7 +191,7 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
               </div>
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">CNPJ ou CPF *</label>
-                <input
+                <input aria-label="CNPJ ou CPF *"
                   type="text"
                   required
                   value={cnpjCpf}
@@ -201,7 +201,7 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
               </div>
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Telefone / WhatsApp</label>
-                <input
+                <input aria-label="Telefone / WhatsApp"
                   type="text"
                   placeholder="(11) 98765-4321"
                   value={telefone}
@@ -215,7 +215,7 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
               </div>
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">E-mail de Contato</label>
-                <input
+                <input aria-label="E-mail de Contato"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -242,7 +242,7 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Plano Contratado *</label>
-                <select
+                <select aria-label="Plano Contratado *"
                   value={plano}
                   onChange={(e) => handlePlanChange(e.target.value as SaaSPlanType)}
                   className="w-full px-3 py-2 border border-purple-400 rounded-xl bg-purple-50/50 font-bold text-purple-900"
@@ -256,7 +256,7 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Status da Conta *</label>
-                <select
+                <select aria-label="Status da Conta *"
                   value={status}
                   onChange={(e) => setStatus(e.target.value as OrganizationStatus)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-bold"
@@ -271,7 +271,7 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Vencimento da Assinatura</label>
-                <input
+                <input aria-label="Vencimento da Assinatura"
                   type="date"
                   value={dataVencimentoPlano}
                   onChange={(e) => setDataVencimentoPlano(e.target.value)}
@@ -281,7 +281,7 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Valor da Mensalidade (R$)</label>
-                <input
+                <input aria-label="Valor da Mensalidade (R$)"
                   type="number"
                   step="0.01"
                   value={valorMensalReais}
@@ -300,7 +300,7 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Tipo da Chave PIX</label>
-                <select
+                <select aria-label="Tipo da Chave PIX"
                   value={tipoChavePix}
                   onChange={(e) => setTipoChavePix(e.target.value as PixKeyType)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white"
@@ -314,7 +314,7 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
               </div>
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Chave PIX</label>
-                <input
+                <input aria-label="Chave PIX"
                   type="text"
                   value={chavePix}
                   onChange={(e) => setChavePix(e.target.value)}
@@ -326,7 +326,7 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Nome do Beneficiário / Titular</label>
-                <input
+                <input aria-label="Nome do Beneficiário / Titular"
                   type="text"
                   value={beneficiarioPix}
                   onChange={(e) => setBeneficiarioPix(e.target.value)}
@@ -337,7 +337,7 @@ export const OrganizationEditModal: React.FC<OrganizationEditModalProps> = ({
               </div>
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Cidade do Beneficiário</label>
-                <input
+                <input aria-label="Cidade do Beneficiário"
                   type="text"
                   value={cidadePix}
                   onChange={(e) => setCidadePix(e.target.value)}

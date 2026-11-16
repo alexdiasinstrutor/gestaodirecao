@@ -224,7 +224,7 @@ export const AdminStudentLeadsView: React.FC<AdminStudentLeadsViewProps> = ({
           {/* Campo de Busca */}
           <div className="md:col-span-2 relative">
             <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
-            <input
+            <input aria-label="Buscar registros"
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -235,7 +235,7 @@ export const AdminStudentLeadsView: React.FC<AdminStudentLeadsViewProps> = ({
 
           {/* Filtro de Status */}
           <div>
-            <select
+            <select aria-label="Filtrar solicitações por status"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white font-medium focus:outline-hidden focus:ring-2 focus:ring-purple-500"
@@ -249,7 +249,7 @@ export const AdminStudentLeadsView: React.FC<AdminStudentLeadsViewProps> = ({
 
           {/* Filtro de Categoria CNH */}
           <div>
-            <select
+            <select aria-label="Filtrar solicitações por categoria CNH"
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
               className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white font-medium focus:outline-hidden focus:ring-2 focus:ring-purple-500"

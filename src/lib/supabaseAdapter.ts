@@ -1,3 +1,4 @@
+import { getPendingWrites, queueCloudWrite, acknowledgeCloudWrite, overlayPendingRows, PendingWrite } from './cloudOutbox';
 /**
  * ============================================================
  * ADAPTADOR SUPABASE — Sistema de Gestão de Direção v5.6
@@ -15,7 +16,7 @@ import {
   Organization, User, Student, Vehicle, Lesson, AvailableSlot,
   AccountReceivable, PaymentRecord, Expense, Investment, PackageOffer,
   AuditLog, WhatsAppReminderLog, StudentTransferHistory,
-  DiscountCoupon, CouponRedemption,
+  DiscountCoupon, CouponRedemption, StudentPackageContract,
 } from '../types';
 
 // ─── Helpers de mapeamento: TypeScript camelCase → SQL snake_case ───────────
@@ -110,6 +111,8 @@ function userToRow(u: User): Record<string, any> {
     ultimo_acesso: u.ultimoAcesso || null,
     avatar_url: u.avatarUrl || null,
     assinatura_url: u.assinaturaUrl || null,
+    assinatura_config: u.assinaturaConfig || null,
+    ...(u.registrationLegalConsent ? {registration_legal_consent:u.registrationLegalConsent} : {}),
     senha_temporaria: u.senhaTemporaria || null,
     chave_pix: u.chavePix || null,
     tipo_chave_pix: u.tipoChavePix || null,
@@ -142,6 +145,8 @@ function rowToUser(r: any): User {
     ultimoAcesso: r.ultimo_acesso,
     avatarUrl: r.avatar_url,
     assinaturaUrl: r.assinatura_url || (r.avatar_url && typeof r.avatar_url === 'string' && r.avatar_url.startsWith('data:image') ? r.avatar_url : undefined),
+    assinaturaConfig: r.assinatura_config || undefined,
+    registrationLegalConsent: r.registration_legal_consent || undefined,
     senhaTemporaria: r.senha_temporaria,
     chavePix: r.chave_pix,
     tipoChavePix: r.tipo_chave_pix,
@@ -711,11 +716,12 @@ async function readVaultRows(table: string): Promise<any[]> {
       .select('modulos_customizados')
       .eq('id', vaultId)
       .limit(1);
-    if (error || !data || data.length === 0) return [];
+    if (error) throw new Error(`[Supabase] Falha ao ler cofre ${table}: ${error.message}`);
+    if (!data || data.length === 0) return [];
     const raw = data[0]?.modulos_customizados;
     return Array.isArray(raw) ? raw : [];
-  } catch {
-    return [];
+  } catch (error) {
+    throw error;
   }
 }
 
@@ -737,7 +743,8 @@ async function writeVaultRows(table: string, rows: any[]): Promise<void> {
     modulos_customizados: cappedRows,
     criado_em: new Date().toISOString(),
   };
-  await supabase.from('organizations').upsert(payload, { onConflict: 'id' });
+  const { error } = await supabase.from('organizations').upsert(payload, { onConflict: 'id' });
+  if (error) throw new Error(`[Supabase] Falha ao gravar cofre: ${error.message}`);
 }
 
 async function upsertVaultRowsBatch(table: string, newRows: Record<string, any>[]): Promise<void> {
@@ -789,9 +796,10 @@ async function recordVaultDeletedIds(table: string, ids: string[]): Promise<void
       modulos_customizados: Array.from(set),
       criado_em: new Date().toISOString(),
     };
-    await supabase.from('organizations').upsert(payload, { onConflict: 'id' });
+    const { error } = await supabase.from('organizations').upsert(payload, { onConflict: 'id' });
+    if (error) throw new Error(error.message);
   } catch (err) {
-    console.warn(`[Supabase] Erro ao registrar IDs deletados para ${table}:`, err);
+    throw err;
   }
 }
 
@@ -849,9 +857,29 @@ async function deleteVaultRowsBatch(table: string, ids: string[]): Promise<void>
   });
 }
 
+const rowWriteQueues = new Map<string, Promise<void>>();
+function sendPendingWrite(entry: PendingWrite): Promise<void> {
+  const previous = rowWriteQueues.get(entry.key) || Promise.resolve();
+  const next = previous.catch(() => {}).then(async () => {
+    if (!getPendingWrites().some(p => p.key === entry.key && p.revision === entry.revision)) return;
+    if (entry.operation === 'delete') await performSupabaseDelete(entry.table, entry.row.id);
+    else await performSupabaseUpsert(entry.table, entry.row);
+    acknowledgeCloudWrite(entry);
+  });
+  rowWriteQueues.set(entry.key, next);
+  void next.finally(() => { if (rowWriteQueues.get(entry.key) === next) rowWriteQueues.delete(entry.key); }).catch(() => {});
+  return next;
+}
+async function supabaseUpsert(table: string, row: Record<string, any>): Promise<void> {
+  return sendPendingWrite(queueCloudWrite(table, row, 'upsert'));
+}
+async function supabaseDelete(table: string, id: string): Promise<void> {
+  return sendPendingWrite(queueCloudWrite(table, { id }, 'delete'));
+}
+
 // ─── Helper genérico de upsert no Supabase ──────────────────────────────────
 
-async function supabaseUpsert(table: string, row: Record<string, any>): Promise<void> {
+async function performSupabaseUpsert(table: string, row: Record<string, any>): Promise<void> {
   if (!supabase) return;
   if (VAULT_TABLES.has(table)) {
     await upsertVaultRowsBatch(table, [row]);
@@ -859,7 +887,7 @@ async function supabaseUpsert(table: string, row: Record<string, any>): Promise<
   const { error } = await supabase.from(table).upsert(row, { onConflict: 'id' });
   if (error) {
     // Se a tabela possui RLS restritivo p/ chave anon (42501), o dado já está persistido com segurança no Cloud Vault
-    if (error.code === '42501' || (error.message && error.message.includes('row-level security'))) {
+    if (VAULT_TABLES.has(table) && (error.code === '42501' || error.message?.includes('row-level security'))) {
       return;
     }
 
@@ -907,7 +935,7 @@ async function supabaseUpsert(table: string, row: Record<string, any>): Promise<
       }
       const retry = await supabase.from(table).upsert(fallbackRow, { onConflict: 'id' });
       if (retry.error) {
-        if (retry.error.code === '42501' || retry.error.message?.includes('row-level security')) {
+        if (VAULT_TABLES.has(table) && (retry.error.code === '42501' || retry.error.message?.includes('row-level security'))) {
           return;
         }
         if (table === 'students' && (retry.error.message?.includes('column') || retry.error.code === 'PGRST204')) {
@@ -916,26 +944,26 @@ async function supabaseUpsert(table: string, row: Record<string, any>): Promise<
           delete fallbackRow.historico_transferencias;
           const retry2 = await supabase.from(table).upsert(fallbackRow, { onConflict: 'id' });
           if (retry2.error && retry2.error.code !== '42501') {
-            console.error(`[Supabase] Erro ao salvar em "${table}" (fallback 2):`, retry2.error.message);
+            throw new Error(`[Supabase] ${table}: ${retry2.error.message}`);
           }
           return;
         }
-        console.error(`[Supabase] Erro ao salvar em "${table}" (fallback):`, retry.error.message);
+        throw new Error(`[Supabase] ${table}: ${retry.error.message}`);
       }
       return;
     }
-    console.error(`[Supabase] Erro ao salvar em "${table}":`, error.message);
+    throw new Error(`[Supabase] ${table}: ${error.message}`);
   }
 }
 
-async function supabaseDelete(table: string, id: string): Promise<void> {
+async function performSupabaseDelete(table: string, id: string): Promise<void> {
   if (!supabase) return;
   if (VAULT_TABLES.has(table)) {
     await deleteVaultRowsBatch(table, [id]);
   }
   const { error } = await supabase.from(table).delete().eq('id', id);
-  if (error && error.code !== '42501') {
-    console.error(`[Supabase] Erro ao deletar de "${table}" id=${id}:`, error.message);
+  if (error && !(VAULT_TABLES.has(table) && error.code === '42501')) {
+    throw new Error(`[Supabase] ${table}: ${error.message}`);
   }
 }
 
@@ -959,7 +987,7 @@ async function supabaseSelect<T>(
 
   if (error && !VAULT_TABLES.has(table)) {
     console.error(`[Supabase] Erro ao ler "${table}":`, error.message);
-    return [];
+    throw new Error(`[Supabase] ${table}: ${error.message}`);
   }
 
   const nativeRows = (data || []).filter((r: any) => {
@@ -974,7 +1002,7 @@ async function supabaseSelect<T>(
   });
 
   if (!VAULT_TABLES.has(table)) {
-    return nativeRows.map(mapper);
+    return overlayPendingRows(table, nativeRows, filters).map(mapper);
   }
 
   const mergedMap = new Map<string, any>();
@@ -994,11 +1022,13 @@ async function supabaseSelect<T>(
         if (!match) continue;
       }
       const existing = mergedMap.get(String(vr.id)) || {};
-      mergedMap.set(String(vr.id), { ...existing, ...vr });
+      const nativeTime = existing.atualizado_em || existing.timestamp || '';
+      const vaultTime = vr.atualizado_em || vr.timestamp || '';
+      mergedMap.set(String(vr.id), nativeTime > vaultTime ? { ...vr, ...existing } : { ...existing, ...vr });
     }
   }
 
-  return Array.from(mergedMap.values()).map(mapper);
+  return overlayPendingRows(table, Array.from(mergedMap.values()), filters).map(mapper);
 }
 
 // ─── API pública do adaptador ────────────────────────────────────────────────
@@ -1008,6 +1038,11 @@ async function supabaseSelect<T>(
  * Use junto com a camada localStorage como dual-write durante a transição.
  */
 export const supabaseAdapter = {
+  async flushPendingWrites(): Promise<void> {
+    const priority = (table: string) => table === 'organizations' ? 0 : table === 'users' ? 1 : table === 'students' ? 2 : 3;
+    const snapshot = getPendingWrites().sort((a,b) => priority(a.table) - priority(b.table));
+    for (const entry of snapshot) await sendPendingWrite(entry);
+  },
   get enabled(): boolean {
     return isSupabaseEnabled();
   },
@@ -1066,14 +1101,14 @@ export const supabaseAdapter = {
   },
   async saveVehiclesBatch(vehicles: Vehicle[]): Promise<void> {
     if (!supabase || vehicles.length === 0) return;
-    await upsertVaultRowsBatch('vehicles', vehicles.map(vehicleToRow));
+    for (const vehicle of vehicles) await supabaseUpsert('vehicles', vehicleToRow(vehicle));
   },
   async deleteVehicle(id: string): Promise<void> {
     await supabaseDelete('vehicles', id);
   },
   async deleteVehiclesBatch(ids: string[]): Promise<void> {
     if (!supabase || ids.length === 0) return;
-    await deleteVaultRowsBatch('vehicles', ids);
+    for (const id of ids) await supabaseDelete('vehicles', id);
   },
   async getDeletedVehicleIds(): Promise<string[]> {
     const set = await readVaultDeletedIds('vehicles');
@@ -1207,14 +1242,14 @@ export const supabaseAdapter = {
   },
   async savePackagesBatch(pkgs: PackageOffer[]): Promise<void> {
     if (!supabase || pkgs.length === 0) return;
-    await upsertVaultRowsBatch('package_offers', pkgs.map(packageToRow));
+    for (const pkg of pkgs) await supabaseUpsert('package_offers', packageToRow(pkg));
   },
   async deletePackage(id: string): Promise<void> {
     await supabaseDelete('package_offers', id);
   },
   async deletePackagesBatch(ids: string[]): Promise<void> {
     if (!supabase || ids.length === 0) return;
-    await deleteVaultRowsBatch('package_offers', ids);
+    for (const id of ids) await supabaseDelete('package_offers', id);
   },
 
   // Audit Logs
@@ -1241,6 +1276,12 @@ export const supabaseAdapter = {
   async getStudentMetaAuditLogs(): Promise<AuditLog[]> {
     const list = await supabaseSelect('audit_logs', rowToAudit, { entidade: 'StudentFichaMeta' });
     return list.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || '')).slice(0, 500);
+  },
+  async getDataCheckpointAuditLogs(): Promise<AuditLog[]> {
+    return supabaseSelect('audit_logs', rowToAudit, { entidade: 'DataCheckpoint' });
+  },
+  async getSaaSPlanAuditLogs(): Promise<AuditLog[]> {
+    return supabaseSelect('audit_logs', rowToAudit, { entidade: 'SaaSPlanDefinition' });
   },
   async getSignatureMetaAuditLogs(): Promise<AuditLog[]> {
     const list = await supabaseSelect('audit_logs', rowToAudit, { entidade: 'InstructorSignatureMeta' });

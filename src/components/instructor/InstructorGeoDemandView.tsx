@@ -402,7 +402,7 @@ export const InstructorGeoDemandView: React.FC<InstructorGeoDemandViewProps> = (
     <div className="space-y-4">
       {/* Banner Topo: Mapa de Demanda, Alunos & Área de Atendimento */}
       <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white rounded-3xl p-4 sm:p-6 shadow-lg border border-slate-800">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="flex flex-col min-w-0 gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-400/30 text-[10px] font-bold uppercase">
@@ -518,7 +518,7 @@ export const InstructorGeoDemandView: React.FC<InstructorGeoDemandViewProps> = (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-center">
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Filtrar Mapa por Cidade</label>
-                <select
+                <select aria-label="Filtrar Mapa por Cidade"
                   value={mapFilterCity}
                   onChange={(e) => setMapFilterCity(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-semibold text-xs focus:border-blue-600 focus:outline-none cursor-pointer"
@@ -537,7 +537,7 @@ export const InstructorGeoDemandView: React.FC<InstructorGeoDemandViewProps> = (
                   <span className="font-bold text-slate-700">Distância até Você:</span>
                   <span className="font-mono font-bold text-blue-700">Até {mapFilterRadiusKm} km</span>
                 </div>
-                <input
+                <input aria-label="Distância máxima dos pontos no mapa em quilômetros"
                   type="range"
                   min={5}
                   max={40}
@@ -861,7 +861,7 @@ export const InstructorGeoDemandView: React.FC<InstructorGeoDemandViewProps> = (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="block font-bold text-slate-700 mb-1">Sua Cidade Base *</label>
-              <input
+              <input aria-label="Sua Cidade Base *"
                 type="text"
                 required
                 value={cidadeBase}
@@ -876,7 +876,7 @@ export const InstructorGeoDemandView: React.FC<InstructorGeoDemandViewProps> = (
 
             <div>
               <label className="block font-bold text-slate-700 mb-1">Estado (UF) *</label>
-              <select
+              <select aria-label="Estado (UF) *"
                 required
                 value={estadoBase}
                 onChange={(e) => {
@@ -897,7 +897,7 @@ export const InstructorGeoDemandView: React.FC<InstructorGeoDemandViewProps> = (
 
             <div>
               <label className="block font-bold text-slate-700 mb-1">Seu Bairro Base *</label>
-              <input
+              <input aria-label="Seu Bairro Base *"
                 type="text"
                 required
                 value={bairroBase}
@@ -950,7 +950,7 @@ export const InstructorGeoDemandView: React.FC<InstructorGeoDemandViewProps> = (
               {/* Seletor do Estado de Pesquisa */}
               <div className="flex items-center gap-1.5 shrink-0">
                 <span className="text-[11px] font-bold text-slate-600">Estado de Pesquisa:</span>
-                <select
+                <select aria-label="Cidades que Você Atende (aparecerão na busca por cidade e no mapa dos alunos)"
                   value={estadoPesquisaCidade}
                   onChange={(e) => {
                     setEstadoPesquisaCidade(e.target.value);
@@ -974,7 +974,7 @@ export const InstructorGeoDemandView: React.FC<InstructorGeoDemandViewProps> = (
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                     <Search className="w-4 h-4" />
                   </div>
-                  <input
+                  <input aria-label="Pesquisar cidade de atendimento"
                     type="text"
                     value={novaCidadeInput}
                     onChange={(e) => {
@@ -1152,7 +1152,7 @@ export const InstructorGeoDemandView: React.FC<InstructorGeoDemandViewProps> = (
               <label className="block font-extrabold text-slate-900">
                 Tipo de Câmbio dos seus Veículos
               </label>
-              <select
+              <select aria-label="Tipo de Câmbio dos seus Veículos"
                 value={tipoCambio}
                 onChange={(e) => setTipoCambio(e.target.value as VehicleTransmissionType)}
                 className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-semibold text-xs focus:border-blue-600 focus:outline-none"

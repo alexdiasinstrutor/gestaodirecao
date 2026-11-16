@@ -1,3 +1,6 @@
+import { prepareSignatureImage } from './signatureImage';
+import { syncSaaSPlans } from './saasPlans';
+import { recordDataChange, setHistoryCloudWriter, hydrateDataHistory } from './dataHistory';
 import {
   Organization,
   User,
@@ -20,7 +23,8 @@ import {
   CouponRedemption,
   StudentNotification,
   InstructorCoverageProfile,
-  StudentLeadRequest
+  StudentLeadRequest,
+  SignatureConfig
 } from '../types';
 import { generateCPFFingerprint, maskCPF, formatDateBR } from './validation';
 import {
@@ -808,36 +812,28 @@ export function seedCleanProductionData(): { org: Organization; user: User } {
   );
   const deletedVehicles = new Set(readList<string>(STORAGE_KEYS.DELETED_VEHICLES));
   const existingVehicles = readList<Vehicle>(STORAGE_KEYS.VEHICLES).filter(
-    (v) =>
-      !deletedVehicles.has(v.id) &&
-      v.id !== 'veh_onix_01' &&
-      v.id !== 'veh_mobi_02' &&
-      v.id !== 'veh_cg_moto'
+    (v) => !deletedVehicles.has(v.id) && v.id !== 'veh_onix_01' && v.id !== 'veh_mobi_02' && v.id !== 'veh_cg_moto'
   );
   const existingBackupVehicles = readList<Vehicle>(STORAGE_KEYS.VEHICLES_BACKUP).filter(
-    (v) =>
-      !deletedVehicles.has(v.id) &&
-      v.id !== 'veh_onix_01' &&
-      v.id !== 'veh_mobi_02' &&
-      v.id !== 'veh_cg_moto'
+    (v) => !deletedVehicles.has(v.id) && v.id !== 'veh_onix_01' && v.id !== 'veh_mobi_02' && v.id !== 'veh_cg_moto'
   );
   const mergedVehiclesMap = new Map<string, Vehicle>();
   existingBackupVehicles.forEach((v) => mergedVehiclesMap.set(v.id, v));
   existingVehicles.forEach((v) => mergedVehiclesMap.set(v.id, v));
 
   const existingPackages = readList<PackageOffer>(STORAGE_KEYS.PACKAGES).filter(
-    (p) =>
+    (p) => !!p.atualizadoEm || !!p.instrutorId || (
       p.id !== 'pkg_cnh_b_20' &&
       p.id !== 'pkg_cnh_a_20' &&
       p.id !== 'pkg_cnh_ab_40' &&
-      p.id !== 'pkg_reforco_05'
+      p.id !== 'pkg_reforco_05')
   );
   const existingBackupPackages = readList<PackageOffer>(STORAGE_KEYS.PACKAGES_BACKUP).filter(
-    (p) =>
+    (p) => !!p.atualizadoEm || !!p.instrutorId || (
       p.id !== 'pkg_cnh_b_20' &&
       p.id !== 'pkg_cnh_a_20' &&
       p.id !== 'pkg_cnh_ab_40' &&
-      p.id !== 'pkg_reforco_05'
+      p.id !== 'pkg_reforco_05')
   );
   const mergedPackagesMap = new Map<string, PackageOffer>();
   existingBackupPackages.forEach((p) => mergedPackagesMap.set(p.id, p));
@@ -879,6 +875,18 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
   if (!supabaseAdapter.enabled) return { synced: false, source: 'clean' };
 
   try {
+    await supabaseAdapter.flushPendingWrites();
+    await syncSaaSPlans();
+    const historyUser = db.getCurrentUser();
+    if (historyUser) await hydrateDataHistory(await supabaseAdapter.getDataCheckpointAuditLogs(), historyUser);
+    for (const id of readList<string>('agd_pending_signatures')) {
+      const user = readList<User>(STORAGE_KEYS.USERS).find(u => u.id === id);
+      if (user) {
+        try { await supabaseAdapter.saveUser(user);
+          hydrateList('agd_pending_signatures', readList<string>('agd_pending_signatures').filter(value => value !== id));
+        } catch { /* Preserve the local signature and retry on reconnect. */ }
+      }
+    }
     const [remoteOrgs, remoteUsers] = await Promise.all([
       supabaseAdapter.getOrganizations(),
       supabaseAdapter.getUsers()
@@ -906,7 +914,7 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
     const mergedOrgsMap = new Map<string, Organization>();
     localOrgs.forEach((o) => mergedOrgsMap.set(o.id, o));
     remoteOrgs.forEach((o) => mergedOrgsMap.set(o.id, o));
-    writeList(STORAGE_KEYS.ORGANIZATIONS, Array.from(mergedOrgsMap.values()));
+    hydrateList(STORAGE_KEYS.ORGANIZATIONS, Array.from(mergedOrgsMap.values()));
 
     const localUsers = readList<User>(STORAGE_KEYS.USERS);
     const mergedUsersMap = new Map<string, User>();
@@ -919,7 +927,7 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
         assinaturaConfig: u.assinaturaConfig || existing?.assinaturaConfig
       });
     });
-    writeList(STORAGE_KEYS.USERS, Array.from(mergedUsersMap.values()));
+    hydrateList(STORAGE_KEYS.USERS, Array.from(mergedUsersMap.values()));
 
     // Carrega todos os registros remotos do Supabase de todas as organizações
     const [
@@ -975,7 +983,7 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
           }
         }
       }
-      writeList(STORAGE_KEYS.USERS, Array.from(mergedUsersMap.values()));
+      hydrateList(STORAGE_KEYS.USERS, Array.from(mergedUsersMap.values()));
     }
 
     const studentMetaMap = new Map<string, Student>();
@@ -1011,54 +1019,54 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
             ...st,
             ...(metaExisting
               ? {
-                  categoriaCnh: metaExisting.categoriaCnh || st.categoriaCnh,
-                  pacoteId: metaExisting.pacoteId ?? st.pacoteId ?? localExisting?.pacoteId,
-                  pacoteNome: metaExisting.pacoteNome ?? st.pacoteNome ?? localExisting?.pacoteNome,
-                  totalAulasContratadas: metaExisting.totalAulasContratadas || st.totalAulasContratadas,
-                  aulasCumpridas: Math.max(st.aulasCumpridas || 0, metaExisting.aulasCumpridas || 0),
-                  habilidades: metaExisting.habilidades || st.habilidades || localExisting?.habilidades,
-                  observacoesInstrutor:
-                    metaExisting.observacoesInstrutor ?? st.observacoesInstrutor ?? localExisting?.observacoesInstrutor,
-                  cep: metaExisting.cep || st.cep || localExisting?.cep,
-                  estado: metaExisting.estado || st.estado || localExisting?.estado,
-                  cidade: metaExisting.cidade || st.cidade || localExisting?.cidade,
-                  bairro: metaExisting.bairro || st.bairro || localExisting?.bairro,
-                  logradouro: metaExisting.logradouro || st.logradouro || localExisting?.logradouro,
-                  numero: metaExisting.numero || st.numero || localExisting?.numero,
-                  complemento: metaExisting.complemento || st.complemento || localExisting?.complemento,
-                  instrutorId: metaExisting.instrutorId || st.instrutorId || localExisting?.instrutorId || '',
-                  historicoTransferencias:
-                    metaExisting.historicoTransferencias && metaExisting.historicoTransferencias.length > 0
-                      ? metaExisting.historicoTransferencias
-                      : st.historicoTransferencias && st.historicoTransferencias.length > 0
+                categoriaCnh: metaExisting.categoriaCnh || st.categoriaCnh,
+                pacoteId: metaExisting.pacoteId ?? st.pacoteId ?? localExisting?.pacoteId,
+                pacoteNome: metaExisting.pacoteNome ?? st.pacoteNome ?? localExisting?.pacoteNome,
+                totalAulasContratadas: metaExisting.totalAulasContratadas || st.totalAulasContratadas,
+                aulasCumpridas: Math.max(st.aulasCumpridas || 0, metaExisting.aulasCumpridas || 0),
+                habilidades: metaExisting.habilidades || st.habilidades || localExisting?.habilidades,
+                observacoesInstrutor:
+                  metaExisting.observacoesInstrutor ?? st.observacoesInstrutor ?? localExisting?.observacoesInstrutor,
+                cep: metaExisting.cep || st.cep || localExisting?.cep,
+                estado: metaExisting.estado || st.estado || localExisting?.estado,
+                cidade: metaExisting.cidade || st.cidade || localExisting?.cidade,
+                bairro: metaExisting.bairro || st.bairro || localExisting?.bairro,
+                logradouro: metaExisting.logradouro || st.logradouro || localExisting?.logradouro,
+                numero: metaExisting.numero || st.numero || localExisting?.numero,
+                complemento: metaExisting.complemento || st.complemento || localExisting?.complemento,
+                instrutorId: metaExisting.instrutorId || st.instrutorId || localExisting?.instrutorId || '',
+                historicoTransferencias:
+                  metaExisting.historicoTransferencias && metaExisting.historicoTransferencias.length > 0
+                    ? metaExisting.historicoTransferencias
+                    : st.historicoTransferencias && st.historicoTransferencias.length > 0
                       ? st.historicoTransferencias
                       : localExisting?.historicoTransferencias || [],
-                  contratosPacotes:
-                    Array.isArray(metaExisting?.contratosPacotes) && metaExisting.contratosPacotes.length > 0
-                      ? metaExisting.contratosPacotes
-                      : Array.isArray(st.contratosPacotes) && st.contratosPacotes.length > 0
+                contratosPacotes:
+                  Array.isArray(metaExisting?.contratosPacotes) && metaExisting.contratosPacotes.length > 0
+                    ? metaExisting.contratosPacotes
+                    : Array.isArray(st.contratosPacotes) && st.contratosPacotes.length > 0
                       ? st.contratosPacotes
                       : Array.isArray(localExisting?.contratosPacotes)
-                      ? localExisting.contratosPacotes
-                      : []
-                }
+                        ? localExisting.contratosPacotes
+                        : []
+              }
               : {
-                  pacoteId: st.pacoteId || localExisting?.pacoteId,
-                  pacoteNome: st.pacoteNome || localExisting?.pacoteNome,
-                  cep: st.cep || localExisting?.cep,
-                  estado: st.estado || localExisting?.estado,
-                  cidade: st.cidade || localExisting?.cidade,
-                  bairro: st.bairro || localExisting?.bairro,
-                  logradouro: st.logradouro || localExisting?.logradouro,
-                  numero: st.numero || localExisting?.numero,
-                  complemento: st.complemento || localExisting?.complemento,
-                  contratosPacotes:
-                    Array.isArray(st.contratosPacotes) && st.contratosPacotes.length > 0
-                      ? st.contratosPacotes
-                      : Array.isArray(localExisting?.contratosPacotes)
+                pacoteId: st.pacoteId || localExisting?.pacoteId,
+                pacoteNome: st.pacoteNome || localExisting?.pacoteNome,
+                cep: st.cep || localExisting?.cep,
+                estado: st.estado || localExisting?.estado,
+                cidade: st.cidade || localExisting?.cidade,
+                bairro: st.bairro || localExisting?.bairro,
+                logradouro: st.logradouro || localExisting?.logradouro,
+                numero: st.numero || localExisting?.numero,
+                complemento: st.complemento || localExisting?.complemento,
+                contratosPacotes:
+                  Array.isArray(st.contratosPacotes) && st.contratosPacotes.length > 0
+                    ? st.contratosPacotes
+                    : Array.isArray(localExisting?.contratosPacotes)
                       ? localExisting.contratosPacotes
                       : []
-                })
+              })
           });
         });
       }
@@ -1123,12 +1131,12 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
       }
 
       const finalStudents = Array.from(mergedStudentsMap.values());
-      writeList(STORAGE_KEYS.STUDENTS, finalStudents);
+      hydrateList(STORAGE_KEYS.STUDENTS, finalStudents);
 
       // Envia para a nuvem quaisquer alunos locais/reconstruídos que ainda não estavam no banco remoto
       for (const st of finalStudents) {
         if (!remoteStudentIds.has(st.id)) {
-          supabaseAdapter.saveStudent(st).catch(() => {});
+          supabaseAdapter.saveStudent(st).catch(() => { });
         }
       }
     }
@@ -1143,10 +1151,10 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
         // ignore
       }
       const deletedVehicleIds = new Set([...localDeleted, ...remoteDeleted]);
-      writeList(STORAGE_KEYS.DELETED_VEHICLES, Array.from(deletedVehicleIds));
+      hydrateList(STORAGE_KEYS.DELETED_VEHICLES, Array.from(deletedVehicleIds));
 
       if (deletedVehicleIds.size > 0) {
-        supabaseAdapter.deleteVehiclesBatch(Array.from(deletedVehicleIds)).catch(() => {});
+        supabaseAdapter.deleteVehiclesBatch(Array.from(deletedVehicleIds)).catch(() => { });
       }
       const pendingVehicleIds = new Set(readList<string>(STORAGE_KEYS.PENDING_VEHICLES));
       const localVehicles = readList<Vehicle>(STORAGE_KEYS.VEHICLES);
@@ -1200,8 +1208,8 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
       }
 
       const finalVehicles = Array.from(mergedVehiclesMap.values());
-      writeList(STORAGE_KEYS.VEHICLES, finalVehicles);
-      writeList(STORAGE_KEYS.VEHICLES_BACKUP, finalVehicles);
+      hydrateList(STORAGE_KEYS.VEHICLES, finalVehicles);
+      hydrateList(STORAGE_KEYS.VEHICLES_BACKUP, finalVehicles);
 
       // Envia para o Supabase quaisquer veículos locais ou pendentes que ainda não estavam sincronizados
       const vehiclesToPush = finalVehicles.filter(
@@ -1211,18 +1219,18 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
         supabaseAdapter
           .saveVehiclesBatch(vehiclesToPush)
           .then(() => {
-            writeList(STORAGE_KEYS.PENDING_VEHICLES, []);
+            hydrateList(STORAGE_KEYS.PENDING_VEHICLES, []);
           })
-          .catch(() => {});
+          .catch(() => { });
       }
     }
 
-    if (lessons && lessons.length > 0) writeList(STORAGE_KEYS.LESSONS, lessons);
+    if (lessons && lessons.length > 0) hydrateList(STORAGE_KEYS.LESSONS, lessons);
 
     // Gestão segura e bidirecional de slots (agenda de horários disponíveis)
     const deletedSlotIds = new Set(readList<string>(STORAGE_KEYS.DELETED_SLOTS));
     if (deletedSlotIds.size > 0) {
-      supabaseAdapter.deleteSlotsBatch(Array.from(deletedSlotIds)).catch(() => {});
+      supabaseAdapter.deleteSlotsBatch(Array.from(deletedSlotIds)).catch(() => { });
     }
 
     if (slots) {
@@ -1247,12 +1255,12 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
       }
 
       const mergedSlots = Array.from(mergedSlotsMap.values());
-      writeList(STORAGE_KEYS.SLOTS, mergedSlots);
+      hydrateList(STORAGE_KEYS.SLOTS, mergedSlots);
 
       // Limpa DELETED_SLOTS que já não constam mais no Supabase
       const remoteRawIds = new Set(slots.map((s) => s.id));
       const remainingDeleted = Array.from(deletedSlotIds).filter((id) => remoteRawIds.has(id));
-      writeList(STORAGE_KEYS.DELETED_SLOTS, remainingDeleted);
+      hydrateList(STORAGE_KEYS.DELETED_SLOTS, remainingDeleted);
     }
 
     // Sincroniza notificações de aulas desmarcadas para os alunos
@@ -1307,7 +1315,7 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
       }
     }
 
-    writeList(
+    hydrateList(
       STORAGE_KEYS.STUDENT_NOTIFICATIONS,
       Array.from(notifMap.values()).sort((a, b) => b.criadoEm.localeCompare(a.criadoEm))
     );
@@ -1317,16 +1325,16 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
       const mergedAccountsMap = new Map<string, AccountReceivable>();
       localAccounts.forEach((a) => mergedAccountsMap.set(a.id, a));
       accounts.forEach((a) => mergedAccountsMap.set(a.id, a));
-      writeList(STORAGE_KEYS.ACCOUNTS, Array.from(mergedAccountsMap.values()));
+      hydrateList(STORAGE_KEYS.ACCOUNTS, Array.from(mergedAccountsMap.values()));
     }
-    if (payments && payments.length > 0) writeList(STORAGE_KEYS.PAYMENTS, payments);
-    if (expenses && expenses.length > 0) writeList(STORAGE_KEYS.EXPENSES, expenses);
-    if (investments && investments.length > 0) writeList(STORAGE_KEYS.INVESTMENTS, investments);
+    if (payments && payments.length > 0) hydrateList(STORAGE_KEYS.PAYMENTS, payments);
+    if (expenses && expenses.length > 0) hydrateList(STORAGE_KEYS.EXPENSES, expenses);
+    if (investments && investments.length > 0) hydrateList(STORAGE_KEYS.INVESTMENTS, investments);
     // Sincronização bidirecional e protegida de pacotes e planos dos instrutores (PROIBIDO apagar ou inventar pacotes)
     {
       const deletedPkgIds = new Set(readList<string>(STORAGE_KEYS.DELETED_PACKAGES));
       if (deletedPkgIds.size > 0) {
-        supabaseAdapter.deletePackagesBatch(Array.from(deletedPkgIds)).catch(() => {});
+        supabaseAdapter.deletePackagesBatch(Array.from(deletedPkgIds)).catch(() => { });
       }
       const pendingPkgIds = new Set(readList<string>(STORAGE_KEYS.PENDING_PACKAGES));
       const localPkgs = readList<PackageOffer>(STORAGE_KEYS.PACKAGES);
@@ -1374,16 +1382,16 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
           // Escolhe entre rp e metaExisting qual versão remota é mais atualizada ou customizada
           const bestRemote: PackageOffer =
             metaExisting &&
-            ((metaExisting.atualizadoEm && (!rp.atualizadoEm || metaExisting.atualizadoEm >= rp.atualizadoEm)) ||
-              (isGenericSeedPackage(rp) && !isGenericSeedPackage(metaExisting)))
+              ((metaExisting.atualizadoEm && (!rp.atualizadoEm || metaExisting.atualizadoEm >= rp.atualizadoEm)) ||
+                (isGenericSeedPackage(rp) && !isGenericSeedPackage(metaExisting)))
               ? { ...rp, ...metaExisting }
               : {
-                  ...metaExisting,
-                  ...rp,
-                  instrutorId: rp.instrutorId || metaExisting?.instrutorId,
-                  instrutorNome: rp.instrutorNome || metaExisting?.instrutorNome,
-                  atualizadoEm: rp.atualizadoEm || metaExisting?.atualizadoEm
-                };
+                ...metaExisting,
+                ...rp,
+                instrutorId: rp.instrutorId || metaExisting?.instrutorId,
+                instrutorNome: rp.instrutorNome || metaExisting?.instrutorNome,
+                atualizadoEm: rp.atualizadoEm || metaExisting?.atualizadoEm
+              };
 
           if (localExisting) {
             const localIsProtected =
@@ -1421,13 +1429,13 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
       });
 
       const finalPackages = Array.from(mergedPkgsMap.values());
-      writeList(STORAGE_KEYS.PACKAGES, finalPackages);
-      writeList(STORAGE_KEYS.PACKAGES_BACKUP, finalPackages);
+      hydrateList(STORAGE_KEYS.PACKAGES, finalPackages);
+      hydrateList(STORAGE_KEYS.PACKAGES_BACKUP, finalPackages);
       db.sanitizePackages();
 
       // 4. Envia para o Supabase todos os pacotes locais, customizados ou pendentes para blindar contra perda
       const sanitizedPackages = readList<PackageOffer>(STORAGE_KEYS.PACKAGES);
-      writeList(STORAGE_KEYS.PACKAGES_BACKUP, sanitizedPackages);
+      hydrateList(STORAGE_KEYS.PACKAGES_BACKUP, sanitizedPackages);
       const pkgsToPush = sanitizedPackages.filter(
         (pk) => !remotePkgIds.has(pk.id) || pendingPkgIds.has(pk.id) || !isGenericSeedPackage(pk)
       );
@@ -1435,13 +1443,16 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
         supabaseAdapter
           .savePackagesBatch(pkgsToPush)
           .then(() => {
-            writeList(STORAGE_KEYS.PENDING_PACKAGES, []);
+            const sent = new Map(pkgsToPush.map(p => [p.id, p.atualizadoEm]));
+            const current = readList<PackageOffer>(STORAGE_KEYS.PACKAGES);
+            hydrateList(STORAGE_KEYS.PENDING_PACKAGES, readList<string>(STORAGE_KEYS.PENDING_PACKAGES).filter(id =>
+              !sent.has(id) || current.find(p => p.id === id)?.atualizadoEm !== sent.get(id)));
           })
-          .catch(() => {});
+          .catch(() => { });
       }
 
       const remainingDeletedPkgs = Array.from(deletedPkgIds).filter((id) => remotePkgIds.has(id));
-      writeList(STORAGE_KEYS.DELETED_PACKAGES, remainingDeletedPkgs);
+      hydrateList(STORAGE_KEYS.DELETED_PACKAGES, remainingDeletedPkgs);
     }
 
     // Sincroniza perfis de cobertura geográfica dos instrutores (Raio 5-40km, Cidades Atendidas, Câmbio e Veículos)
@@ -1464,7 +1475,7 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
           }
         }
       }
-      writeList(STORAGE_KEYS.INSTRUCTOR_COVERAGE, Array.from(covMap.values()));
+      hydrateList(STORAGE_KEYS.INSTRUCTOR_COVERAGE, Array.from(covMap.values()));
     }
 
     // Sincroniza solicitações de alunos à procura de instrutor (Demanda Reversa)
@@ -1492,7 +1503,7 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
           }
         }
       }
-      writeList(
+      hydrateList(
         STORAGE_KEYS.STUDENT_LEADS,
         Array.from(leadsMap.values()).sort((a, b) => b.criadoEm.localeCompare(a.criadoEm))
       );
@@ -1611,13 +1622,16 @@ function readList<T>(key: string): T[] {
   }
 }
 
-function writeList<T>(key: string, items: T[]): void {
-  try {
-    localStorage.setItem(key, JSON.stringify(items));
-  } catch (err) {
-    console.error(`Erro ao gravar no storage [${key}]:`, err);
-  }
+function hydrateList<T>(key: string, items: T[]): void {
+  localStorage.setItem(key, JSON.stringify(items));
 }
+function writeList<T>(key: string, items: T[]): void {
+  const previous = localStorage.getItem(key);
+  const next = JSON.stringify(items);
+  localStorage.setItem(key, next); // Quota errors must reach the form; never report a failed write as saved.
+  recordDataChange(key, previous, next);
+}
+setHistoryCloudWriter(log => supabaseAdapter.addAuditLog(log));
 
 // Dual-write dos cupons para o Supabase (tabelas discount_coupons e coupon_redemptions)
 setCouponSyncHooks({
@@ -1745,7 +1759,9 @@ export const db = {
         localStorage.setItem(STORAGE_KEYS.SESSION_EXPIRY, (Date.now() + SESSION_DURATION_MS).toString());
       }
 
-      return JSON.parse(raw);
+      const session = JSON.parse(raw) as User;
+      const profile = readList<User>(STORAGE_KEYS.USERS).find(u => u.id === session.id);
+      return { ...session, assinaturaUrl: profile?.assinaturaUrl ?? session.assinaturaUrl, assinaturaConfig: profile?.assinaturaConfig ?? session.assinaturaConfig };
     } catch {
       return null;
     }
@@ -1753,7 +1769,8 @@ export const db = {
 
   setCurrentUser(user: User | null): void {
     if (user) {
-      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
+      const { assinaturaUrl, assinaturaConfig, ...session } = user;
+      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(session));
       localStorage.setItem(STORAGE_KEYS.SESSION_EXPIRY, (Date.now() + SESSION_DURATION_MS).toString());
     } else {
       localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
@@ -2062,6 +2079,7 @@ export const db = {
     const users = readList<User>(STORAGE_KEYS.USERS);
     const index = users.findIndex((u) => u.id === user.id);
     if (index >= 0) {
+      user = { ...user, registrationLegalConsent: users[index].registrationLegalConsent || user.registrationLegalConsent, assinaturaUrl: users[index].assinaturaUrl || user.assinaturaUrl, assinaturaConfig: users[index].assinaturaConfig || user.assinaturaConfig };
       users[index] = user;
     } else {
       users.push(user);
@@ -2075,6 +2093,7 @@ export const db = {
     const users = readList<User>(STORAGE_KEYS.USERS);
     const index = users.findIndex((u) => u.id === user.id);
     if (index >= 0) {
+      user = { ...user, registrationLegalConsent: users[index].registrationLegalConsent || user.registrationLegalConsent, assinaturaUrl: users[index].assinaturaUrl || user.assinaturaUrl, assinaturaConfig: users[index].assinaturaConfig || user.assinaturaConfig };
       users[index] = user;
     } else {
       users.push(user);
@@ -2088,6 +2107,7 @@ export const db = {
     const users = readList<User>(STORAGE_KEYS.USERS);
     const index = users.findIndex((u) => u.id === user.id);
     if (index >= 0) {
+      user = { ...user, registrationLegalConsent: users[index].registrationLegalConsent || user.registrationLegalConsent, assinaturaUrl: users[index].assinaturaUrl || user.assinaturaUrl, assinaturaConfig: users[index].assinaturaConfig || user.assinaturaConfig };
       users[index] = user;
     } else {
       users.push(user);
@@ -2100,6 +2120,7 @@ export const db = {
     const users = readList<User>(STORAGE_KEYS.USERS);
     const index = users.findIndex((u) => u.id === user.id);
     if (index >= 0) {
+      user = { ...user, registrationLegalConsent: users[index].registrationLegalConsent || user.registrationLegalConsent, assinaturaUrl: users[index].assinaturaUrl || user.assinaturaUrl, assinaturaConfig: users[index].assinaturaConfig || user.assinaturaConfig };
       users[index] = user;
     } else {
       users.push(user);
@@ -2112,6 +2133,7 @@ export const db = {
     const users = readList<User>(STORAGE_KEYS.USERS);
     const index = users.findIndex((u) => u.id === user.id);
     if (index >= 0) {
+      user = { ...user, registrationLegalConsent: users[index].registrationLegalConsent || user.registrationLegalConsent, assinaturaUrl: users[index].assinaturaUrl || user.assinaturaUrl, assinaturaConfig: users[index].assinaturaConfig || user.assinaturaConfig };
       users[index] = user;
       writeList(STORAGE_KEYS.USERS, users);
       supabaseAdapter.saveUser(user).catch(console.error);
@@ -2132,11 +2154,11 @@ export const db = {
     signatureBase64: string,
     config?: SignatureConfig
   ): Promise<User | null> {
+    signatureBase64 = await prepareSignatureImage(signatureBase64);
     const users = readList<User>(STORAGE_KEYS.USERS);
     const index = users.findIndex((u) => u.id === userId);
     if (index === -1) {
-      console.warn(`saveUserSignature: Usuário ${userId} não encontrado.`);
-      return null;
+      throw new Error('Instrutor não encontrado.');
     }
 
     const updatedUser: User = {
@@ -2154,8 +2176,9 @@ export const db = {
 
     try {
       await supabaseAdapter.saveUser(updatedUser);
+      writeList('agd_pending_signatures', readList<string>('agd_pending_signatures').filter(id => id !== userId));
     } catch (e) {
-      console.warn('Erro ao salvar assinatura no Supabase users:', e);
+      throw new Error('Assinatura preservada neste dispositivo, mas não confirmada no banco. Verifique a conexão e a migração de assinatura.');
     }
 
     try {
@@ -2165,7 +2188,8 @@ export const db = {
         usuarioId: userId,
         acao: 'SALVAR_ASSINATURA_DIGITAL',
         entidade: 'InstructorSignatureMeta',
-        registroId: userId,
+        entidadeId: userId,
+        usuarioNome: updatedUser.nome,
         detalhes: JSON.stringify({
           userId,
           hasSignature: !!signatureBase64,
@@ -2315,6 +2339,12 @@ export const db = {
       });
     }
 
+    const rentalAmount = params.contract.valorLocacaoExameCentavos ?? 0;
+    const lessonAmount = params.contract.valorAulasCentavos ?? (params.contract.valorCentavos - rentalAmount);
+    if (![rentalAmount, lessonAmount, params.contract.valorCentavos].every(value => Number.isSafeInteger(value) && value >= 0) || lessonAmount + rentalAmount !== params.contract.valorCentavos || (rentalAmount > 0 && !params.contract.locacaoExameContratada)) {
+      throw new Error('Os valores de aulas, locação e total do contrato estão inconsistentes.');
+    }
+
     const newContractId = params.contract.id || `cnt_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     let createdAccount: AccountReceivable | undefined;
 
@@ -2333,7 +2363,7 @@ export const db = {
         parcelasTotal: params.parcelasTotal || 1,
         criadoEm: new Date().toISOString()
       };
-      await this.saveAccountReceivableAsync(createdAccount, params.actorId);
+      await this.updateAccountReceivableAsync(createdAccount, params.actorId);
     }
 
     const finalContract: StudentPackageContract = {
@@ -2347,6 +2377,9 @@ export const db = {
       quantidadeAulas: Math.max(1, Number(params.contract.quantidadeAulas) || 1),
       valorCentavos: Math.max(0, Number(params.contract.valorCentavos) || 0),
       dataContratacao: params.contract.dataContratacao || today,
+      valorAulasCentavos: params.contract.valorAulasCentavos,
+      valorLocacaoExameCentavos: params.contract.valorLocacaoExameCentavos,
+      locacaoExameContratada: params.contract.locacaoExameContratada,
       formaPagamento: params.contract.formaPagamento,
       contaReceberId: createdAccount?.id || params.contract.contaReceberId,
       observacoes: params.contract.observacoes,
@@ -3694,13 +3727,14 @@ export const db = {
       'pkg_habilitados_10_',
       'pkg_cnh_d_20_'
     ];
-    const toRemove = all.filter((p) => autoInjectedPrefixes.some((prefix) => p.id.startsWith(prefix)));
+    const toRemove = all.filter((p) => !p.atualizadoEm && !p.instrutorId && autoInjectedPrefixes.some((prefix) => p.id.startsWith(prefix)));
     if (toRemove.length > 0) {
-      const cleaned = all.filter((p) => !autoInjectedPrefixes.some((prefix) => p.id.startsWith(prefix)));
+      const removedIds = new Set(toRemove.map(p => p.id));
+      const cleaned = all.filter((p) => !removedIds.has(p.id));
       writeList(STORAGE_KEYS.PACKAGES, cleaned);
       writeList(STORAGE_KEYS.PACKAGES_BACKUP, cleaned);
       toRemove.forEach((p) => {
-        supabaseAdapter.deletePackage(p.id).catch(() => {});
+        supabaseAdapter.deletePackage(p.id).catch(() => { });
       });
     }
   },
@@ -3717,7 +3751,7 @@ export const db = {
       detalhes: JSON.stringify(pkg),
       timestamp: pkg.atualizadoEm || new Date().toISOString()
     };
-    supabaseAdapter.addAuditLog(metaAudit).catch(() => {});
+    supabaseAdapter.addAuditLog(metaAudit).catch(() => { });
   },
 
   createPackage(pkg: PackageOffer, actorId: string): void {
@@ -3780,7 +3814,7 @@ export const db = {
 
     notifyDataChange();
     if (supabaseAdapter.enabled) {
-      await supabaseAdapter.savePackage(updatedPkg).catch(console.error);
+      await supabaseAdapter.savePackage(updatedPkg);
       const afterPending = readList<string>(STORAGE_KEYS.PENDING_PACKAGES).filter(
         (id) => id !== updatedPkg.id
       );
@@ -3871,7 +3905,7 @@ export const db = {
 
       notifyDataChange();
       if (supabaseAdapter.enabled) {
-        await supabaseAdapter.savePackage(pkg).catch(console.error);
+        await supabaseAdapter.savePackage(pkg);
         const afterPending = readList<string>(STORAGE_KEYS.PENDING_PACKAGES).filter((id) => id !== pkg.id);
         writeList(STORAGE_KEYS.PENDING_PACKAGES, afterPending);
       }
@@ -3945,7 +3979,7 @@ export const db = {
 
     notifyDataChange();
     if (supabaseAdapter.enabled) {
-      await supabaseAdapter.savePackage(updatedPkg).catch(console.error);
+      await supabaseAdapter.savePackage(updatedPkg);
       const afterPending = readList<string>(STORAGE_KEYS.PENDING_PACKAGES).filter(
         (id) => id !== updatedPkg.id
       );
@@ -4243,10 +4277,10 @@ export const db = {
         totalAulasContratadas: 20,
         habilidades: {
           baliza: 0,
-          percursoUrbano: 0,
-          estradaRodovia: 0,
-          estacionamentoGaragem: 0,
-          controleEmbreagemAclive: 0,
+          transitoPesado: 0,
+          rodoviaVelocidade: 0,
+          conversoesCruzamentos: 0,
+          controleEmbreagem: 0,
           sinalizacaoPreferencia: 0,
           posturaDefensiva: 0,
           simuladoExame: 0

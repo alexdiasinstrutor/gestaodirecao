@@ -529,7 +529,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
       <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
         <div className="relative w-full sm:w-80">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-          <input
+          <input aria-label="Buscar registros"
             type="text"
             placeholder="Buscar por nome, telefone ou CPF..."
             value={searchTerm}
@@ -574,7 +574,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
       </div>
 
       {/* Students Grid Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {filteredStudents.map((student) => {
           const progressPercent = Math.min(
             100,
@@ -602,7 +602,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                     <h3 className="font-bold text-slate-900 text-sm truncate flex items-center gap-1.5">
                       <span>{student.nome}</span>
                     </h3>
-                    <p className="text-xs text-slate-500 font-mono">
+                    <p className="text-xs text-slate-500 font-mono break-all">
                       CPF: {student.cpfMascarado}
                     </p>
                     {student.pacoteNome && (
@@ -700,13 +700,13 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                 <div className="min-w-0">
                   <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2 flex-wrap">
                     <span className="break-words">{activeStudent.nome}</span>
-                    <select
+                    <select aria-label="Clique para alterar a categoria CNH do aluno"
                       value={editingCategory}
                       onChange={(e) => {
                         const newCat = e.target.value as CnhCategory;
                         handleSelectCategoryInFicha(newCat);
                       }}
-                      className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 text-xs font-semibold border border-blue-400/30 shrink-0 cursor-pointer focus:bg-slate-800"
+                      className="w-full max-w-full sm:w-auto min-w-0 px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 text-xs font-semibold border border-blue-400/30 cursor-pointer focus:bg-slate-800"
                       title="Clique para alterar a categoria CNH do aluno"
                     >
                       {CNH_CATEGORIES.map((c) => (
@@ -820,7 +820,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                           <Package className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                           <span>Plano / Pacote Contratado pelo Aluno:</span>
                         </label>
-                        <select
+                        <select aria-label="Plano / Pacote Contratado pelo Aluno:"
                           value={editingPackageId}
                           onChange={(e) => handleSelectPackageInFicha(e.target.value)}
                           className="w-full px-3 py-2 bg-white border border-blue-300 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-600 cursor-pointer"
@@ -845,7 +845,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                         <label className="text-xs uppercase font-bold text-blue-900 block mb-1">
                           Categoria CNH:
                         </label>
-                        <select
+                        <select aria-label="Categoria CNH:"
                           value={editingCategory}
                           onChange={(e) => handleSelectCategoryInFicha(e.target.value as CnhCategory)}
                           className="w-full px-3 py-2 bg-white border border-blue-300 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-600 cursor-pointer"
@@ -862,7 +862,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                         <label className="text-xs uppercase font-bold text-blue-900 block mb-1">
                           Total Aulas:
                         </label>
-                        <input
+                        <input aria-label="Total Aulas:"
                           type="number"
                           min={1}
                           max={200}
@@ -1273,7 +1273,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                     style={{
                       width: `${Math.min(
                         100,
-                        (activeStudent.aulasCumpridas / Math.max(1, editingTotalLessons)) * 100
+                        (activeStudent.aulasCumpridas / Math.max(1, Number(editingTotalLessons) || 1)) * 100
                       )}%`
                     }}
                   />
@@ -1281,7 +1281,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                 <div className="flex justify-between text-xs text-slate-500 pt-1">
                   <span>Início do curso prático ({editingPackageName})</span>
                   <span>
-                    Faltam {Math.max(0, editingTotalLessons - activeStudent.aulasCumpridas)} aula(s) para o Exame Prático
+                    Faltam {Math.max(0, Number(editingTotalLessons) - activeStudent.aulasCumpridas)} aula(s) para o Exame Prático
                   </span>
                 </div>
               </div>
@@ -1318,6 +1318,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                         </div>
                         <input
                           type="range"
+                          aria-label={comp.label}
                           min="0"
                           max="10"
                           step="0.5"
@@ -1341,7 +1342,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                 <label className="block font-semibold text-slate-900 mb-1">
                   Parecer Técnico e Observações do Instrutor
                 </label>
-                <textarea
+                <textarea aria-label="Parecer técnico e observações do instrutor"
                   rows={3}
                   value={instructorNotes}
                   onChange={(e) => setInstructorNotes(e.target.value)}

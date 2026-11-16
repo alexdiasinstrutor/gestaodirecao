@@ -1,0 +1,10 @@
+import { chromium } from 'playwright';
+import { isolateServices } from './ui/mock-backend.mjs';
+const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:false,args:['--start-maximized']});
+const context=await browser.newContext({viewport:null});await isolateServices(context);
+const page=await context.newPage();await page.goto('http://localhost:3000/tests/ui/harness.html?scene=Header');await page.waitForFunction(()=>window.__UI_AUDIT_READY__);
+await page.getByRole('button',{name:'Termos, privacidade e contratos',exact:true}).click();
+await page.getByRole('dialog',{name:'Documentos jurídicos'}).waitFor();
+await page.evaluate(()=>document.title='Documentos jurídicos — prévia de minutas com dados fictícios');
+await page.screenshot({path:'review-artifacts/legal-preview.png'});
+console.log('Prévia jurídica aberta no Chrome.');await new Promise(()=>{});

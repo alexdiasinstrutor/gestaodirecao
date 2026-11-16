@@ -173,7 +173,7 @@ export const PixConfigModal: React.FC<PixConfigModalProps> = ({
               </p>
             </div>
           </div>
-          <button
+          <button aria-label="Fechar janela"
             type="button"
             onClick={onClose}
             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
@@ -226,7 +226,7 @@ export const PixConfigModal: React.FC<PixConfigModalProps> = ({
             {/* Tipo de Chave */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">Tipo da Chave PIX *</label>
-              <select
+              <select aria-label="Tipo da Chave PIX *"
                 value={tipoChave}
                 onChange={(e) => setTipoChave(e.target.value as PixKeyType)}
                 className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 bg-white focus:outline-none focus:border-emerald-600 cursor-pointer"
@@ -242,7 +242,7 @@ export const PixConfigModal: React.FC<PixConfigModalProps> = ({
             {/* Chave PIX */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">Chave PIX Oficial *</label>
-              <input
+              <input aria-label="Chave PIX Oficial *"
                 type="text"
                 required
                 value={chavePix}
@@ -259,7 +259,7 @@ export const PixConfigModal: React.FC<PixConfigModalProps> = ({
               <label className="block text-xs font-bold text-slate-700 mb-1">
                 Nome do Titular / Beneficiário *
               </label>
-              <input
+              <input aria-label="Nome do Titular / Beneficiário *"
                 type="text"
                 required
                 maxLength={50}
@@ -276,7 +276,7 @@ export const PixConfigModal: React.FC<PixConfigModalProps> = ({
               <label className="block text-xs font-bold text-slate-700 mb-1">
                 Cidade do Titular *
               </label>
-              <input
+              <input aria-label="Cidade do Titular *"
                 type="text"
                 required
                 maxLength={15}
@@ -315,7 +315,7 @@ export const PixConfigModal: React.FC<PixConfigModalProps> = ({
                     Beneficiário: <strong>{beneficiario}</strong> ({cidade})
                   </p>
                   <p className="text-xs text-slate-500 font-mono truncate">
-                    Chave: <strong className="text-emerald-700">{chavePix}</strong>
+                    Chave: <strong className="text-emerald-700 break-all">{chavePix}</strong>
                   </p>
                   <button
                     type="button"

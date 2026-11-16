@@ -273,7 +273,7 @@ export const MasterUserEditModal: React.FC<MasterUserEditModalProps> = ({
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Nome Completo do Master *
               </label>
-              <input
+              <input aria-label="Nome Completo do Master *"
                 type="text"
                 required
                 value={nome}
@@ -290,7 +290,7 @@ export const MasterUserEditModal: React.FC<MasterUserEditModalProps> = ({
               </label>
               <div className="relative">
                 <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                <input
+                <input aria-label="E-mail Corporativo de Login *"
                   type="email"
                   required
                   value={email}
@@ -312,7 +312,7 @@ export const MasterUserEditModal: React.FC<MasterUserEditModalProps> = ({
                 </label>
                 <div className="relative">
                   <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                  <input
+                  <input aria-label="Telefone / WhatsApp *"
                     type="tel"
                     required
                     value={telefone}
@@ -329,7 +329,7 @@ export const MasterUserEditModal: React.FC<MasterUserEditModalProps> = ({
                 </label>
                 <div className="relative">
                   <CreditCard className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                  <input
+                  <input aria-label="CPF do Titular *"
                     type="text"
                     required
                     value={cpf}
@@ -363,7 +363,7 @@ export const MasterUserEditModal: React.FC<MasterUserEditModalProps> = ({
                   </label>
                   <div className="relative">
                     <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                    <input
+                    <input aria-label="Senha de Acesso Inicial *"
                       type={showPassword ? 'text' : 'password'}
                       required
                       value={senha}
@@ -387,7 +387,7 @@ export const MasterUserEditModal: React.FC<MasterUserEditModalProps> = ({
                   </label>
                   <div className="relative">
                     <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                    <input
+                    <input aria-label="Confirmar Senha de Acesso *"
                       type={showPassword ? 'text' : 'password'}
                       required
                       value={confirmSenha}

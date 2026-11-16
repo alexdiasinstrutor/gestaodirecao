@@ -1,3 +1,5 @@
+import { RegistrationTerms } from '../legal/RegistrationTerms';
+import { registrationConsent } from '../../legal/registrationConsent';
 import React, { useState } from 'react';
 import {
   X,
@@ -68,6 +70,7 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
     cidade: ''
   });
 
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -180,6 +183,7 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!termsAccepted) {setError('Aceite os Termos de Uso e a Política de Privacidade para concluir o cadastro.');return;}
     setError('');
 
     if (!formData.senha || formData.senha.length < 6) {
@@ -229,7 +233,9 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
         criadoEm: new Date().toISOString()
       };
 
+      const legalConsent = await registrationConsent(termsAccepted);
       const newUser: User = {
+        registrationLegalConsent: legalConsent,
         id: userId,
         organizacaoId: orgId,
         nome: formData.nome.trim(),
@@ -319,7 +325,7 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white p-1 rounded-lg cursor-pointer">
+          <button aria-label="Fechar janela" onClick={onClose} className="text-slate-400 hover:text-white p-1 rounded-lg cursor-pointer">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -457,7 +463,7 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
 
                 {!appliedCoupon ? (
                   <div className="flex gap-2">
-                    <input
+                    <input aria-label="Cupom da assinatura do instrutor"
                       type="text"
                       value={couponCodeInput}
                       onChange={(e) => setCouponCodeInput(normalizeCouponCode(e.target.value))}
@@ -576,7 +582,7 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="sm:col-span-2">
                   <label className="block font-medium text-slate-700 mb-1">Nome Completo do Instrutor *</label>
-                  <input
+                  <input aria-label="Nome Completo do Instrutor *"
                     type="text"
                     required
                     value={formData.nome}
@@ -588,7 +594,7 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
 
                 <div>
                   <label className="block font-medium text-slate-700 mb-1">CPF (com validação estrita) *</label>
-                  <input
+                  <input aria-label="CPF (com validação estrita) *"
                     type="text"
                     required
                     value={formData.cpf}
@@ -600,7 +606,7 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
 
                 <div>
                   <label className="block font-medium text-slate-700 mb-1">Telefone WhatsApp *</label>
-                  <input
+                  <input aria-label="Telefone WhatsApp *"
                     type="text"
                     required
                     value={formData.telefone}
@@ -613,7 +619,7 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
 
                 <div className="sm:col-span-2">
                   <label className="block font-medium text-slate-700 mb-1">E-mail Profissional *</label>
-                  <input
+                  <input aria-label="E-mail Profissional *"
                     type="email"
                     required
                     value={formData.email}
@@ -625,7 +631,7 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
 
                 <div>
                   <label className="block font-medium text-slate-700 mb-1">Modalidade de Atuação</label>
-                  <select
+                  <select aria-label="Modalidade de Atuação"
                     value={formData.tipo}
                     onChange={(e) => setFormData({ ...formData, tipo: e.target.value as any })}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none bg-white"
@@ -637,7 +643,7 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
 
                 <div>
                   <label className="block font-medium text-slate-700 mb-1">Nome da Autoescola / Marca</label>
-                  <input
+                  <input aria-label="Nome da Autoescola / Marca"
                     type="text"
                     value={formData.nomeAutoescola}
                     onChange={(e) => setFormData({ ...formData, nomeAutoescola: e.target.value })}
@@ -708,7 +714,7 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-medium text-slate-700 mb-1">Crie sua Senha de Acesso (Mín. 6 dígitos) *</label>
-                  <input
+                  <input aria-label="Crie sua Senha de Acesso (Mín. 6 dígitos) *"
                     type="password"
                     required
                     value={formData.senha}
@@ -720,7 +726,7 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
 
                 <div>
                   <label className="block font-medium text-slate-700 mb-1">Confirmar Senha *</label>
-                  <input
+                  <input aria-label="Confirmar Senha *"
                     type="password"
                     required
                     value={formData.confirmarSenha}
@@ -731,6 +737,7 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
                 </div>
               </div>
 
+              <RegistrationTerms accepted={termsAccepted} onChange={setTermsAccepted} />
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-600 text-xs flex items-center gap-2">
                 <Shield className="w-4 h-4 text-blue-600 shrink-0" />
                 <span>

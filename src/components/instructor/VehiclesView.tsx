@@ -134,7 +134,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ currentOrg, currentU
 
       await db.saveInstructorCoverageAsync({
         ...existingCov,
-        tiposVeiculos,
+        tiposVeiculo: tiposVeiculos,
         tipoCambio,
         categoriasAtendidas
       });
@@ -503,7 +503,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ currentOrg, currentU
                 <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
                   Marca e Modelo do Veículo *
                 </label>
-                <input
+                <input aria-label="Marca e Modelo do Veículo *"
                   type="text"
                   required
                   placeholder="Ex: Hyundai HB20 1.0 Sense / Fiat Mobi Like / Honda CG 160"
@@ -518,7 +518,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ currentOrg, currentU
                   <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
                     Placa *
                   </label>
-                  <input
+                  <input aria-label="Placa *"
                     type="text"
                     required
                     maxLength={8}
@@ -533,7 +533,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ currentOrg, currentU
                   <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
                     Ano *
                   </label>
-                  <input
+                  <input aria-label="Ano *"
                     type="number"
                     required
                     min={1995}
@@ -548,7 +548,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ currentOrg, currentU
                   <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
                     Cor
                   </label>
-                  <input
+                  <input aria-label="Cor"
                     type="text"
                     placeholder="Branco, Prata..."
                     value={form.cor}
@@ -563,7 +563,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ currentOrg, currentU
                   <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
                     Tipo de Veículo *
                   </label>
-                  <select
+                  <select aria-label="Tipo de Veículo *"
                     value={form.tipo}
                     onChange={(e) => {
                       const novoTipo = e.target.value as Vehicle['tipo'];
@@ -585,7 +585,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ currentOrg, currentU
                   <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
                     Tipo de Câmbio *
                   </label>
-                  <select
+                  <select aria-label="Tipo de Câmbio *"
                     value={form.cambio}
                     onChange={(e) =>
                       setForm({ ...form, cambio: e.target.value as 'MANUAL' | 'AUTOMATICO' })
@@ -601,14 +601,14 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ currentOrg, currentU
                   <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
                     Categoria CNH *
                   </label>
-                  <select
+                  <select aria-label="Categoria CNH *"
                     value={form.categoriaCnh}
                     onChange={(e) => setForm({ ...form, categoriaCnh: e.target.value as CnhCategory })}
                     className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white"
                   >
                     {CNH_CATEGORIES.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        CNH {c.id}
+                      <option key={c.value} value={c.value}>
+                        CNH {c.value}
                       </option>
                     ))}
                   </select>
@@ -620,7 +620,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ currentOrg, currentU
                   <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
                     Quilometragem Atual (km)
                   </label>
-                  <input
+                  <input aria-label="Quilometragem Atual (km)"
                     type="number"
                     min={0}
                     value={form.kmAtual}
@@ -633,7 +633,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ currentOrg, currentU
                   <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
                     Próxima Revisão (km)
                   </label>
-                  <input
+                  <input aria-label="Próxima Revisão (km)"
                     type="number"
                     min={0}
                     value={form.proximaRevisaoKm}
@@ -675,7 +675,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({ currentOrg, currentU
                 <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
                   Status Operacional
                 </label>
-                <select
+                <select aria-label="Status Operacional"
                   value={form.status}
                   onChange={(e) => setForm({ ...form, status: e.target.value as Vehicle['status'] })}
                   className="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white"

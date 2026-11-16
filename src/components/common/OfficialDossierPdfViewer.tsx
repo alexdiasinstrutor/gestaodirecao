@@ -41,8 +41,9 @@ export const OfficialDossierPdfViewer: React.FC<OfficialDossierPdfViewerProps> =
 }) => {
   return (
     <div className="space-y-4">
+      <p className="p-4 rounded-xl bg-amber-50 text-amber-900 text-sm">Revisão de 16/11/2026: menu lateral, persistência confirmada, assinatura no cadastro e histórico de backups. Campos da migração do banco confirmados em 16/11/2026; homologação em produção pendente. A seção 16 do dossie.md registra evidências e limitações; o PDF anterior permanece como registro histórico.</p>
       {/* Top Document Toolbar */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-3 sticky top-0 z-10 backdrop-blur-md bg-white/95">
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-3  z-10 backdrop-blur-md bg-white/95">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
             <span className="px-2 py-0.5 rounded-full text-xs font-extrabold uppercase bg-blue-100 text-blue-800 border border-blue-200">
@@ -50,7 +51,7 @@ export const OfficialDossierPdfViewer: React.FC<OfficialDossierPdfViewerProps> =
             </span>
             <span className="px-2 py-0.5 rounded-full text-xs font-extrabold uppercase bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
               <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-              v6.8 Homologada (17/17 Testes)
+              {DOSSIER_METADATA.version}
             </span>
             <span className="px-2 py-0.5 rounded-full text-xs font-mono bg-slate-100 text-slate-700">
               PDF Real (jsPDF Engine)

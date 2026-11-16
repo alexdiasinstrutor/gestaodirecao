@@ -1,66 +1,38 @@
+import { getPendingWrites } from '../lib/cloudOutbox';
 import { useState, useEffect, useCallback } from 'react';
-import { db } from '../lib/storage';
+import { db, syncFromSupabase } from '../lib/storage';
+import { retryDataBackups } from '../lib/dataHistory';
 
 export function useOnlineStatus() {
-  const [isOnline, setIsOnline] = useState<boolean>(
-    typeof navigator !== 'undefined' ? navigator.onLine : true
-  );
-  const [isSyncing, setIsSyncing] = useState<boolean>(false);
-  const [pendingCount, setPendingCount] = useState<number>(0);
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
-
+  const [syncError, setSyncError] = useState<string | null>(null);
   const checkPendingQueue = useCallback(() => {
-    const queue = db.getSyncQueue();
-    setPendingCount(queue.length);
+    const list = (key: string) => { try { return JSON.parse(localStorage.getItem(key) || '[]').length; } catch { return 0; } };
+    const saas = ['DEMO', 'BASICO', 'AVANCADO', 'MASTER'].filter(id => localStorage.getItem('agd_pending_saas_' + id)).length;
+    setPendingCount(getPendingWrites().length + db.getSyncQueue().length + list('agd_pending_packages') + list('agd_pending_signatures') + saas);
   }, []);
-
   const triggerSync = useCallback(async () => {
-    const queue = db.getSyncQueue();
-    if (queue.length === 0) return;
-
-    setIsSyncing(true);
-    // Simulate real cloud synchronization round-trip with backend
-    await new Promise((resolve) => setTimeout(resolve, 1200));
-
-    // Clear queue after successful synchronization
-    db.clearSyncQueue();
-    setPendingCount(0);
-    setIsSyncing(false);
-    setLastSyncTime(new Date().toLocaleTimeString('pt-BR'));
-  }, []);
-
+    setIsSyncing(true); setSyncError(null);
+    try {
+      const result = await syncFromSupabase();
+      if (!result.synced) throw new Error('O banco não confirmou a sincronização.');
+      const user = db.getCurrentUser();
+      if (user) await retryDataBackups(user);
+      setLastSyncTime(new Date().toLocaleTimeString('pt-BR'));
+    } catch (error) { setSyncError(String(error)); }
+    finally { checkPendingQueue(); setIsSyncing(false); }
+  }, [checkPendingQueue]);
   useEffect(() => {
     checkPendingQueue();
-
-    const handleOnline = () => {
-      setIsOnline(true);
-      // Automatically synchronize queued items when returning online
-      triggerSync();
-    };
-
-    const handleOffline = () => {
-      setIsOnline(false);
-      checkPendingQueue();
-    };
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
+    const online = () => { setIsOnline(true); void triggerSync(); };
+    const offline = () => { setIsOnline(false); checkPendingQueue(); };
+    window.addEventListener('online', online); window.addEventListener('offline', offline);
+    window.addEventListener('agd:data-synced', checkPendingQueue);
     const interval = setInterval(checkPendingQueue, 3000);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-      clearInterval(interval);
-    };
+    return () => { clearInterval(interval); window.removeEventListener('online', online); window.removeEventListener('offline', offline); window.removeEventListener('agd:data-synced', checkPendingQueue); };
   }, [checkPendingQueue, triggerSync]);
-
-  return {
-    isOnline,
-    isSyncing,
-    pendingCount,
-    lastSyncTime,
-    triggerSync,
-    checkPendingQueue
-  };
+  return { isOnline, isSyncing, pendingCount, lastSyncTime, syncError, triggerSync, checkPendingQueue };
 }
