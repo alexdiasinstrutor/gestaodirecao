@@ -1,3 +1,4 @@
+import { resolveStudentPackages } from '../../legal/legacyPackages';
 import React, { useState } from 'react';
 import {
   Users,
@@ -81,7 +82,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   const [editingCategory, setEditingCategory] = useState<CnhCategory>('B');
   const [editingPackageId, setEditingPackageId] = useState<string>('');
   const [editingPackageName, setEditingPackageName] = useState<string>('');
-  const [editingTotalLessons, setEditingTotalLessons] = useState<number | string>(20);
+  const [editingTotalLessons, setEditingTotalLessons] = useState<number | string>('');
   const [editingSkills, setEditingSkills] = useState<StudentSkills | null>(null);
   const [editingAddress, setEditingAddress] = useState<AddressFields>({
     estado: 'MG',
@@ -94,6 +95,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   });
   const [instructorNotes, setInstructorNotes] = useState<string>('');
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
+  const [fichaError,setFichaError]=useState('');
   const [isSavingFicha, setIsSavingFicha] = useState<boolean>(false);
 
   // Transfer modal state
@@ -150,15 +152,15 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
       availablePkgs.find((p) => p.nome === student.pacoteNome) ||
       availablePkgs.find((p) => p.categoriaCnh === student.categoriaCnh);
 
-    setActiveStudent(student);
+    setFichaError('');setActiveStudent(student);
     setEditingCategory(student.categoriaCnh || matchedPkg?.categoriaCnh || 'B');
     setEditingPackageId(student.pacoteId || matchedPkg?.id || '');
     setEditingPackageName(
       student.pacoteNome ||
       matchedPkg?.nome ||
-      `Pacote CNH ${student.categoriaCnh || 'B'} (${student.totalAulasContratadas || 20} Aulas Práticas)`
+      `Pacote CNH ${student.categoriaCnh || 'B'} (${student.totalAulasContratadas ?? 0} Aulas Práticas)`
     );
-    setEditingTotalLessons(student.totalAulasContratadas || matchedPkg?.totalAulas || 20);
+    setEditingTotalLessons(student.totalAulasContratadas ?? matchedPkg?.totalAulas ?? 0);
     setEditingSkills({ ...student.habilidades });
     setEditingAddress({
       estado: student.estado || 'MG',
@@ -185,7 +187,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
     setEditingPackageId(selectedPkg.id);
     setEditingPackageName(selectedPkg.nome);
     setEditingCategory(selectedPkg.categoriaCnh);
-    setEditingTotalLessons(selectedPkg.totalAulas || 20);
+    setEditingTotalLessons(selectedPkg.totalAulas + (activeStudent.contratosPacotes || []).filter(contract=>contract.tipo!=='PACOTE_BASE').reduce((sum,contract)=>sum+contract.quantidadeAulas,0));
 
     // Se o parecer técnico ainda estiver com o texto automático do plano anterior, atualiza o nome do plano nele também
     if (instructorNotes && prevPkgName && instructorNotes.includes(`"${prevPkgName}"`)) {
@@ -208,7 +210,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
       const prevPkgName = editingPackageName;
       setEditingPackageId(matchingPkgForCat.id);
       setEditingPackageName(matchingPkgForCat.nome);
-      setEditingTotalLessons(matchingPkgForCat.totalAulas || 20);
+      setEditingTotalLessons(matchingPkgForCat.totalAulas + (activeStudent.contratosPacotes || []).filter(contract=>contract.tipo!=='PACOTE_BASE').reduce((sum,contract)=>sum+contract.quantidadeAulas,0));
       if (instructorNotes && prevPkgName && instructorNotes.includes(`"${prevPkgName}"`)) {
         setInstructorNotes(instructorNotes.replace(`"${prevPkgName}"`, `"${matchingPkgForCat.nome}"`));
       }
@@ -231,7 +233,13 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
       const finalPackageName = selectedPkg
         ? selectedPkg.nome
         : editingPackageName || `Pacote CNH ${finalCategory} (${editingTotalLessons} Aulas Práticas)`;
-      const finalTotalLessons = Math.max(1, Number(editingTotalLessons) || selectedPkg?.totalAulas || 20);
+      const finalTotalLessons=Number(editingTotalLessons);
+      if(!Number.isInteger(finalTotalLessons)||finalTotalLessons<1)throw new Error('Informe a quantidade de aulas contratada, sem valores padrão.');
+      const resolved=resolveStudentPackages(activeStudent,availablePkgs,db.getAccountsReceivable(orgId));
+      const extras=resolved.contracts.filter(contract=>contract.tipo!=='PACOTE_BASE').reduce((sum,contract)=>sum+contract.quantidadeAulas,0);
+      if(finalTotalLessons<=extras)throw new Error('O total deve preservar as aulas adicionais já contratadas.');
+      const changedPackage=!!selectedPkg&&(activeStudent.pacoteId!==selectedPkg.id||activeStudent.pacoteNome!==selectedPkg.nome);
+      const contracts=resolved.contracts.map(contract=>contract.tipo==='PACOTE_BASE'?{...contract,pacoteId:finalPackageId,nome:finalPackageName,categoriaCnh:finalCategory,quantidadeAulas:finalTotalLessons-extras,...(changedPackage?{valorCentavos:selectedPkg.valorCentavos,valorAulasCentavos:selectedPkg.valorCentavos}: {})}:contract);
 
       const updatedStudent: Student = {
         ...activeStudent,
@@ -239,6 +247,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
         pacoteId: finalPackageId,
         pacoteNome: finalPackageName,
         totalAulasContratadas: finalTotalLessons,
+        ...(contracts.length?{contratosPacotes:contracts}:{}),
         cep: editingAddress.cep?.trim(),
         estado: editingAddress.estado?.trim().toUpperCase(),
         cidade: editingAddress.cidade?.trim(),
@@ -253,7 +262,10 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
       // Se o plano foi alterado para um pacote específico, sincroniza a conta a receber em aberto do aluno
       if (selectedPkg && (activeStudent.pacoteId !== selectedPkg.id || activeStudent.pacoteNome !== selectedPkg.nome)) {
         const studentAccounts = db.getAccountsReceivable(orgId).filter((a) => a.alunoId === activeStudent.id);
-        const openAccount = studentAccounts.find((a) => a.status !== 'PAGO');
+        const baseAccountId=resolved.contracts.find(contract=>contract.tipo==='PACOTE_BASE')?.contaReceberId;
+        const candidates=studentAccounts.filter(account=>(baseAccountId?account.id===baseAccountId:account.pacoteId===activeStudent.pacoteId)&&account.status!=='PAGO'&&account.status!=='CANCELADO');
+        if(candidates.length>1)throw new Error('Há mais de uma cobrança do plano. Confira o financeiro antes de alterar o pacote base.');
+        const openAccount=candidates[0];
         if (openAccount) {
           const novoSaldo = Math.max(0, selectedPkg.valorCentavos - (openAccount.valorPagoCentavos || 0));
           const updatedAcc: AccountReceivable = {
@@ -273,6 +285,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
       setStudentsVersion((v) => v + 1);
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 3500);
+    } catch(error) {setFichaError(error instanceof Error?error.message:'O banco não confirmou o salvamento.');
     } finally {
       setIsSavingFicha(false);
     }
@@ -367,8 +380,8 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   const handleEmitReceiptForLessons = (student: Student) => {
     const studentAccounts = accounts.filter((a) => a.alunoId === student.id);
     const aulas = Math.max(1, student.aulasCumpridas);
-    const totalAulas = Math.max(1, student.totalAulasContratadas || 20);
-    const totalContratado = studentAccounts.reduce((acc, a) => acc + a.valorTotalCentavos, 0) || 180000;
+    const totalAulas = Math.max(1, student.totalAulasContratadas ?? aulas);
+    const totalContratado = studentAccounts.filter(account=>account.status!=='CANCELADO').reduce((acc, a) => acc + a.valorTotalCentavos, 0);
     const valorEstimadoCentavos = Math.round((totalContratado / totalAulas) * aulas);
 
     const receipt: PaymentReceiptData = {
@@ -485,7 +498,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
             Gestão de Alunos & Progresso Prático
           </h1>
           <p className="text-xs text-slate-500">
-            Acompanhe o cumprimento das 20 aulas do Detran, evolução de habilidades, histórico financeiro e emissão de recibos.
+            Acompanhe as aulas contratadas, evolução de habilidades, histórico financeiro e emissão de recibos.
           </p>
         </div>
 
@@ -873,7 +886,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                           }}
                           onBlur={() => {
                             if (editingTotalLessons === '' || Number(editingTotalLessons) < 1) {
-                              setEditingTotalLessons(20);
+                              setEditingTotalLessons(activeStudent.totalAulasContratadas ?? 0);
                             }
                           }}
                           className="w-full px-3 py-2 bg-white border border-blue-300 rounded-xl text-xs font-bold font-mono text-slate-900 focus:outline-none focus:border-blue-600"
@@ -884,42 +897,15 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                 );
               })()}
 
+              {fichaError && <p role="alert" className="p-3 rounded-lg bg-red-50 text-red-800">{fichaError}</p>}
               {/* SEÇÃO: PACOTES, AULAS EXTRAS & CONTRATAÇÕES DO ALUNO */}
               {(() => {
-                const existingContracts: StudentPackageContract[] = Array.isArray(activeStudent.contratosPacotes)
-                  ? activeStudent.contratosPacotes
-                  : typeof (activeStudent as any)?.contratosPacotes === 'string'
-                  ? (() => {
-                      try {
-                        const parsed = JSON.parse((activeStudent as any).contratosPacotes);
-                        return Array.isArray(parsed) ? parsed : [];
-                      } catch {
-                        return [];
-                      }
-                    })()
-                  : [];
-
-                const contractsList: StudentPackageContract[] = existingContracts.length > 0
-                  ? existingContracts
-                  : [
-                      {
-                        id: `cnt_base_${activeStudent.id}`,
-                        alunoId: activeStudent.id,
-                        organizacaoId: activeStudent.organizacaoId,
-                        tipo: 'PACOTE_BASE',
-                        pacoteId: activeStudent.pacoteId,
-                        nome: activeStudent.pacoteNome || 'Pacote Inicial de Matrícula',
-                        categoriaCnh: activeStudent.categoriaCnh,
-                        quantidadeAulas: activeStudent.totalAulasContratadas || 20,
-                        valorCentavos: 180000,
-                        dataContratacao: activeStudent.dataCadastro ? activeStudent.dataCadastro.slice(0, 10) : new Date().toISOString().slice(0, 10),
-                        criadoPorId: activeStudent.instrutorId,
-                        criadoPorNome: 'Sistema (Matrícula)'
-                      }
-                    ];
+                const resolved=resolveStudentPackages(activeStudent,getInstructorPackagesForStudent(activeStudent),accounts);
+                const contractsList=resolved.contracts;
 
                 return (
                   <div className="p-4 bg-gradient-to-br from-indigo-50/70 via-blue-50/50 to-purple-50/40 border border-indigo-200/80 rounded-2xl space-y-3 shadow-xs">
+                    {resolved.issue && <p role="status" className="text-sm text-amber-800">{resolved.issue}</p>}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-indigo-200/70 pb-2.5">
                       <div>
                         <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
@@ -1023,7 +1009,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                               </div>
                               <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
                                 <span>
-                                  Carga: <strong className="text-blue-700 font-mono font-bold">+{contrato.quantidadeAulas} aula(s)</strong>
+                                  Carga: <strong className="text-blue-700 font-mono font-bold">{isBase?'':'+'}{contrato.quantidadeAulas} aula(s)</strong>
                                 </span>
                                 {contrato.valorCentavos > 0 && (
                                   <span>
@@ -1130,7 +1116,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                       <div className="bg-white p-3 rounded-xl border border-slate-200">
                         <span className="text-xs uppercase font-bold font-bold text-slate-500 block">Total Contratado</span>
                         <span className="text-base font-extrabold text-slate-900 font-mono">
-                          {formatCurrencyBRL(totalContratado || 180000)}
+                          {formatCurrencyBRL(totalContratado)}
                         </span>
                       </div>
                       <div className="bg-white p-3 rounded-xl border border-slate-200">

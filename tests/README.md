@@ -63,3 +63,11 @@ Execute node tests/contract-reminder.mjs para verificar o aviso persistente em q
 Execute node tests/legacy-contract-loading.mjs para reproduzir matrículas legadas sem contratos detalhados e validar o carregamento por cobrança histórica e aceite de versão publicada.
 
 A suíte legal-documents.mjs verifica o botão Exportar minuta como download PDF e a ação Exportar dados (JSON) com conferência de hash.
+
+
+## Consistência dos pacotes do aluno
+Execute node tests/student-package-consistency.mjs para validar que pacote base, quantidade, valor histórico e cobrança permanecem coerentes. O cenário cobre 10 aulas por R$ 950,00, salvamento sem duplicação, acréscimo somente por contratação explícita e preservação de extras reais em desktop e celular.
+
+
+## Edição da quantidade de aulas
+Execute node tests/lesson-quantity-inputs.mjs para validar que os campos de quantidade da ficha, aulas avulsas, pacote personalizado e cadastro de pacote permitem apagar e redigitar o valor em desktop e celular.

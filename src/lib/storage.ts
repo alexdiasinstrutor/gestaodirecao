@@ -1,3 +1,4 @@
+import { resolveStudentPackages } from '../legal/legacyPackages';
 import { prepareSignatureImage } from './signatureImage';
 import { syncSaaSPlans } from './saasPlans';
 import { recordDataChange, setHistoryCloudWriter, hydrateDataHistory } from './dataHistory';
@@ -2322,21 +2323,9 @@ export const db = {
     // Se é a primeira contratação adicional e o aluno já possuía um pacote base sem registro em contratosPacotes,
     // sintetiza o pacote inicial para preservar o histórico cronológico completo
     if (contratos.length === 0 && (currentStudent.pacoteNome || currentStudent.pacoteId)) {
-      contratos.push({
-        id: `cnt_base_${currentStudent.id}`,
-        alunoId: currentStudent.id,
-        organizacaoId: currentStudent.organizacaoId,
-        tipo: 'PACOTE_BASE',
-        pacoteId: currentStudent.pacoteId,
-        nome: currentStudent.pacoteNome || 'Pacote Inicial de Matrícula',
-        categoriaCnh: currentStudent.categoriaCnh,
-        quantidadeAulas: currentStudent.totalAulasContratadas || 20,
-        valorCentavos: 0,
-        dataContratacao: currentStudent.dataCadastro ? currentStudent.dataCadastro.slice(0, 10) : today,
-        criadoPorId: currentStudent.instrutorId,
-        criadoPorNome: 'Sistema (Matrícula)',
-        criadoEm: currentStudent.dataCadastro || new Date().toISOString()
-      });
+      const resolved=resolveStudentPackages(currentStudent,this.getPackages(currentStudent.organizacaoId,currentStudent.instrutorId),this.getAccountsReceivable(currentStudent.organizacaoId));
+      if(!resolved.contracts.length)throw new Error(resolved.issue || 'Confira o pacote base antes de adicionar aulas.');
+      contratos.push(...resolved.contracts);
     }
 
     const rentalAmount = params.contract.valorLocacaoExameCentavos ?? 0;

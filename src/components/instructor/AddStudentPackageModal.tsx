@@ -93,7 +93,7 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
   }, [instructorPackages, selectedCatalogPkgId]);
 
   // ─── 2. Estado: Aulas Avulsas ────────────────────────────────────────────────
-  const [singleClassCount, setSingleClassCount] = useState<number>(2);
+  const [singleClassCount, setSingleClassCount] = useState<number | string>(2);
   const [singleClassPriceBRL, setSingleClassPriceBRL] = useState<number>(() => {
     if (selectedCatalogPkg && selectedCatalogPkg.totalAulas > 0 && selectedCatalogPkg.valorCentavos > 0) {
       const unit = Math.round(selectedCatalogPkg.valorCentavos / selectedCatalogPkg.totalAulas) / 100;
@@ -107,7 +107,7 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
 
   // ─── 3. Estado: Pacote Personalizado ─────────────────────────────────────────
   const [customPkgName, setCustomPkgName] = useState<string>('Pacote Especial de Reforço & Treinamento');
-  const [customPkgLessons, setCustomPkgLessons] = useState<number>(8);
+  const [customPkgLessons, setCustomPkgLessons] = useState<number | string>(8);
   const [customPkgPriceBRL, setCustomPkgPriceBRL] = useState<number>(720);
   const [customPkgCategory, setCustomPkgCategory] = useState<CnhCategory>(studentCategory);
   const [customPkgObs, setCustomPkgObs] = useState<string>('Pacote personalizado sob medida para o aluno');
@@ -144,19 +144,19 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
       pacoteId = selectedCatalogPkg?.id;
     } else if (activeTab === 'SINGLE_CLASSES') {
       tipo = 'AULA_AVULSA';
-      qtdAulas = Math.max(1, Number(singleClassCount) || 1);
+      qtdAulas = singleClassCount === '' ? 0 : Math.max(0, Number(singleClassCount) || 0);
       valorCentavos = Math.round(Math.max(0, Number(singleClassPriceBRL) || 0) * qtdAulas * 100);
       nome = `${qtdAulas} Aula(s) Prática(s) Avulsa(s) - CNH ${student.categoriaCnh}`;
       categoria = student.categoriaCnh;
     } else {
       tipo = 'PACOTE_PERSONALIZADO';
-      qtdAulas = Math.max(1, Number(customPkgLessons) || 1);
+      qtdAulas = customPkgLessons === '' ? 0 : Math.max(0, Number(customPkgLessons) || 0);
       valorCentavos = Math.round(Math.max(0, Number(customPkgPriceBRL) || 0) * 100);
       nome = customPkgName.trim() || `Pacote Personalizado ${qtdAulas} Aulas - CNH ${customPkgCategory}`;
       categoria = customPkgCategory;
     }
 
-    const aulasAtuais = Number(student?.totalAulasContratadas) || 20;
+    const aulasAtuais = Number(student?.totalAulasContratadas ?? 0);
     const novoTotalAulas = aulasAtuais + qtdAulas;
 
     return {
@@ -448,7 +448,10 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
                         min={1}
                         max={50}
                         value={singleClassCount}
-                        onChange={(e) => setSingleClassCount(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setSingleClassCount(value === '' ? '' : Math.min(50, Math.max(0, parseInt(value, 10) || 0)));
+                        }}
                         className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-bold font-mono focus:outline-none focus:border-blue-600"
                       />
                     </div>
@@ -509,7 +512,10 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
                         min={1}
                         max={100}
                         value={customPkgLessons}
-                        onChange={(e) => setCustomPkgLessons(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setCustomPkgLessons(value === '' ? '' : Math.min(100, Math.max(0, parseInt(value, 10) || 0)));
+                        }}
                         className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-bold font-mono focus:outline-none focus:border-blue-600"
                       />
                     </div>

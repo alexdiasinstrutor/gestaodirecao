@@ -1477,3 +1477,17 @@ A regressão de celular identificou sobreposição após incluir o segundo forma
 
 ### 18.16 Verificação da coluna de contratos
 Responsável informou execução da migração da coluna. Consulta REST somente de metadados, select=id,contratos_pacotes com limit=0, retornou HTTP 200 no projeto configurado. Coluna students.contratos_pacotes confirmada na API. Nenhuma matrícula ou contrato real foi criado ou alterado. Essa confirmação verifica o esquema; não publica versões nem registra aceites.
+
+
+### 18.17 Consistência do pacote contratado na ficha do aluno
+Corrigida a divergência entre o pacote selecionado, a cobrança e o histórico de pacotes. Matrículas legadas sem contratos detalhados passam a projetar o pacote base pela mesma fonte usada nos contratos jurídicos: pacote vinculado e cobrança histórica única não cancelada. O sistema não inventa mais R$ 1.800,00 nem 20 aulas quando o cadastro informa 10 aulas por R$ 950,00. O pacote base é exibido como carga contratada, sem sinal de acréscimo; somente compras adicionais explícitas recebem o prefixo “+”.
+
+Ao salvar a evolução, o pacote base é normalizado sem criar uma aula extra, e uma nova contratação preserva o pacote original e soma apenas a quantidade adquirida. A troca do pacote base preserva extras reais já registrados. A cobrança pendente só é atualizada quando corresponde inequivocamente ao pacote base; cobranças pagas, canceladas ou ambíguas não são alteradas automaticamente. O cálculo de recibo por aulas ministradas também deixou de assumir 20 aulas.
+
+Validação: cenário de 10 aulas por R$ 950,00 aprovado em 1440×900 e 390×844; salvar manteve 10 aulas e um único pacote base. O total chegou a 20 somente após adicionar explicitamente outras 10 aulas, e novo salvamento não criou terceiro registro. Regressão de contratos aprovada em quatro resoluções, regressão de contratos legados aprovada, TypeScript e build aprovados. Serviços externos permaneceram interceptados; nenhum dado de produção foi alterado. Evidências em review-artifacts/package-consistency. Alterações locais, sem commit ou push.
+
+
+### 18.18 Edição dos campos de quantidade de aulas
+Corrigidos os campos numéricos que convertiam o conteúdo vazio imediatamente em 1 ou restauravam 20 aulas ao perder o foco. Durante a digitação, os campos de total da ficha, aulas avulsas, pacote personalizado e cadastro/edição do pacote podem permanecer vazios, permitindo apagar o valor anterior e informar outro. A validação ocorre no salvamento: quantidades inválidas, vazias ou fora do intervalo permitido não são persistidas.
+
+Validação automatizada aprovada em 1440×900 e 390×844 nos quatro campos, incluindo apagar, trocar o foco, redigitar e preservar o novo valor. A regressão de consistência do pacote de 10 aulas por R$ 950,00 permaneceu aprovada. TypeScript aprovado. Nenhum dado de produção foi alterado; sem commit ou push.

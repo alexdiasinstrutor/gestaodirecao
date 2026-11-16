@@ -121,6 +121,11 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
 
     const valorCentavos = Math.round(parseFloat(form.valorReais || '0') * 100);
     if (isNaN(valorCentavos) || valorCentavos <= 0) return;
+    const totalAulas = Number(form.totalAulas);
+    if (!Number.isInteger(totalAulas) || totalAulas < 1 || totalAulas > 100) {
+      setSaveError('Informe uma quantidade de aulas entre 1 e 100.');
+      return;
+    }
 
     setIsSaving(true);
     try {
@@ -132,7 +137,7 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
         instrutorNome: editingPackage.instrutorNome || currentUser.nome,
         nome: form.nome.trim(),
         categoriaCnh: form.categoriaCnh,
-        totalAulas: Number(form.totalAulas) || 20,
+        totalAulas,
         valorCentavos,
         formaPagamento: form.formaPagamento,
         maxParcelas: Number(form.maxParcelas) || 1,
@@ -152,7 +157,7 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
         instrutorNome: currentUser.nome,
         nome: form.nome.trim(),
         categoriaCnh: form.categoriaCnh,
-        totalAulas: Number(form.totalAulas) || 20,
+        totalAulas,
         valorCentavos,
         formaPagamento: form.formaPagamento,
         maxParcelas: Number(form.maxParcelas) || 1,
@@ -434,11 +439,6 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
                     onChange={(e) => {
                       const val = e.target.value;
                       setForm({ ...form, totalAulas: val === '' ? '' : Math.max(0, parseInt(val, 10) || 0) });
-                    }}
-                    onBlur={() => {
-                      if (form.totalAulas === '' || Number(form.totalAulas) < 1) {
-                        setForm({ ...form, totalAulas: 20 });
-                      }
                     }}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none font-mono"
                   />

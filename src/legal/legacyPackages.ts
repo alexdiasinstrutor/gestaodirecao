@@ -1,7 +1,9 @@
 import type {AccountReceivable,PackageOffer,Student,StudentPackageContract} from '../types';
 export interface ResolvedStudentPackages {contracts:StudentPackageContract[];legacy:boolean;issue?:string;}
 export function resolveStudentPackages(student:Student,offers:PackageOffer[],accounts:AccountReceivable[]):ResolvedStudentPackages {
- if(student.contratosPacotes?.length)return {contracts:student.contratosPacotes,legacy:false};
+ let stored:unknown=student.contratosPacotes;
+ if(typeof stored==='string'){try{stored=JSON.parse(stored);}catch{stored=[];}}
+ if(Array.isArray(stored)&&stored.length)return {contracts:stored,legacy:false};
  if(!student.pacoteId)return {contracts:[],legacy:false,issue:'A matrícula não possui pacote vinculado. Solicite a atualização ao instrutor.'};
  const offer=offers.find(item=>item.id===student.pacoteId&&item.organizacaoId===student.organizacaoId&&(!item.instrutorId||item.instrutorId===student.instrutorId));
  const invoices=accounts.filter(item=>item.alunoId===student.id&&item.organizacaoId===student.organizacaoId&&item.pacoteId===student.pacoteId&&item.status!=='CANCELADO');
