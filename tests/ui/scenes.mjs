@@ -51,6 +51,7 @@ export const scenes = [...simple,...appScenes,
  ...['Instituições & CFCs','Equipe Master & Senhas','Alunos Procurando','Planos SaaS & Módulos','Gerador de Cupons','Manutenção & Demo','Banco Supabase'].map((name,i)=>extra('AdminMasterPanel','aba-'+i,[button(name,true)])),
  ...['2.','3.','4.','5.'].map((name,i)=>extra('SecurityAgentsModal','aba-'+(i+2),[button('^'+name.replace('.','\\.'),true)])),
  extra('ApplyDiscountModal','manual',[button('Desconto Direto (R$ ou %)')]),
+ extra('Header','aluno',[],{auditRole:'ALUNO'}),
  extra('Header','perfil',[{css:'header button',hasText:'Carlos'}]),
  extra('DataUpdateBar','historico',[button('Histórico e backups')])
 ];

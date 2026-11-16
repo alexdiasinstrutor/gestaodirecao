@@ -1431,3 +1431,18 @@ Validação final da seção 18.7: quatro fluxos completos de contrato alimentad
 
 ### 18.8 Verificação da migração de dados cadastrais
 Responsável informou execução da migração. Consultas somente de metadados com limit=0 no projeto configurado retornaram users: HTTP 200; package_offers: HTTP 200. Consulta de schema da função prepare_legal_contract: indisponível para consulta anônima. Nenhum cadastro ou contrato real foi criado, alterado ou aceito. Essa consulta confirma os campos, sem executar a função nem comprovar sua definição interna ou os vínculos Auth.
+
+### 18.9 Correção do acesso jurídico do aluno
+Captura do responsável revelou que o leitor só carregava cadastros no caminho do instrutor. Corrigido o perfil ALUNO para buscar sua matrícula por organização e fingerprint, com exigência de vínculo único, carregar seu instrutor e conta pelo banco e preencher o pacote. Quando há somente um contrato ele é selecionado automaticamente; quando há vários o aluno escolhe qual visualizar. O aluno não pode preparar uma versão em nome do instrutor. Sem vínculo ou sem escolha de pacote, o leitor mostra a orientação correspondente e não exporta um contrato vazio.
+
+O erro 42501 ao consultar legal_contract_versions passou a orientar sobre sessão Supabase Authentication e vínculo cadastral. O bloqueio de acesso do banco foi preservado. Login legado por dados locais continua insuficiente para consultar e registrar aceites autenticados. Testes ampliados usam o acesso App:aluno, múltiplos pacotes, erro de permissão e conta sem matrícula, sem alterar produção.
+
+Resultado da seção 18.9: quatro resoluções aprovadas pelo portal App:aluno, com preenchimento da identidade e valores, pacote único automático, múltiplos pacotes, ausência de matrícula e orientação de autenticação após erro 42501. Os cenários de agenda fictícios usam relógio às 09h para estabilidade dos dados. Testes de documentos (12) e cadastros (2), TypeScript e build revalidados. Evidências em review-artifacts/legal-contracts/aluno-*.png. A configuração da sessão Supabase Auth/vínculo de produção continua pendente de homologação. Nenhuma permissão de produção foi relaxada e nenhum novo commit ou push foi realizado.
+
+### 18.10 CPF como identificação no contrato
+Por orientação do responsável, aluno e instrutor são identificados pelo CPF cadastrado, sem exigir RG. Retirada a variável RG_ALUNO e publicada versão 1.0.1 do modelo. A preparação no servidor também deixa de exigir RG. Migração supabase_migracao_contratos_cpf_20261116.sql atualiza a função e insere a nova versão, preservando contratos e aceites anteriores. Removida a coleta de RG no cadastro do aluno. Testes passam a usar conta sem RG. Alteração local, sem novo commit ou push.
+
+Validação da seção 18.10: 19 verificações de PostgreSQL aprovadas com RG nulo, quatro fluxos de interface aprovados com CPF do aluno e sem RG, TypeScript e build aprovados.
+
+### 18.11 Execução da migração de CPF informada
+Responsável informou execução de supabase_migracao_contratos_cpf_20261116.sql. Verificação somente de leitura do modelo 1.0.1 na API retornou HTTP 401. A consulta anônima não permite confirmar o conteúdo/versão por causa das permissões da tabela jurídica. Nenhum contrato ou aceite real foi criado ou alterado. Execução registrada como informação do responsável; confirmação funcional do modelo depende de sessão autenticada autorizada.

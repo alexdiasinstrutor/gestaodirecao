@@ -3,7 +3,7 @@
     {
       "codigo": "CONTRATO_AULA_PRATICA",
       "arquivo": "01_contrato_prestacao_servicos.md",
-      "versao": "1.0.0",
+      "versao": "1.0.1",
       "variaveis": [
         "NOME_PLATAFORMA",
         "NOME_INSTRUTOR",
@@ -13,7 +13,6 @@
         "CIDADE_UF_INSTRUTOR",
         "NOME_ALUNO",
         "CPF_ALUNO",
-        "RG_ALUNO",
         "CIDADE_UF_ALUNO",
         "CATEGORIA_CNH",
         "MODALIDADE_CONTRATO",

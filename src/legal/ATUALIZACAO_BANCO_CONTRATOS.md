@@ -30,3 +30,6 @@ Execute também supabase_migracao_aceites_cadastro_20261116.sql antes de disponi
 
 ## Documentos preenchidos na origem
 Execute supabase_migracao_dados_cadastrais_contratos_20261116.sql após a migração de contratos/aceites. Ela adiciona users.rg, users.registro_detran e package_offers.condicoes_contratuais e atualiza a função de preparação para obter identificação e condições diretamente dos registros do banco. O leitor não possui campos de preenchimento. RG e registro DETRAN são informados nos cadastros de aluno/instrutor. Duração, aviso de exame, validade e multa são informados no cadastro ou contratação do pacote. Pacotes contratados mantêm as condições próprias; registros legados sem essas condições consultam a oferta de origem. Campos ausentes bloqueiam o registro e devem ser corrigidos na origem. CPF completo do aluno é obtido da sua conta vinculada por organização e fingerprint, sem usar CPF mascarado como identificação completa.
+
+## Identificação por CPF
+Execute supabase_migracao_contratos_cpf_20261116.sql após as migrações jurídicas anteriores para usar o modelo 1.0.1, sem RG obrigatório. Contratos já registrados mantêm seu conteúdo e seus hashes. O cadastro continua usando CPF completo e vínculo por identidade para as partes.

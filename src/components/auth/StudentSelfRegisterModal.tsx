@@ -1188,8 +1188,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
 
                 {/* Endereço Residencial com Busca Automática por CEP */}
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold">RG do aluno<input aria-label="RG do aluno" value={formData.rg} onChange={event=>setFormData({...formData,rg:event.target.value})} className="block w-full border rounded-lg p-3 mt-1" /></label>
-              <AddressCepFields
+                  <AddressCepFields
                     value={address}
                     onChange={setAddress}
                     required={true}

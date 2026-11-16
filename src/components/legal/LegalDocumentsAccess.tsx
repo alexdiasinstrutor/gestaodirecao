@@ -63,6 +63,31 @@ export function LegalDocumentsAccess() {
       setValues(legalDefaults(instructor,student,matches.length===1?matches[0]:undefined));
     });
   };
+  useEffect(() => {
+    if(!open || code!=='CONTRATO_AULA_PRATICA' || currentUser?.papel!=='ALUNO')return;
+    let active=true;
+    setBusy(true);setNotice('');setSource(null);setValues(legalDefaults(null));resetAcceptance();setPackageId('');
+    const actor=currentUser;
+    Promise.all([supabaseAdapter.getUsers(),supabaseAdapter.getStudents(actor.organizacaoId),supabaseAdapter.getPackages(actor.organizacaoId)]).then(([users,remoteStudents,packages])=>{
+      if(!active)return;
+      const matches=remoteStudents.filter(student=>student.organizacaoId===actor.organizacaoId && !!actor.cpfFingerprint && student.cpfFingerprint===actor.cpfFingerprint);
+      if(matches.length!==1)throw new Error('Não foi possível identificar uma matrícula única vinculada ao seu cadastro. Solicite a conferência do vínculo ao instrutor.');
+      const student=matches[0];
+      const relatedUsers=users.filter(user=>user.organizacaoId===actor.organizacaoId);
+      const instructor=relatedUsers.find(user=>user.id===student.instrutorId) || null;
+      const account=relatedUsers.find(user=>user.id===actor.id && user.cpfFingerprint===student.cpfFingerprint);
+      if(!account)throw new Error('Sua conta não foi confirmada no banco. Entre novamente e tente consultar o contrato.');
+      setSource({student,users:relatedUsers,packages});setStudentId(student.id);
+      const contracts=student.contratosPacotes || [];
+      const contract=contracts.length===1?contracts[0]:undefined;
+      if(contract){
+        const offer=packages.find(item=>item.id===contract.pacoteId);
+        const conditions={...offer?.condicoesContratuais,...Object.fromEntries(Object.entries(contract).filter(([,value])=>value!==undefined))};
+        setPackageId(contract.id);setValues(legalContractValues(instructor,student,account,{...contract,...conditions}));
+      }else setValues(legalDefaults(instructor,student,account));
+    }).catch(error=>{if(active)setNotice(error instanceof Error?error.message:'Não foi possível carregar os dados da matrícula.');}).finally(()=>{if(active)setBusy(false);});
+    return ()=>{active=false;};
+  },[open,code,currentUser?.id,currentUser?.papel]);
   const show = () => { setValues(legalDefaults(null));setSource(null); setStudentId('');setPackageId('');resetAcceptance();setVersions([]); setNotice(''); setOpen(true); };
   const download = async () => {
     try {
@@ -81,7 +106,7 @@ export function LegalDocumentsAccess() {
           <label className="block font-semibold">Documento<select aria-label="Documento jurídico" value={code} onChange={event => {setCode(event.target.value);resetAcceptance();setNotice('');}} className="block w-full border rounded-lg p-3 mt-1"><option value="TERMOS_DE_USO">Termos de uso</option><option value="POLITICA_PRIVACIDADE_LGPD">Política de privacidade</option><option value="CONTRATO_AULA_PRATICA">Contrato de aulas práticas</option></select></label>
           <p className="text-sm bg-amber-50 p-3 rounded-lg">Minuta para conferência. Dados preenchidos automaticamente pelos cadastros e pelo pacote contratado. Versão {rendered.definition.versao}.</p>
           {code === 'CONTRATO_AULA_PRATICA' && students.length > 0 && <label className="block font-semibold">Aluno vinculado<select aria-label="Aluno do contrato" disabled={busy} value={studentId} onChange={event => selectStudent(event.target.value)} className="block w-full border rounded-lg p-3"><option value="" disabled>Selecione o aluno</option>{students.map(student => <option key={student.id} value={student.id}>{student.nome}</option>)}</select></label>}
-          {code === 'CONTRATO_AULA_PRATICA' && selectedStudent && <label className="block font-semibold">Pacote contratado<select aria-label="Pacote do contrato" defaultValue="" key={studentId} onChange={event => {
+          {code === 'CONTRATO_AULA_PRATICA' && selectedStudent && <label className="block font-semibold">Pacote contratado<select aria-label="Pacote do contrato" value={packageId} disabled={busy} key={studentId} onChange={event => {
             resetAcceptance();setPackageId(event.target.value);
             const contract = selectedStudent.contratosPacotes?.find(item => item.id === event.target.value);
             if (!contract) return;
@@ -93,18 +118,18 @@ export function LegalDocumentsAccess() {
           {code === 'CONTRATO_AULA_PRATICA' && currentUser && <section className="border rounded-xl p-3 space-y-3">
             <button disabled={busy} type="button" className="min-h-11 border rounded-lg px-3" onClick={() => run(async () => {setVersions(await loadLegalContracts());setNotice('Versões acessíveis carregadas do banco.');})}>Consultar contratos para aceite</button>
             {versions.length > 0 && <label className="block">Versão registrada<select aria-label="Versão registrada para aceite" value={version?.id || ''} onChange={event => {setVersion(versions.find(item => item.id===event.target.value) || null);setGeneral(false);setClauses(false);}} className="block w-full border rounded-lg p-3"><option value="">Selecione uma versão</option>{versions.map(item => <option value={item.id} key={item.id}>{item.package_contract_id} · {new Date(item.created_at).toLocaleString('pt-BR')}</option>)}</select></label>}
-            {selectedStudent && packageId && !version && <button disabled={busy} type="button" className="min-h-11 bg-blue-600 text-white rounded-lg px-3" onClick={() => run(async () => {
+            {currentUser.papel!=='ALUNO' && selectedStudent && packageId && !version && <button disabled={busy} type="button" className="min-h-11 bg-blue-600 text-white rounded-lg px-3" onClick={() => run(async () => {
               if(rendered.missing.length)throw new Error('Atualize os cadastros ou as condições do pacote para resolver as pendências antes de registrar.');
               const key=JSON.stringify([studentId,packageId,values]);if(operation.current.key!==key)operation.current={key,id:crypto.randomUUID()};
               setVersion(await prepareLegalContract(operation.current.id,studentId,packageId,values));setGeneral(false);setClauses(false);setNotice('Versão registrada. Confira o conteúdo antes do aceite.');
             })}>Registrar versão para aceite</button>}
             {version && <><p className="text-xs break-all">Versão {version.id} · SHA-256 {version.content_sha256}</p><label className="flex items-start gap-2"><input type="checkbox" checked={general} onChange={event => setGeneral(event.target.checked)} />Li e concordo com os termos do Contrato de Prestação de Serviços.</label><label className="flex items-start gap-2 border-2 border-amber-400 bg-amber-50 rounded-lg p-3"><input type="checkbox" checked={clauses} onChange={event => setClauses(event.target.checked)} />{legalDocuments[0].checkboxes_obrigatorios?.[1]}</label><button type="button" disabled={busy || !general || !clauses} className="min-h-11 px-3 rounded-lg bg-emerald-700 text-white disabled:opacity-50" onClick={() => run(async () => {const receipt=await acceptLegalContract(version,general,clauses);setNotice('Aceite confirmado pelo banco em '+new Date(receipt.accepted_at).toLocaleString('pt-BR')+'. Comprovante '+receipt.id);})}>Confirmar meu aceite</button></>}
           </section>}
-          {!version && rendered.missing.length>0 && <section className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm"><h3 className="font-semibold">Dados pendentes no cadastro</h3><p>Atualize a identificação e o endereço nos cadastros do aluno e do instrutor. Duração, prazos e multa são definidos na contratação do pacote.</p><ul className="list-disc pl-5">{rendered.missing.map(key=><li key={key}>{key.replaceAll('_',' ')}</li>)}</ul></section>}
-          <LegalDocument content={version?.content || rendered.content} />
+          {!version && (code!=='CONTRATO_AULA_PRATICA' || (!!selectedStudent && !!packageId)) && rendered.missing.length>0 && <section className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm"><h3 className="font-semibold">Dados pendentes no cadastro</h3><p>Atualize a identificação e o endereço nos cadastros do aluno e do instrutor. Duração, prazos e multa são definidos na contratação do pacote.</p><ul className="list-disc pl-5">{rendered.missing.map(key=><li key={key}>{key.replaceAll('_',' ')}</li>)}</ul></section>}
+          {code==='CONTRATO_AULA_PRATICA' && currentUser?.papel==='ALUNO' && (!selectedStudent || !packageId) && !version ? <p role="status" className="rounded-xl border bg-white p-4">{busy?'Carregando sua matrícula e os dados do contrato…':selectedStudent?'Selecione o pacote contratado para visualizar o documento completo.':'Contrato indisponível até a confirmação da matrícula vinculada.'}</p> : <LegalDocument content={version?.content || rendered.content} />}
           {code === 'CONTRATO_AULA_PRATICA' && <section className="border-2 border-amber-400 bg-amber-50 p-4 rounded-xl"><h3 className="font-bold">Ciência específica das cláusulas Quarta e Quinta</h3><p className="text-sm mt-2">{legalDocuments[0].checkboxes_obrigatorios?.[1]}</p></section>}
         </main>
-        <footer className="p-3 border-t flex flex-wrap items-center justify-between gap-3"><p role="status" className="text-xs flex-1 min-w-0">{notice || 'Exportação da minuta para revisão das partes.'}</p><button type="button" onClick={download} className="min-h-11 rounded-lg px-4 py-2 bg-blue-600 text-white font-semibold">Exportar minuta</button></footer>
+        <footer className="p-3 border-t flex flex-wrap items-center justify-between gap-3"><p role="status" className="text-xs flex-1 min-w-0">{notice || 'Exportação da minuta para revisão das partes.'}</p><button type="button" onClick={download} disabled={code==='CONTRATO_AULA_PRATICA' && currentUser?.papel==='ALUNO' && !packageId && !version} className="min-h-11 rounded-lg px-4 py-2 bg-blue-600 text-white font-semibold">Exportar minuta</button></footer>
       </div>
     </div>,document.body)}
   </>;

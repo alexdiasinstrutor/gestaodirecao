@@ -20,7 +20,7 @@ export function legalDefaults(user: User | null, student?: Student, studentUser?
   return { RAZAO_SOCIAL_EMPRESA: env.VITE_LEGAL_RAZAO_SOCIAL || 'Stark Light Save', CNPJ_EMPRESA: env.VITE_LEGAL_CNPJ || '23.659.019/0001-40', ENDERECO_EMPRESA: env.VITE_LEGAL_ENDERECO || 'Rua São Cristóvão, 36, Brasileia, Betim/MG, CEP 32600-280', CIDADE_SEDE_EMPRESA: env.VITE_LEGAL_CIDADE || 'Betim', EMAIL_DPO_PRIVACIDADE: env.VITE_LEGAL_EMAIL_DPO || 'cassiodiniz@uol.com.br', NOME_PLATAFORMA: 'Gestão AD (Auto Direção)', DATA_ATUALIZACAO: '16/11/2026',
     NOME_INSTRUTOR: user && user.papel !== 'ALUNO' ? user.nome : '', CPF_CNPJ_INSTRUTOR: user?.papel !== 'ALUNO' ? user?.cpfCompleto || '' : '',
     CIDADE_UF_INSTRUTOR: user?.papel !== 'ALUNO' ? [user?.cidade, user?.estado].filter(Boolean).join('/') : '',
-    NOME_ALUNO: student?.nome || '', CPF_ALUNO:studentUser?.cpfCompleto || '', RG_ALUNO:studentUser?.rg || '', REGISTRO_DETRAN:user?.registroDetran || '', CATEGORIA_CNH: student?.categoriaCnh || '',
+    NOME_ALUNO: student?.nome || '', CPF_ALUNO:studentUser?.cpfCompleto || '', REGISTRO_DETRAN:user?.registroDetran || '', CATEGORIA_CNH: student?.categoriaCnh || '',
     CIDADE_UF_ALUNO: [student?.cidade, student?.estado].filter(Boolean).join('/'),
     UF: user ? user.estado || '' : 'MG', CIDADE_UF: [user?.cidade,user?.estado].filter(Boolean).join('/') };
 }

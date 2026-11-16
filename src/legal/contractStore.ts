@@ -2,7 +2,7 @@ import { supabase } from '../lib/supabaseClient';
 export interface LegalContractVersion { id: string; student_id: string; package_contract_id: string; content: string; content_sha256: string; instructor_user_id: string; student_user_id: string; created_at: string; }
 export async function loadLegalContracts(): Promise<LegalContractVersion[]> {
  const {data,error}=await supabase.from('legal_contract_versions').select('*').order('created_at',{ascending:false});
- if(error)throw error;return data || [];
+ if(error){if(error.code==='42501'||error.code==='PGRST301')throw new Error('A consulta de versões para aceite exige uma sessão Supabase Authentication vinculada ao seu cadastro. Entre pela conta autenticada ou solicite ao administrador a conferência do vínculo.');throw error;}return data || [];
 }
 export async function prepareLegalContract(requestId: string,studentId: string,packageId: string,variables: Record<string,string>): Promise<LegalContractVersion> {
  const {data,error}=await supabase.rpc('prepare_legal_contract',{p_request_id:requestId,p_student_id:studentId,p_package_contract_id:packageId,p_variables:variables});

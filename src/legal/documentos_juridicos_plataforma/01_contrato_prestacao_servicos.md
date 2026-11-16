@@ -4,7 +4,7 @@ Pelo presente instrumento particular de prestação de serviços, firmado eletro
 
 **CONTRATADO (INSTRUTOR AUTÔNOMO):** **{{NOME_INSTRUTOR}}**, inscrito(a) no CPF/CNPJ sob o nº **{{CPF_CNPJ_INSTRUTOR}}**, credenciado(a) junto ao Departamento Estadual de Trânsito (DETRAN/{{UF}}) sob o registro nº **{{REGISTRO_DETRAN}}**, residente e domiciliado(a) em {{CIDADE_UF_INSTRUTOR}}, doravante denominado simplesmente **INSTRUTOR**;
 
-**CONTRATANTE (ALUNO):** **{{NOME_ALUNO}}**, inscrito(a) no CPF sob o nº **{{CPF_ALUNO}}**, portador(a) do RG nº **{{RG_ALUNO}}**, residente e domiciliado(a) em {{CIDADE_UF_ALUNO}}, doravante denominado simplesmente **ALUNO**;
+**CONTRATANTE (ALUNO):** **{{NOME_ALUNO}}**, inscrito(a) no CPF sob o nº **{{CPF_ALUNO}}**, residente e domiciliado(a) em {{CIDADE_UF_ALUNO}}, doravante denominado simplesmente **ALUNO**;
 
 Têm entre si justo e contratado o presente **Contrato de Prestação de Serviços de Instrução Prática de Direção Veicular**, que se regerá pelas disposições do Código de Defesa do Consumidor (Lei nº 8.078/1990), do Código Civil (Lei nº 10.406/2002), do Código de Trânsito Brasileiro (Lei nº 9.503/1997), das Resoluções do CONTRAN e pelas cláusulas seguintes:
 
