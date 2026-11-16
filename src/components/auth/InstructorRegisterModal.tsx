@@ -50,6 +50,7 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
   const [couponSuccess, setCouponSuccess] = useState<string>('');
 
   const [formData, setFormData] = useState({
+    registroDetran: '',
     nome: '',
     email: '',
     cpf: '',
@@ -235,6 +236,7 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
 
       const legalConsent = await registrationConsent(termsAccepted);
       const newUser: User = {
+        registroDetran: formData.registroDetran.trim(),
         registrationLegalConsent: legalConsent,
         id: userId,
         organizacaoId: orgId,
@@ -653,7 +655,8 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
                 </div>
 
                 <div className="sm:col-span-2">
-                  <AddressCepFields
+                  <label className="block text-xs font-semibold">Registro de credenciamento DETRAN<input aria-label="Registro de credenciamento DETRAN" value={formData.registroDetran} onChange={event=>setFormData({...formData,registroDetran:event.target.value})} className="block w-full border rounded-lg p-3 mt-1" /></label>
+              <AddressCepFields
                     value={address}
                     onChange={setAddress}
                     required={true}

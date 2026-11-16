@@ -58,6 +58,8 @@ export interface Organization {
 }
 
 export interface User {
+  rg?: string;
+  registroDetran?: string;
   registrationLegalConsent?: RegistrationConsent;
   id: string;
   organizacaoId: string;
@@ -143,6 +145,10 @@ export type StudentContractType =
   | 'PACOTE_PERSONALIZADO';
 
 export interface StudentPackageContract {
+  duracaoAulaMinutos?: number;
+  diasAvisoExame?: number;
+  prazoValidadeDias?: number;
+  percentualMulta?: number;
   valorAulasCentavos?: number;
   valorLocacaoExameCentavos?: number;
   locacaoExameContratada?: boolean;
@@ -359,6 +365,7 @@ export interface Investment {
 export type PackagePaymentType = 'A_VISTA' | 'PARCELADO_CARTAO' | 'NEGOCIADO' | 'TODAS';
 
 export interface PackageOffer {
+  condicoesContratuais?: Pick<StudentPackageContract,'duracaoAulaMinutos'|'diasAvisoExame'|'prazoValidadeDias'|'percentualMulta'>;
   id: string;
   organizacaoId: string;
   instrutorId?: string;

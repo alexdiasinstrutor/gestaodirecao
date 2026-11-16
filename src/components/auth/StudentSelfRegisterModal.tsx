@@ -99,6 +99,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
 
   // Dados do formulário
   const [formData, setFormData] = useState({
+    rg: '',
     nome: '',
     email: '',
     cpf: '',
@@ -574,6 +575,7 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
 
       const legalConsent = await registrationConsent(termsAccepted, chosenPackage ? {id:chosenPackage.id,instructorId:activeInstructorId,name:chosenPackage.nome,lessons:chosenPackage.totalAulas,totalCents:couponResult ? couponResult.valorFinalCentavos : chosenPackage.valorCentavos} : undefined, packageAccepted, clausesAccepted);
       const newUser: User = {
+        rg: formData.rg.trim(),
         registrationLegalConsent: legalConsent,
         id: userId,
         organizacaoId: targetOrgId,
@@ -1186,7 +1188,8 @@ export const StudentSelfRegisterModal: React.FC<StudentSelfRegisterModalProps> =
 
                 {/* Endereço Residencial com Busca Automática por CEP */}
                 <div className="sm:col-span-2">
-                  <AddressCepFields
+                  <label className="block text-xs font-semibold">RG do aluno<input aria-label="RG do aluno" value={formData.rg} onChange={event=>setFormData({...formData,rg:event.target.value})} className="block w-full border rounded-lg p-3 mt-1" /></label>
+              <AddressCepFields
                     value={address}
                     onChange={setAddress}
                     required={true}

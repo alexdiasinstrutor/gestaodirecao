@@ -1416,3 +1416,18 @@ O responsável informou ter executado o SQL. Consulta REST somente de metadados,
 
 ### 18.5 Coluna de aceite de cadastro confirmada
 Após nova execução do SQL informada pelo responsável, consulta REST somente de metadados com select=id,registration_legal_consent e limit=0 retornou HTTP 200 no projeto configurado. A coluna está disponível na API. Nenhum cadastro real foi criado ou alterado. A confirmação refere-se ao esquema; não foi realizado cadastro ou aceite de produção.
+
+### 18.6 Apresentação formal dos documentos
+Contratos, termos e política passaram a ser apresentados com títulos e cláusulas hierarquizados, destaques tipográficos, identificação das partes em quadros e quadro financeiro separado. Aparência de folha branca, tipografia serifada, margens adaptativas e cabeçalho sóbrio. O componente LegalDocument renderiza estruturas Markdown em elementos React e não executa HTML. O conteúdo original continua sendo usado na exportação, no hash e no armazenamento de versões. A leitura compacta nos cadastros usa o mesmo componente. As ações e regras de aceite permanecem nos fluxos existentes. Alteração em avaliação local, sem novo commit ou push.
+
+Validação visual e funcional da seção 18.6: 12 cenários de documentos, quatro fluxos de contrato/aceite e dois cadastros aprovados. TypeScript e build aprovados. Conferida a captura da prévia no Chrome com dados fictícios. Ajustados também alinhamento dos quadros das partes e espaçamento das ações do leitor. Captura em review-artifacts/legal-formal-preview.png.
+
+### 18.7 Fonte única dos dados contratuais
+A pedido do responsável, removido o formulário avulso de variáveis jurídicas. Ao escolher aluno/pacote, o leitor consulta usuários, alunos e pacotes no adaptador do Supabase; resolve instrutor pelo vínculo e a conta do aluno pela mesma organização/fingerprint. Identidade, CPF completo, RG e endereço vêm dos cadastros. Valores, quantidade, pagamento, locação e condições vêm do pacote. Valor por extenso reutiliza o gerador existente. Informações ausentes aparecem como pendências para corrigir o cadastro ou pacote, bloqueando a preparação. Versões já registradas mantêm seu conteúdo original.
+
+Acrescentados RG e registro DETRAN nos cadastros iniciais e condições contratuais no cadastro/contratação do pacote. Migração supabase_migracao_dados_cadastrais_contratos_20261116.sql adiciona campos e atualiza a função no servidor para substituir os dados de identificação e condições pelos registros reais, mesmo se o cliente enviar outros valores. Migração adicional de produção ainda não executada. Testes em PostgreSQL isolado: 18 aprovados. Teste de interface usa registros persistidos simulados e não digita dados no documento.
+
+Validação final da seção 18.7: quatro fluxos completos de contrato alimentados por registros simulados no banco, sem edição avulsa; 12 cenários de documentos; dois cadastros completos; 18 verificações de PostgreSQL; 42/42 cenários de layout dos formulários alterados, sem avisos. TypeScript e build aprovados. Prévia aberta no Chrome com dados fictícios persistidos no banco simulado. Sem novo commit ou push.
+
+### 18.8 Verificação da migração de dados cadastrais
+Responsável informou execução da migração. Consultas somente de metadados com limit=0 no projeto configurado retornaram users: HTTP 200; package_offers: HTTP 200. Consulta de schema da função prepare_legal_contract: indisponível para consulta anônima. Nenhum cadastro ou contrato real foi criado, alterado ou aceito. Essa consulta confirma os campos, sem executar a função nem comprovar sua definição interna ou os vínculos Auth.

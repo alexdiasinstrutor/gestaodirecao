@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import { ContractConditionsFields } from '../legal/ContractConditionsFields';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   X,
   Package,
@@ -120,6 +121,8 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
   const [formaPagamento, setFormaPagamento] = useState<string>('PIX');
   const [gerarFatura, setGerarFatura] = useState<boolean>(true);
 
+  const [conditions,setConditions] = useState<NonNullable<PackageOffer['condicoesContratuais']>>({});
+  useEffect(()=>setConditions(activeTab==='CATALOG_PACKAGE' ? selectedCatalogPkg?.condicoesContratuais || {} : {}),[activeTab,selectedCatalogPkgId]);
   const [locacaoExameContratada, setLocacaoExameContratada] = useState(false);
   const [locacaoBRL, setLocacaoBRL] = useState(0);
 
@@ -195,6 +198,7 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
       const res = await db.addStudentContractAsync({
         alunoId: student.id,
         contract: {
+          ...conditions,
           tipo: previewData.tipo,
           pacoteId: previewData.pacoteId,
           nome: previewData.nome,
@@ -608,6 +612,7 @@ export const AddStudentPackageModal: React.FC<AddStudentPackageModalProps> = ({
               </div>
 
               <section className="border rounded-xl p-4 space-y-3"><label className="flex gap-2 items-center"><input type="checkbox" checked={locacaoExameContratada} onChange={event => setLocacaoExameContratada(event.target.checked)} />Incluir locação do carro para exame no pacote</label>{locacaoExameContratada && <label className="block text-sm font-semibold">Valor da locação para exame (R$)<input aria-label="Valor da locação para exame (R$)" type="number" min="0" step="0.01" required value={locacaoBRL} onChange={event => setLocacaoBRL(Number(event.target.value))} className="block w-full border rounded-lg p-3" /></label>}<p className="text-sm">Aulas {formatCurrencyBRL(previewData.valorCentavos)} · Locação {formatCurrencyBRL(locacaoExameContratada ? Math.round(locacaoBRL*100) : 0)} · Total {formatCurrencyBRL(previewData.valorCentavos + (locacaoExameContratada ? Math.round(locacaoBRL*100) : 0))}</p></section>
+              <ContractConditionsFields value={conditions} onChange={setConditions} />
               {/* CARD DE RESUMO DINÂMICO ANTES DE SALVAR */}
               <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-2xl space-y-2">
                 <div className="flex items-center justify-between border-b border-emerald-200/80 pb-1.5">

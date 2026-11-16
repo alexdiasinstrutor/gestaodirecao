@@ -13,7 +13,7 @@ const simple = [
  ['PaymentReceiptModal','common'], ['PixConfigModal','common'], ['PixQrCodeModal','common'], ['ApplyDiscountModal','common'],
  ['SecurityAgentsModal','common'], ['OfficialDossierPdfViewer','common'], ['AuditLogViewer','common'], ['CouponsManager','common'],
  ['DataUpdateBar','common'], ['Header','common'], ['AddressCepFields','common'], ['InteractiveGeoMap','common']
-].map(([component,folder])=>({ id: component, component, source: folder+'/'+component+'.tsx', ...(component==='LegalDocumentsAccess'?{steps:[{role:'button',name:'Termos, privacidade e contratos'},{css:'details summary'}]}:{}) }));
+].map(([component,folder])=>({ id: component, component, source: folder+'/'+component+'.tsx', ...(component==='LegalDocumentsAccess'?{steps:[{role:'button',name:'Termos, privacidade e contratos'}]}:{}) }));
 const extra = (base,id,steps=[],props={})=>({ ...simple.find(s=>s.id===base),id:base+':'+id,steps,props });
 const button = (name,regex=false)=>({ role:'button',name,regex });
 const appScenes = ['Painel Geral','Agenda & Horários','Alunos & Progresso','Meus Veículos','Mapa & Notificações','Cobrança & PIX','Finanças & DRE','Saúde Financeira','Relatórios Automáticos'].map((name,index)=>({id:'App:area-'+index,component:'App',source:'../App.tsx',steps:[button(name)]}));
@@ -54,4 +54,4 @@ export const scenes = [...simple,...appScenes,
  extra('Header','perfil',[{css:'header button',hasText:'Carlos'}]),
  extra('DataUpdateBar','historico',[button('Histórico e backups')])
 ];
-export const primitives = ['RegistrationTerms.tsx','Logo.tsx','SmartScrollNav.tsx','ErrorBoundary.tsx'];
+export const primitives = ['ContractConditionsFields.tsx','LegalDocument.tsx','RegistrationTerms.tsx','Logo.tsx','SmartScrollNav.tsx','ErrorBoundary.tsx'];

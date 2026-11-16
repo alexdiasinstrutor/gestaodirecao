@@ -1,3 +1,4 @@
+import { ContractConditionsFields } from '../legal/ContractConditionsFields';
 import React, { useState, useEffect } from 'react';
 import {
   Package,
@@ -50,6 +51,7 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
   const packages = db.getPackages(orgId, targetInstructorId);
   const students = db.getStudents(orgId, targetInstructorId);
 
+  const [conditions,setConditions] = useState<NonNullable<PackageOffer['condicoesContratuais']>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [showModal, setShowModal] = useState<boolean>(false);
@@ -80,7 +82,7 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
 
   const handleOpenNew = () => {
     setSaveError('');
-    setEditingPackage(null);
+    setEditingPackage(null);setConditions({});
     setForm({
       nome: '',
       categoriaCnh: 'B',
@@ -97,7 +99,7 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
 
   const handleOpenEdit = (pkg: PackageOffer) => {
     setSaveError('');
-    setEditingPackage(pkg);
+    setEditingPackage(pkg);setConditions(pkg.condicoesContratuais || {});
     setForm({
       nome: pkg.nome,
       categoriaCnh: pkg.categoriaCnh,
@@ -136,6 +138,7 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
         maxParcelas: Number(form.maxParcelas) || 1,
         descontoAvistaPercentual: Number(form.descontoAvistaPercentual) || 0,
         descricao: form.descricao.trim(),
+        condicoesContratuais: conditions,
         ativo: form.ativo,
         atualizadoEm: new Date().toISOString()
       };
@@ -155,6 +158,7 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
         maxParcelas: Number(form.maxParcelas) || 1,
         descontoAvistaPercentual: Number(form.descontoAvistaPercentual) || 0,
         descricao: form.descricao.trim(),
+        condicoesContratuais: conditions,
         ativo: form.ativo,
         criadoEm: new Date().toISOString().slice(0, 10),
         atualizadoEm: new Date().toISOString()
@@ -390,6 +394,7 @@ export const PackagesManager: React.FC<PackagesManagerProps> = ({
             </div>
 
             <form onSubmit={handleSave} className="p-5 overflow-y-auto space-y-4 text-xs">
+              <ContractConditionsFields value={conditions} onChange={setConditions} />
               <div>
                 <label className="block font-bold text-slate-800 mb-1">Nome do Pacote *</label>
                 <input aria-label="Nome do Pacote *"

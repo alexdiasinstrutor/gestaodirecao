@@ -10,13 +10,16 @@ const check=(condition)=>{assert.ok(condition);passed++;};
 try {
  await pg.exec(`create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key);
  create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
- create table public.users(id text primary key,email text,organizacao_id text,papel text);
+ create table public.users(id text primary key,email text,organizacao_id text,papel text);create table public.package_offers(id text primary key,organizacao_id text);
  create table public.students(id text primary key,instrutor_id text,organizacao_id text,email text,contratos_pacotes jsonb);
  insert into auth.users values('11111111-1111-4111-8111-111111111111'),('22222222-2222-4222-8222-222222222222'),('33333333-3333-4333-8333-333333333333');
  insert into public.users values('instructor','teacher@example.invalid','org','INSTRUTOR'),('student','student@example.invalid','org','ALUNO'),('outsider','outsider@example.invalid','other','INSTRUTOR');
  insert into public.students values('s1','instructor','org','student@example.invalid','[{"id":"p1","valorCentavos":120000,"valorAulasCentavos":100000,"valorLocacaoExameCentavos":20000}]');`);
  const migration=await fs.readFile(new URL('../supabase_migracao_contratos_aceites_20261116.sql',import.meta.url),'utf8');await pg.exec(migration);await pg.exec(migration);check(true);
  await pg.exec(`update public.users set auth_user_id=case id when 'instructor' then '11111111-1111-4111-8111-111111111111'::uuid when 'student' then '22222222-2222-4222-8222-222222222222'::uuid else '33333333-3333-4333-8333-333333333333'::uuid end;`);
+ await pg.exec("alter table public.users add column nome text default 'Nome cadastrado';alter table public.users add column cpf_completo text default '11144477735';alter table public.users add column cidade text default 'Betim';alter table public.users add column estado text default 'MG';alter table public.students add column nome text default 'Aluno cadastrado';alter table public.students add column cidade text default 'Betim';alter table public.students add column estado text default 'MG';");
+ const automaticMigration=await fs.readFile(new URL('../supabase_migracao_dados_cadastrais_contratos_20261116.sql',import.meta.url),'utf8');await pg.exec(automaticMigration);await pg.exec(automaticMigration);
+ await pg.exec(`update public.users set rg='RG-DO-CADASTRO',registro_detran='DETRAN-DO-CADASTRO';update public.students set contratos_pacotes='[{"id":"p1","nome":"Pacote cadastrado","formaPagamento":"PIX","quantidadeAulas":20,"duracaoAulaMinutos":50,"diasAvisoExame":5,"prazoValidadeDias":180,"percentualMulta":10,"valorCentavos":120000,"valorAulasCentavos":100000,"valorLocacaoExameCentavos":20000}]';`);
  const setActor=async(uuid)=>{await pg.exec('reset role');await pg.query("select set_config('request.jwt.claim.sub',$1,false)",[uuid]);await pg.exec('set role authenticated');};
  await setActor('11111111-1111-4111-8111-111111111111');
  const schema=JSON.parse(await fs.readFile(new URL('../src/legal/documentos_juridicos_plataforma/variaveis_schema.json',import.meta.url),'utf8'));
@@ -24,7 +27,7 @@ try {
  const args=['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','s1','p1',JSON.stringify(variables)];
  const prepare=()=>pg.query('select (public.prepare_legal_contract($1,$2,$3,$4::jsonb)).*',args);
  await assert.rejects(()=>pg.query('select public.prepare_legal_contract($1,$2,$3,$4::jsonb)',['bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','s1','p1',JSON.stringify({...variables,VALOR_ALUGUEL_EXAME:'999,00'})]));passed++;
- const row=(await prepare()).rows[0];check(row.total_amount_cents==120000&&row.rental_amount_cents==20000);check(row.content.includes('200,00')&&!row.content.includes('{{'));
+ const row=(await prepare()).rows[0];check(row.total_amount_cents==120000&&row.rental_amount_cents==20000);check(row.content.includes('Aluno cadastrado')&&row.content.includes('DETRAN-DO-CADASTRO')&&row.content.includes('RG-DO-CADASTRO'));check(row.content.includes('200,00')&&!row.content.includes('{{'));
  check((await prepare()).rows[0].id===row.id);
  const sign=(general,clauses,hash=row.content_sha256)=>pg.query('select (public.accept_legal_contract($1,$2,$3,$4)).*',[row.id,hash,general,clauses]);
  await assert.rejects(()=>sign(true,false));passed++;await assert.rejects(()=>sign(true,true,'wrong'));passed++;
