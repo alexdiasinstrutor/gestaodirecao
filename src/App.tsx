@@ -42,6 +42,7 @@ import { StudentPortal } from './components/student/StudentPortal';
 import { AdminMasterPanel } from './components/admin/AdminMasterPanel';
 import { SecurityAgentsModal } from './components/common/SecurityAgentsModal';
 import { PixConfigModal } from './components/common/PixConfigModal';
+import { InstructorEditModal } from './components/common/InstructorEditModal';
 import { SmartScrollNav } from './components/common/SmartScrollNav';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { useInterfaceMode } from './hooks/useInterfaceMode';
@@ -94,6 +95,7 @@ export default function App() {
   const [showLGPDModal, setShowLGPDModal] = useState<boolean>(false);
   const [showSecurityAgentsModal, setShowSecurityAgentsModal] = useState<boolean>(false);
   const [showPixConfigModal, setShowPixConfigModal] = useState<boolean>(false);
+  const [showEditProfileModal, setShowEditProfileModal] = useState<boolean>(false);
 
   // Parâmetros de link de convite (Deep link / URL Query)
   const [inviteParams, setInviteParams] = useState<{
@@ -363,6 +365,7 @@ export default function App() {
           onOpenLGPD={() => setShowLGPDModal(true)}
           onOpenDossieAndAgents={() => setShowSecurityAgentsModal(true)}
           onOpenPixConfig={() => setShowPixConfigModal(true)}
+          onOpenEditProfile={() => setShowEditProfileModal(true)}
           onNavigate={(tab) => setActiveTab(tab)}
         />
       </div>
@@ -622,6 +625,17 @@ export default function App() {
           isOpen={showSecurityAgentsModal}
           onClose={() => setShowSecurityAgentsModal(false)}
           currentUserNome={currentUser.nome}
+        />
+      )}
+
+      {showEditProfileModal && currentUser && (
+        <InstructorEditModal
+          userToEdit={currentUser}
+          onClose={() => setShowEditProfileModal(false)}
+          onSuccess={(updatedUser) => {
+            setCurrentUser({ ...updatedUser });
+            setShowEditProfileModal(false);
+          }}
         />
       )}
 

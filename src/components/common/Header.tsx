@@ -35,6 +35,7 @@ interface HeaderProps {
   onOpenLGPD: () => void;
   onOpenDossieAndAgents?: () => void;
   onOpenPixConfig?: () => void;
+  onOpenEditProfile?: () => void;
   onNavigate?: (tab: string) => void;
 }
 
@@ -46,6 +47,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenLGPD,
   onOpenDossieAndAgents,
   onOpenPixConfig,
+  onOpenEditProfile,
   onNavigate
 }) => {
   const { isOnline, isSyncing, pendingCount, triggerSync } = useOnlineStatus();
@@ -335,6 +337,22 @@ export const Header: React.FC<HeaderProps> = ({
                         >
                           <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
                           <span>Equipe Master & Senhas</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Meus Dados & Registro DETRAN (Instrutor / Gestor CFC) */}
+                    {onOpenEditProfile && (currentUser.papel === 'INSTRUTOR' || currentUser.papel === 'ADMIN_ORG') && (
+                      <div className="px-2 py-1.5 border-b border-slate-100">
+                        <button
+                          onClick={() => {
+                            setShowSwitchMenu(false);
+                            onOpenEditProfile();
+                          }}
+                          className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs hover:bg-blue-50 text-blue-700 font-semibold flex items-center gap-2 cursor-pointer transition-colors"
+                        >
+                          <UserCheck className="w-3.5 h-3.5 text-blue-600" />
+                          <span>Meus Dados & Registro DETRAN</span>
                         </button>
                       </div>
                     )}

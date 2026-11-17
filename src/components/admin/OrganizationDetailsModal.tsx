@@ -13,7 +13,8 @@ import {
   AlertTriangle,
   Lock,
   DollarSign,
-  GraduationCap
+  GraduationCap,
+  Pencil
 } from 'lucide-react';
 import { db } from '../../lib/storage';
 import { formatCurrencyBRL, formatDateBR } from '../../lib/validation';
@@ -27,6 +28,7 @@ interface OrganizationDetailsModalProps {
   onOpenEdit: (org: Organization) => void;
   onOpenKeyModal: (org: Organization) => void;
   onOpenResetPass: (user: User) => void;
+  onOpenEditUser?: (user: User) => void;
 }
 
 export const OrganizationDetailsModal: React.FC<OrganizationDetailsModalProps> = ({
@@ -34,7 +36,8 @@ export const OrganizationDetailsModal: React.FC<OrganizationDetailsModalProps> =
   onClose,
   onOpenEdit,
   onOpenKeyModal,
-  onOpenResetPass
+  onOpenResetPass,
+  onOpenEditUser
 }) => {
   const users = db.getUsers(organization.id);
   const students = db.getStudents(organization.id);
@@ -175,6 +178,8 @@ export const OrganizationDetailsModal: React.FC<OrganizationDetailsModalProps> =
                     </div>
                     <span className="text-slate-500 text-xs font-mono block">
                       {u.email} · Tel: {u.telefone || 'S/N'} · CPF: {u.cpfMascarado || '***'}
+                      {u.registroDetran ? ` · DETRAN: ${u.registroDetran}` : ''}
+                      {u.rg ? ` · RG: ${u.rg}` : ''}
                     </span>
                     {(u.cep || u.logradouro || u.cidade) && (
                       <span className="text-slate-500 text-xs block mt-0.5">
@@ -183,14 +188,26 @@ export const OrganizationDetailsModal: React.FC<OrganizationDetailsModalProps> =
                     )}
                   </div>
 
-                  <button
-                    onClick={() => onOpenResetPass(u)}
-                    className="flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-semibold cursor-pointer shrink-0"
-                    title="Resetar senha deste usuário e gerar nova senha temporária"
-                  >
-                    <Lock className="w-3 h-3 text-amber-700" />
-                    <span>Resetar Senha</span>
-                  </button>
+                  <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                    {onOpenEditUser && (
+                      <button
+                        onClick={() => onOpenEditUser(u)}
+                        className="flex items-center gap-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-lg text-xs font-semibold cursor-pointer"
+                        title="Editar dados cadastrais e Registro DETRAN deste usuário"
+                      >
+                        <Pencil className="w-3 h-3 text-blue-700" />
+                        <span>Editar Dados / DETRAN</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => onOpenResetPass(u)}
+                      className="flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-semibold cursor-pointer shrink-0"
+                      title="Resetar senha deste usuário e gerar nova senha temporária"
+                    >
+                      <Lock className="w-3 h-3 text-amber-700" />
+                      <span>Resetar Senha</span>
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

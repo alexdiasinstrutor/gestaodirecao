@@ -57,6 +57,7 @@ import { SaaSPlansTableView } from './SaaSPlansTableView';
 import { SupabaseMigrationModal } from './SupabaseMigrationModal';
 import { MasterPasswordModal } from './MasterPasswordModal';
 import { MasterUserEditModal } from './MasterUserEditModal';
+import { InstructorEditModal } from '../common/InstructorEditModal';
 import { CouponsManager } from '../common/CouponsManager';
 import { AdminStudentLeadsView } from './AdminStudentLeadsView';
 
@@ -99,6 +100,7 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
   const [masterEditMode, setMasterEditMode] = useState<'NEW' | 'EDIT'>('NEW');
   const [selectedMasterToEdit, setSelectedMasterToEdit] = useState<User | null>(null);
   const [selectedMasterToChangePassword, setSelectedMasterToChangePassword] = useState<User | null>(null);
+  const [selectedInstructorToEdit, setSelectedInstructorToEdit] = useState<User | null>(null);
 
   // Feedback Messages
   const [feedbackMsg, setFeedbackMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
@@ -1260,6 +1262,22 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
           }}
           onOpenResetPass={(user) => {
             setSelectedUserForResetPass(user);
+          }}
+          onOpenEditUser={(user) => {
+            setSelectedInstructorToEdit(user);
+          }}
+        />
+      )}
+
+      {/* MODAL: EDITAR DADOS DO INSTRUTOR / USUÁRIO & REGISTRO DETRAN */}
+      {selectedInstructorToEdit && (
+        <InstructorEditModal
+          userToEdit={selectedInstructorToEdit}
+          onClose={() => setSelectedInstructorToEdit(null)}
+          onSuccess={(updated) => {
+            refreshOrganizations();
+            setSelectedInstructorToEdit(null);
+            showFeedback(`Dados e Registro DETRAN de "${updated.nome}" atualizados com sucesso!`);
           }}
         />
       )}

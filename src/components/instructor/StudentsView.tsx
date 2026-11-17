@@ -32,7 +32,7 @@ import {
   ShoppingBag
 } from 'lucide-react';
 import { db } from '../../lib/storage';
-import { formatDateBR, formatCurrencyBRL } from '../../lib/validation';
+import { formatDateBR, formatCurrencyBRL, validateMinimumAge } from '../../lib/validation';
 import type { Student, User, Organization, StudentSkills, PaymentRecord, CnhCategory, AddressFields, AccountReceivable, StudentPackageContract } from '../../types';
 import { CNH_CATEGORIES } from '../../types';
 import { StudentTransferModal } from './StudentTransferModal';
@@ -78,7 +78,12 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
     }
   }, [activeStudentCategories, selectedCategory]);
 
-  // Edit plan, category, skills & address state when viewing student
+  // Edit personal data, plan, category, skills & address state when viewing student
+  const [editingNome, setEditingNome] = useState<string>('');
+  const [editingEmail, setEditingEmail] = useState<string>('');
+  const [editingTelefone, setEditingTelefone] = useState<string>('');
+  const [editingDataNascimento, setEditingDataNascimento] = useState<string>('');
+  const [editingStatus, setEditingStatus] = useState<Student['status']>('EM_ANDAMENTO');
   const [editingCategory, setEditingCategory] = useState<CnhCategory>('B');
   const [editingPackageId, setEditingPackageId] = useState<string>('');
   const [editingPackageName, setEditingPackageName] = useState<string>('');
@@ -153,6 +158,11 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
       availablePkgs.find((p) => p.categoriaCnh === student.categoriaCnh);
 
     setFichaError('');setActiveStudent(student);
+    setEditingNome(student.nome || '');
+    setEditingEmail(student.email || '');
+    setEditingTelefone(student.telefone || '');
+    setEditingDataNascimento(student.dataNascimento || '');
+    setEditingStatus(student.status || 'EM_ANDAMENTO');
     setEditingCategory(student.categoriaCnh || matchedPkg?.categoriaCnh || 'B');
     setEditingPackageId(student.pacoteId || matchedPkg?.id || '');
     setEditingPackageName(
@@ -226,6 +236,24 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
     setIsSavingFicha(true);
 
     try {
+      if (!editingNome.trim() || editingNome.trim().length < 3) {
+        throw new Error('O nome completo do aluno deve ter pelo menos 3 caracteres.');
+      }
+      if (!editingEmail.trim() || !editingEmail.includes('@')) {
+        throw new Error('Informe um e-mail válido para o aluno.');
+      }
+      if (!editingTelefone.trim()) {
+        throw new Error('Informe o telefone/WhatsApp do aluno.');
+      }
+      let calculatedAge = activeStudent.idade;
+      if (editingDataNascimento) {
+        const ageCheck = validateMinimumAge(editingDataNascimento);
+        if (!ageCheck.valid) {
+          throw new Error(ageCheck.error || 'O aluno deve ter idade mínima de 18 anos conforme o CTB.');
+        }
+        calculatedAge = ageCheck.age;
+      }
+
       const availablePkgs = getInstructorPackagesForStudent(activeStudent);
       const selectedPkg = availablePkgs.find((p) => p.id === editingPackageId);
       const finalCategory = selectedPkg ? selectedPkg.categoriaCnh : editingCategory;
@@ -243,6 +271,12 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
 
       const updatedStudent: Student = {
         ...activeStudent,
+        nome: editingNome.trim(),
+        email: editingEmail.trim().toLowerCase(),
+        telefone: editingTelefone.trim(),
+        dataNascimento: editingDataNascimento || activeStudent.dataNascimento,
+        idade: calculatedAge,
+        status: editingStatus,
         categoriaCnh: finalCategory,
         pacoteId: finalPackageId,
         pacoteNome: finalPackageName,
@@ -898,6 +932,88 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
               })()}
 
               {fichaError && <p role="alert" className="p-3 rounded-lg bg-red-50 text-red-800">{fichaError}</p>}
+
+              {/* Dados Cadastrais do Aluno (Editável) */}
+              <div className="p-4 bg-slate-50/90 border border-slate-200 rounded-2xl space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <span className="text-[11px] uppercase font-bold text-slate-900 tracking-wider flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    <span>Dados Cadastrais do Aluno (Editável)</span>
+                  </span>
+                  <span className="text-[10px] text-slate-500 font-mono">
+                    CPF: {activeStudent.cpfMascarado}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                  <div className="sm:col-span-6">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Nome Completo *
+                    </label>
+                    <input
+                      type="text"
+                      value={editingNome}
+                      onChange={(e) => setEditingNome(e.target.value)}
+                      placeholder="Nome completo do aluno"
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-medium focus:outline-none focus:border-blue-600"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-6">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      E-mail *
+                    </label>
+                    <input
+                      type="email"
+                      value={editingEmail}
+                      onChange={(e) => setEditingEmail(e.target.value)}
+                      placeholder="aluno@email.com"
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-medium focus:outline-none focus:border-blue-600"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-4">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Telefone / WhatsApp *
+                    </label>
+                    <input
+                      type="text"
+                      value={editingTelefone}
+                      onChange={(e) => setEditingTelefone(e.target.value)}
+                      placeholder="(31) 99999-9999"
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-mono focus:outline-none focus:border-blue-600"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-4">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Data de Nascimento
+                    </label>
+                    <input
+                      type="date"
+                      value={editingDataNascimento}
+                      onChange={(e) => setEditingDataNascimento(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-mono focus:outline-none focus:border-blue-600"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-4">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Status da Matrícula
+                    </label>
+                    <select
+                      aria-label="Status da Matrícula"
+                      value={editingStatus}
+                      onChange={(e) => setEditingStatus(e.target.value as Student['status'])}
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold focus:outline-none focus:border-blue-600 cursor-pointer"
+                    >
+                      <option value="EM_ANDAMENTO">EM ANDAMENTO</option>
+                      <option value="CONCLUIDO">CONCLUÍDO</option>
+                      <option value="CANCELADO">CANCELADO</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
               {/* SEÇÃO: PACOTES, AULAS EXTRAS & CONTRATAÇÕES DO ALUNO */}
               {(() => {
                 const resolved=resolveStudentPackages(activeStudent,getInstructorPackagesForStudent(activeStudent),accounts);
