@@ -2,9 +2,16 @@ import { numberToWordsBRL } from '../lib/numberToWords';
 import schema from './documentos_juridicos_plataforma/variaveis_schema.json';
 import type { Student, User, StudentPackageContract, PackageOffer } from '../types';
 
-const sources = typeof import.meta.glob === 'function'
-  ? (import.meta.glob('./documentos_juridicos_plataforma/*.md', { query: '?raw', import: 'default', eager: true }) as Record<string, string>)
-  : {};
+let sources: Record<string, string> = {};
+try {
+  sources = import.meta.glob('./documentos_juridicos_plataforma/*.md', {
+    query: '?raw',
+    import: 'default',
+    eager: true
+  }) as Record<string, string>;
+} catch {
+  sources = {};
+}
 
 export const legalDocuments = schema.documentos;
 
