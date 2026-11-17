@@ -520,7 +520,9 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
           {/* PASSO 2: DADOS PESSOAIS & ENDEREÇO */}
           {step === 2 && (
             <div className="space-y-4 animate-in fade-in duration-150">
-              {/* Botão de Agilidade: Conectar / Preencher com Google */}
+              {/* Botão de Agilidade: Conectar / Preencher com Google (desabilitado temporariamente) */}
+              {false && (
+              <>
               <button
                 type="button"
                 onClick={async () => {
@@ -580,6 +582,8 @@ export const InstructorRegisterModal: React.FC<InstructorRegisterModalProps> = (
                   </span>
                 </div>
               </div>
+              </>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="sm:col-span-2">

@@ -293,7 +293,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             </div>
           )}
 
-          {/* Social / Google Login */}
+          {/* Social / Google Login (desabilitado temporariamente) */}
+          {false && (
           <div>
             <button
               type="button"
@@ -333,6 +334,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               </div>
             </div>
           </div>
+          )}
 
           {/* Email / Password Form */}
           <form onSubmit={handleSubmit} className="space-y-3.5">
