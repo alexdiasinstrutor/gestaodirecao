@@ -29,9 +29,17 @@ import {
   Car,
   Sparkles,
   Layers,
-  ShoppingBag
+  ShoppingBag,
+  AlertCircle
 } from 'lucide-react';
 import { db } from '../../lib/storage';
+import {
+  analyzePackageChange,
+  applyPackageChangeDecision,
+  resolvePendingReceiptAmount,
+  type PackageChangeDecision,
+  type PendingPackageChangeInfo
+} from '../../lib/packageChangeLogic';
 import { formatDateBR, formatCurrencyBRL, validateMinimumAge } from '../../lib/validation';
 import type { Student, User, Organization, StudentSkills, PaymentRecord, CnhCategory, AddressFields, AccountReceivable, StudentPackageContract } from '../../types';
 import { CNH_CATEGORIES } from '../../types';
@@ -124,6 +132,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   const [showAddPackageModal, setShowAddPackageModal] = useState<boolean>(false);
   const [addPackageInitialTab, setAddPackageInitialTab] = useState<'CATALOG_PACKAGE' | 'SINGLE_CLASSES' | 'CUSTOM_PACKAGE'>('CATALOG_PACKAGE');
   const [packageToast, setPackageToast] = useState<string>('');
+  const [pendingPackageChange, setPendingPackageChange] = useState<PendingPackageChangeInfo | null>(null);
 
   React.useEffect(() => {
     const onDataChanged = () => setStudentsVersion((v) => v + 1);
@@ -197,7 +206,12 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
     setEditingPackageId(selectedPkg.id);
     setEditingPackageName(selectedPkg.nome);
     setEditingCategory(selectedPkg.categoriaCnh);
-    setEditingTotalLessons(selectedPkg.totalAulas + (activeStudent.contratosPacotes || []).filter(contract=>contract.tipo!=='PACOTE_BASE').reduce((sum,contract)=>sum+contract.quantidadeAulas,0));
+    setEditingTotalLessons(
+      selectedPkg.totalAulas +
+        (activeStudent.contratosPacotes || [])
+          .filter((contract) => (!contract.status || contract.status === 'ATIVO') && contract.tipo !== 'PACOTE_BASE')
+          .reduce((sum, contract) => sum + contract.quantidadeAulas, 0)
+    );
 
     // Se o parecer técnico ainda estiver com o texto automático do plano anterior, atualiza o nome do plano nele também
     if (instructorNotes && prevPkgName && instructorNotes.includes(`"${prevPkgName}"`)) {
@@ -220,7 +234,12 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
       const prevPkgName = editingPackageName;
       setEditingPackageId(matchingPkgForCat.id);
       setEditingPackageName(matchingPkgForCat.nome);
-      setEditingTotalLessons(matchingPkgForCat.totalAulas + (activeStudent.contratosPacotes || []).filter(contract=>contract.tipo!=='PACOTE_BASE').reduce((sum,contract)=>sum+contract.quantidadeAulas,0));
+      setEditingTotalLessons(
+        matchingPkgForCat.totalAulas +
+          (activeStudent.contratosPacotes || [])
+            .filter((contract) => (!contract.status || contract.status === 'ATIVO') && contract.tipo !== 'PACOTE_BASE')
+            .reduce((sum, contract) => sum + contract.quantidadeAulas, 0)
+      );
       if (instructorNotes && prevPkgName && instructorNotes.includes(`"${prevPkgName}"`)) {
         setInstructorNotes(instructorNotes.replace(`"${prevPkgName}"`, `"${matchingPkgForCat.nome}"`));
       }
@@ -231,8 +250,10 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
     }
   };
 
-  const handleSaveStudentProgress = async () => {
+  const handleSaveStudentProgress = async (decisionArg?: PackageChangeDecision) => {
     if (!activeStudent || !editingSkills) return;
+    const decision = typeof decisionArg === 'string' ? decisionArg : undefined;
+    setFichaError('');
     setIsSavingFicha(true);
 
     try {
@@ -256,18 +277,121 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
 
       const availablePkgs = getInstructorPackagesForStudent(activeStudent);
       const selectedPkg = availablePkgs.find((p) => p.id === editingPackageId);
-      const finalCategory = selectedPkg ? selectedPkg.categoriaCnh : editingCategory;
-      const finalPackageId = selectedPkg ? selectedPkg.id : editingPackageId || undefined;
-      const finalPackageName = selectedPkg
+      let finalCategory = selectedPkg ? selectedPkg.categoriaCnh : editingCategory;
+      let finalPackageId = selectedPkg ? selectedPkg.id : editingPackageId || undefined;
+      let finalPackageName = selectedPkg
         ? selectedPkg.nome
         : editingPackageName || `Pacote CNH ${finalCategory} (${editingTotalLessons} Aulas Práticas)`;
-      const finalTotalLessons=Number(editingTotalLessons);
-      if(!Number.isInteger(finalTotalLessons)||finalTotalLessons<1)throw new Error('Informe a quantidade de aulas contratada, sem valores padrão.');
-      const resolved=resolveStudentPackages(activeStudent,availablePkgs,db.getAccountsReceivable(orgId));
-      const extras=resolved.contracts.filter(contract=>contract.tipo!=='PACOTE_BASE').reduce((sum,contract)=>sum+contract.quantidadeAulas,0);
-      if(finalTotalLessons<=extras)throw new Error('O total deve preservar as aulas adicionais já contratadas.');
-      const changedPackage=!!selectedPkg&&(activeStudent.pacoteId!==selectedPkg.id||activeStudent.pacoteNome!==selectedPkg.nome);
-      const contracts=resolved.contracts.map(contract=>contract.tipo==='PACOTE_BASE'?{...contract,pacoteId:finalPackageId,nome:finalPackageName,categoriaCnh:finalCategory,quantidadeAulas:finalTotalLessons-extras,...(changedPackage?{valorCentavos:selectedPkg.valorCentavos,valorAulasCentavos:selectedPkg.valorCentavos}: {})}:contract);
+      let finalTotalLessons = Number(editingTotalLessons);
+      if (!Number.isInteger(finalTotalLessons) || finalTotalLessons < 1) {
+        throw new Error('Informe a quantidade de aulas contratada, sem valores padrão.');
+      }
+
+      const studentAccounts = db.getAccountsReceivable(orgId).filter((a) => a.alunoId === activeStudent.id);
+      const resolved = resolveStudentPackages(activeStudent, availablePkgs, studentAccounts);
+      const activeExtras = resolved.contracts.filter(
+        (contract) => (!contract.status || contract.status === 'ATIVO') && contract.tipo !== 'PACOTE_BASE'
+      );
+      const extrasLessons = activeExtras.reduce((sum, contract) => sum + contract.quantidadeAulas, 0);
+      const changedPackage =
+        !!selectedPkg &&
+        (activeStudent.pacoteId !== selectedPkg.id || activeStudent.pacoteNome !== selectedPkg.nome);
+
+      // Quando há troca de pacote, analisa se o anterior está pago ou em aberto e pergunta ao usuário
+      if (changedPackage && selectedPkg) {
+        const changeInfo =
+          pendingPackageChange && pendingPackageChange.newPkg.id === selectedPkg.id
+            ? pendingPackageChange
+            : analyzePackageChange({
+                student: activeStudent,
+                resolvedContracts: resolved.contracts,
+                studentAccounts,
+                newPkg: selectedPkg
+              });
+
+        if (changeInfo && !decision) {
+          setPendingPackageChange(changeInfo);
+          setIsSavingFicha(false);
+          return;
+        }
+
+        if (changeInfo && decision) {
+          const result = applyPackageChangeDecision({
+            student: activeStudent,
+            resolvedContracts: resolved.contracts,
+            info: changeInfo,
+            decision,
+            actorId: currentUser.id,
+            actorName: currentUser.nome
+          });
+
+          if (result.updatedPrevAccount) {
+            await db.updateAccountReceivableAsync(result.updatedPrevAccount, currentUser.id);
+          }
+          if (result.newAccount) {
+            await db.updateAccountReceivableAsync(result.newAccount, currentUser.id);
+          }
+
+          finalCategory = result.activeCategory;
+          finalPackageId = result.activePackageId;
+          finalPackageName = result.activePackageName;
+          finalTotalLessons = result.newTotalLessons;
+
+          const updatedStudent: Student = {
+            ...activeStudent,
+            nome: editingNome.trim(),
+            email: editingEmail.trim().toLowerCase(),
+            telefone: editingTelefone.trim(),
+            dataNascimento: editingDataNascimento || activeStudent.dataNascimento,
+            idade: calculatedAge,
+            status: editingStatus,
+            categoriaCnh: finalCategory,
+            pacoteId: finalPackageId,
+            pacoteNome: finalPackageName,
+            totalAulasContratadas: finalTotalLessons,
+            contratosPacotes: result.contracts,
+            cep: editingAddress.cep?.trim(),
+            estado: editingAddress.estado?.trim().toUpperCase(),
+            cidade: editingAddress.cidade?.trim(),
+            bairro: editingAddress.bairro?.trim(),
+            logradouro: editingAddress.logradouro?.trim(),
+            numero: editingAddress.numero?.trim(),
+            complemento: editingAddress.complemento?.trim(),
+            habilidades: editingSkills,
+            observacoesInstrutor: instructorNotes
+          };
+
+          await db.saveStudentAsync(updatedStudent, currentUser.id);
+          setActiveStudent(updatedStudent);
+          setEditingCategory(finalCategory);
+          setEditingPackageId(finalPackageId || '');
+          setEditingPackageName(finalPackageName);
+          setEditingTotalLessons(finalTotalLessons);
+          setPendingPackageChange(null);
+          setStudentsVersion((v) => v + 1);
+          setPackageToast(`Alteração de pacote aplicada (${selectedPkg.nome}) com registro para auditoria.`);
+          setSavedSuccess(true);
+          setTimeout(() => setSavedSuccess(false), 3500);
+          return;
+        }
+      }
+
+      if (finalTotalLessons <= extrasLessons && resolved.contracts.some((c) => (!c.status || c.status === 'ATIVO') && c.tipo === 'PACOTE_BASE')) {
+        throw new Error('O total deve preservar as aulas adicionais já contratadas.');
+      }
+
+      const contracts = resolved.contracts.map((contract) =>
+        (!contract.status || contract.status === 'ATIVO') && contract.tipo === 'PACOTE_BASE'
+          ? {
+              ...contract,
+              status: contract.status || ('ATIVO' as const),
+              pacoteId: finalPackageId,
+              nome: finalPackageName,
+              categoriaCnh: finalCategory,
+              quantidadeAulas: Math.max(1, finalTotalLessons - extrasLessons)
+            }
+          : contract
+      );
 
       const updatedStudent: Student = {
         ...activeStudent,
@@ -281,7 +405,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
         pacoteId: finalPackageId,
         pacoteNome: finalPackageName,
         totalAulasContratadas: finalTotalLessons,
-        ...(contracts.length?{contratosPacotes:contracts}:{}),
+        ...(contracts.length ? { contratosPacotes: contracts } : {}),
         cep: editingAddress.cep?.trim(),
         estado: editingAddress.estado?.trim().toUpperCase(),
         cidade: editingAddress.cidade?.trim(),
@@ -292,27 +416,6 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
         habilidades: editingSkills,
         observacoesInstrutor: instructorNotes
       };
-
-      // Se o plano foi alterado para um pacote específico, sincroniza a conta a receber em aberto do aluno
-      if (selectedPkg && (activeStudent.pacoteId !== selectedPkg.id || activeStudent.pacoteNome !== selectedPkg.nome)) {
-        const studentAccounts = db.getAccountsReceivable(orgId).filter((a) => a.alunoId === activeStudent.id);
-        const baseAccountId=resolved.contracts.find(contract=>contract.tipo==='PACOTE_BASE')?.contaReceberId;
-        const candidates=studentAccounts.filter(account=>(baseAccountId?account.id===baseAccountId:account.pacoteId===activeStudent.pacoteId)&&account.status!=='PAGO'&&account.status!=='CANCELADO');
-        if(candidates.length>1)throw new Error('Há mais de uma cobrança do plano. Confira o financeiro antes de alterar o pacote base.');
-        const openAccount=candidates[0];
-        if (openAccount) {
-          const novoSaldo = Math.max(0, selectedPkg.valorCentavos - (openAccount.valorPagoCentavos || 0));
-          const updatedAcc: AccountReceivable = {
-            ...openAccount,
-            pacoteId: selectedPkg.id,
-            descricao: selectedPkg.nome,
-            valorTotalCentavos: selectedPkg.valorCentavos,
-            saldoDevedorCentavos: novoSaldo,
-            status: novoSaldo === 0 ? 'PAGO' : openAccount.valorPagoCentavos > 0 ? 'PARCIAL' : 'PENDENTE'
-          };
-          await db.updateAccountReceivableAsync(updatedAcc, currentUser.id);
-        }
-      }
 
       await db.saveStudentAsync(updatedStudent, currentUser.id);
       setActiveStudent(updatedStudent);
@@ -371,19 +474,25 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
     setShowReceiptModal(true);
   };
 
-  // Helper para abrir emissão de recibo para um pacote/contrato específico
+  // Helper para abrir emissão de recibo para um pacote/contrato específico (sempre pelo valor pendente atual)
   const handleEmitReceiptForContract = (contract: StudentPackageContract, student: Student) => {
+    const studentAccounts = accounts.filter((a) => a.alunoId === student.id);
+    const pendingValue = resolvePendingReceiptAmount(contract, studentAccounts);
+
     const receipt: PaymentReceiptData = {
       id: `rec_cnt_${contract.id}`,
       numeroRecibo: `${Math.floor(100000 + Math.random() * 900000)}`,
       dataEmissao: new Date().toISOString().slice(0, 10),
       dataPagamento: contract.dataContratacao || new Date().toISOString().slice(0, 10),
-      valorCentavos: contract.valorCentavos,
+      valorCentavos: pendingValue,
       metodo: 'PIX',
       tipoRecibo: 'PACOTE',
       pacoteReferente: contract.nome,
       totalAulasContratadas: contract.quantidadeAulas,
-      descricaoServico: contract.nome,
+      descricaoServico:
+        contract.valorDiferencaCentavos !== undefined && pendingValue === contract.valorDiferencaCentavos
+          ? `${contract.nome} (Diferença Pendente)`
+          : contract.nome,
       aluno: {
         nome: student.nome,
         cpfMascarado: student.cpfMascarado,
@@ -402,7 +511,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
       },
       assinaturaUrl: currentUser.assinaturaUrl,
       assinaturaConfig: currentUser.assinaturaConfig,
-      observacoes: contract.observacoes || `Comprovante de contratação de ${contract.quantidadeAulas} aulas práticas de direção veicular.`,
+      observacoes: contract.observacoes || `Comprovante pelo valor pendente atual (${formatCurrencyBRL(pendingValue)}).`,
       codigoAutenticacao: `AUT-${Math.floor(100000 + Math.random() * 900000)}`
     };
 
@@ -455,14 +564,19 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
     setShowReceiptModal(true);
   };
 
-  // Helper para abrir emissão de recibo avulso / novo para o aluno ativo
+  // Helper para abrir emissão de recibo avulso / novo para o aluno ativo (pelo valor pendente atual)
   const handleOpenCustomReceiptForStudent = (student: Student) => {
-    const studentAccounts = accounts.filter((a) => a.alunoId === student.id);
+    const studentAccounts = accounts.filter((a) => a.alunoId === student.id && a.status !== 'CANCELADO');
+    const pendingSum = studentAccounts
+      .filter((a) => a.saldoDevedorCentavos > 0)
+      .reduce((sum, a) => sum + a.saldoDevedorCentavos, 0);
     const defaultDesc = student.pacoteNome || 'Pacote de Aulas Práticas CNH B';
     const defaultValor =
-      studentAccounts.find((a) => a.saldoDevedorCentavos > 0)?.saldoDevedorCentavos ||
-      studentAccounts[0]?.valorTotalCentavos ||
-      60000;
+      pendingSum > 0
+        ? pendingSum
+        : studentAccounts.find((a) => a.saldoDevedorCentavos > 0)?.saldoDevedorCentavos ||
+          studentAccounts[0]?.valorTotalCentavos ||
+          0;
 
     const receipt: PaymentReceiptData = {
       id: `rec_new_${Date.now()}`,
@@ -852,7 +966,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                         <button
                           type="button"
                           disabled={isSavingFicha}
-                          onClick={handleSaveStudentProgress}
+                          onClick={() => void handleSaveStudentProgress()}
                           className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer shrink-0"
                         >
                           <Save className="w-3.5 h-3.5" />
@@ -1087,6 +1201,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                         const isBase = contrato.tipo === 'PACOTE_BASE';
                         const isAvulsa = contrato.tipo === 'AULA_AVULSA';
                         const isPersonalizado = contrato.tipo === 'PACOTE_PERSONALIZADO';
+                        const contractStatus = contrato.status || 'ATIVO';
 
                         const badgeColor = isBase
                           ? 'bg-slate-100 text-slate-800 border-slate-300'
@@ -1104,15 +1219,36 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                           ? 'Personalizado'
                           : 'Pacote Adicional';
 
+                        const statusBadgeClass =
+                          contractStatus === 'CANCELADO'
+                            ? 'bg-red-100 text-red-700 border-red-200'
+                            : contractStatus === 'ALTERADO'
+                            ? 'bg-amber-100 text-amber-800 border-amber-300'
+                            : 'bg-emerald-100 text-emerald-800 border-emerald-300';
+
+                        const statusLabel =
+                          contractStatus === 'CANCELADO'
+                            ? 'Cancelado · Auditoria'
+                            : contractStatus === 'ALTERADO'
+                            ? 'Alterado · Auditoria'
+                            : 'Ativo';
+
                         return (
                           <div
                             key={contrato.id || idx}
-                            className="p-3 bg-white border border-slate-200 hover:border-indigo-300 rounded-xl flex flex-col sm:flex-row justify-between sm:items-center gap-2.5 transition-colors shadow-xs"
+                            className={`p-3 border rounded-xl flex flex-col sm:flex-row justify-between sm:items-center gap-2.5 transition-colors shadow-xs ${
+                              contractStatus === 'ATIVO'
+                                ? 'bg-white border-slate-200 hover:border-indigo-300'
+                                : 'bg-slate-50/80 border-slate-200 opacity-85'
+                            }`}
                           >
                             <div className="space-y-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold border ${badgeColor}`}>
                                   {badgeLabel}
+                                </span>
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold border ${statusBadgeClass}`}>
+                                  {statusLabel}
                                 </span>
                                 <span className="font-bold text-slate-900 text-xs break-words">
                                   {contrato.nome}
@@ -1132,6 +1268,11 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                                     Valor: <strong className="text-slate-900 font-mono font-bold">{formatCurrencyBRL(contrato.valorCentavos)}</strong>
                                   </span>
                                 )}
+                                {contrato.valorDiferencaCentavos !== undefined && (
+                                  <span>
+                                    Diferença a pagar: <strong className="text-amber-700 font-mono font-bold">{formatCurrencyBRL(contrato.valorDiferencaCentavos)}</strong>
+                                  </span>
+                                )}
                                 <span>
                                   Data: <span className="font-mono">{formatDateBR(contrato.dataContratacao)}</span>
                                 </span>
@@ -1146,7 +1287,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                                 type="button"
                                 onClick={() => handleEmitReceiptForContract(contrato, activeStudent)}
                                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-xs"
-                                title="Emitir e baixar recibo PDF oficial referente a este pacote específico"
+                                title="Emitir recibo PDF oficial pelo valor pendente atual referente a este pacote"
                               >
                                 <Receipt className="w-3.5 h-3.5" />
                                 <span>Emitir Recibo</span>
@@ -1188,10 +1329,11 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
               {/* SEÇÃO: FINANCEIRO & RECIBOS DO ALUNO */}
               {(() => {
                 const studentAccounts = accounts.filter((a) => a.alunoId === activeStudent.id);
+                const activeAccounts = studentAccounts.filter((a) => a.status !== 'CANCELADO');
                 const studentPayments = payments.filter((p) => p.alunoId === activeStudent.id);
-                const totalContratado = studentAccounts.reduce((acc, a) => acc + a.valorTotalCentavos, 0);
-                const totalPago = studentAccounts.reduce((acc, a) => acc + a.valorPagoCentavos, 0);
-                const saldoDevedor = studentAccounts.reduce((acc, a) => acc + a.saldoDevedorCentavos, 0);
+                const totalContratado = activeAccounts.reduce((acc, a) => acc + a.valorTotalCentavos, 0);
+                const totalPago = activeAccounts.reduce((acc, a) => acc + a.valorPagoCentavos, 0);
+                const saldoDevedor = activeAccounts.reduce((acc, a) => acc + a.saldoDevedorCentavos, 0);
 
                 return (
                   <div className="space-y-3 p-4 bg-emerald-50/40 border border-emerald-200 rounded-2xl">
@@ -1272,7 +1414,11 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                                 </p>
                               </div>
                               <div className="shrink-0 flex items-center gap-2">
-                                {acc.saldoDevedorCentavos > 0 ? (
+                                {acc.status === 'CANCELADO' ? (
+                                  <span className="text-xs font-bold text-red-700 bg-red-50 px-2.5 py-0.5 rounded border border-red-200">
+                                    Cancelado (Auditoria)
+                                  </span>
+                                ) : acc.saldoDevedorCentavos > 0 ? (
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -1520,7 +1666,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
               <button
                 type="button"
                 disabled={isSavingFicha}
-                onClick={handleSaveStudentProgress}
+                onClick={() => void handleSaveStudentProgress()}
                 className="flex items-center justify-center gap-1.5 px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white rounded-xl font-semibold shadow-sm transition-colors cursor-pointer w-full sm:w-auto"
               >
                 <Save className="w-4 h-4" />
@@ -1753,6 +1899,151 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
             handleEmitReceiptForContract(contract, std);
           }}
         />
+      )}
+
+      {/* MODAL INTERATIVO: CONFIRMAÇÃO DE TROCA DE PACOTE (PAGO OU EM ABERTO) */}
+      {pendingPackageChange && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/75 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="bg-slate-900 text-white p-4 sm:p-5 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <AlertCircle className="w-5 h-5 text-amber-400 shrink-0" />
+                <div>
+                  <h3 className="text-sm sm:text-base font-extrabold">
+                    {pendingPackageChange.isPaid
+                      ? 'Troca de Pacote já Pago'
+                      : 'Troca de Pacote com Pagamento em Aberto'}
+                  </h3>
+                  <p className="text-[11px] text-slate-300">
+                    Escolha como deseja registrar o pacote anterior para auditoria e o valor financeiro
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPendingPackageChange(null)}
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg cursor-pointer"
+                aria-label="Fechar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 text-xs text-slate-700">
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
+                <p>
+                  <strong>Pacote Anterior:</strong> {pendingPackageChange.prevContract.nome} (
+                  <span className="font-mono font-bold">
+                    {formatCurrencyBRL(pendingPackageChange.prevTotalCents)}
+                  </span>
+                  {pendingPackageChange.isPaid
+                    ? ` · Pago: ${formatCurrencyBRL(pendingPackageChange.paidCents)}`
+                    : ' · Status: Em Aberto'}
+                  )
+                </p>
+                <p>
+                  <strong>Novo Pacote Selecionado:</strong> {pendingPackageChange.newPkg.nome} (
+                  <span className="font-mono font-bold text-blue-700">
+                    {formatCurrencyBRL(pendingPackageChange.newPkg.valorCentavos)}
+                  </span>
+                  )
+                </p>
+                <p className="text-amber-800 font-semibold pt-1">
+                  Diferença calculada:{' '}
+                  <span className="font-mono font-extrabold">
+                    {formatCurrencyBRL(
+                      pendingPackageChange.isPaid
+                        ? pendingPackageChange.diffFromPaidCents
+                        : pendingPackageChange.diffFromPrevTotalCents
+                    )}
+                  </span>
+                </p>
+              </div>
+
+              {pendingPackageChange.isPaid ? (
+                <div className="space-y-2.5">
+                  <p className="font-semibold text-slate-900">
+                    Este pacote já consta como <strong>PAGO</strong>. Deseja substituir o pacote atual cobrando apenas a diferença, ou manter o anterior pago e adicionar este novo pacote ao aluno?
+                  </p>
+                  <button
+                    type="button"
+                    disabled={isSavingFicha}
+                    onClick={() => void handleSaveStudentProgress('PAGO_TROCAR_DIFERENCA')}
+                    className="w-full text-left p-3.5 rounded-xl border-2 border-blue-600 bg-blue-50 hover:bg-blue-100 text-blue-950 font-bold transition-colors cursor-pointer space-y-1"
+                  >
+                    <span className="block">
+                      Sim — Substituir pelo novo pacote e cobrar a diferença (
+                      {formatCurrencyBRL(pendingPackageChange.diffFromPaidCents)})
+                    </span>
+                    <span className="block text-[11px] font-normal text-blue-800">
+                      Mantém o pacote anterior no histórico como <strong>ALTERADO</strong> (pago para auditoria) e ativa o novo com a diferença pendente.
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={isSavingFicha}
+                    onClick={() => void handleSaveStudentProgress('PAGO_ADICIONAR_NOVO')}
+                    className="w-full text-left p-3.5 rounded-xl border border-emerald-400 bg-emerald-50 hover:bg-emerald-100 text-emerald-950 font-bold transition-colors cursor-pointer space-y-1"
+                  >
+                    <span className="block">
+                      Manter o anterior pago e adicionar o novo pacote (
+                      {formatCurrencyBRL(pendingPackageChange.newPkg.valorCentavos)})
+                    </span>
+                    <span className="block text-[11px] font-normal text-emerald-800">
+                      Adiciona mais um pacote <strong>ATIVO</strong> no cadastro do aluno e soma as aulas.
+                    </span>
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  <p className="font-semibold text-slate-900">
+                    O pacote anterior está <strong>EM ABERTO</strong>. Deseja atualizar o pacote registrando apenas a diferença ou fazer uma troca integral?
+                  </p>
+                  <button
+                    type="button"
+                    disabled={isSavingFicha}
+                    onClick={() => void handleSaveStudentProgress('ABERTO_TROCA_INTEGRAL')}
+                    className="w-full text-left p-3.5 rounded-xl border-2 border-blue-600 bg-blue-50 hover:bg-blue-100 text-blue-950 font-bold transition-colors cursor-pointer space-y-1"
+                  >
+                    <span className="block">
+                      Troca Integral — Cobrar valor do novo pacote (
+                      {formatCurrencyBRL(pendingPackageChange.newPkg.valorCentavos)})
+                    </span>
+                    <span className="block text-[11px] font-normal text-blue-800">
+                      Mantém o lançamento anterior no histórico com status <strong>CANCELADO</strong> para auditoria e ativa o novo pacote integral.
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={isSavingFicha}
+                    onClick={() => void handleSaveStudentProgress('ABERTO_REGISTRAR_DIFERENCA')}
+                    className="w-full text-left p-3.5 rounded-xl border border-amber-400 bg-amber-50 hover:bg-amber-100 text-amber-950 font-bold transition-colors cursor-pointer space-y-1"
+                  >
+                    <span className="block">
+                      Atualizar pacote e registrar apenas a diferença (+{' '}
+                      {formatCurrencyBRL(pendingPackageChange.diffFromPrevTotalCents)})
+                    </span>
+                    <span className="block text-[11px] font-normal text-amber-900">
+                      Mantém a fatura em aberto anterior, marca o pacote anterior como <strong>ALTERADO</strong> e lança a diferença a pagar.
+                    </span>
+                  </button>
+                </div>
+              )}
+
+              <div className="flex justify-end pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setPendingPackageChange(null)}
+                  className="px-4 py-2 border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-xl font-semibold cursor-pointer"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

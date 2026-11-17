@@ -29,7 +29,12 @@ import {
   readContractReminder,
   hasAcceptedCurrentContracts
 } from '../src/legal/contractReminder';
-import type { Student, User, StudentPackageContract } from '../src/types';
+import {
+  analyzePackageChange,
+  applyPackageChangeDecision,
+  resolvePendingReceiptAmount
+} from '../src/lib/packageChangeLogic';
+import type { AccountReceivable, PackageOffer, Student, User, StudentPackageContract } from '../src/types';
 
 const templateDir = path.resolve(
   'g:/My Drive/Alexdiasinstrutor/site-alex/src/legal/documentos_juridicos_plataforma'
@@ -245,7 +250,129 @@ async function runTests() {
   );
   console.log('✓ Teste 4 (Aceite eletronico gravado e validado): OK');
 
-  console.log('=== Todos os 4 testes automatizados de contrato passaram! ===');
+  // TEST 5: Troca de pacote ja PAGO cobrando apenas a diferenca + recibo pelo valor pendente atual
+  const paidAccount: AccountReceivable = {
+    id: 'acc_paid_1',
+    organizacaoId: 'org_1',
+    alunoId: student.id,
+    pacoteId: 'pkg_1',
+    descricao: 'Aula personalizada',
+    valorTotalCentavos: 75000,
+    valorPagoCentavos: 75000,
+    saldoDevedorCentavos: 0,
+    dataVencimento: '2026-11-17',
+    status: 'PAGO',
+    criadoEm: '2026-11-17T10:00:00Z'
+  };
+  const basePaidContract: StudentPackageContract = {
+    ...plan1,
+    pacoteId: 'pkg_1',
+    contaReceberId: paidAccount.id
+  };
+  const newHigherPkg: PackageOffer = {
+    id: 'pkg_2',
+    organizacaoId: 'org_1',
+    nome: 'Pacote Completo 10 Aulas',
+    totalAulas: 10,
+    categoriaCnh: 'B',
+    valorCentavos: 120000,
+    formaPagamento: 'PIX',
+    descricao: '10 aulas praticas',
+    ativo: true
+  };
+  const infoPaid = analyzePackageChange({
+    student: { ...student, pacoteId: 'pkg_1', pacoteNome: 'Aula personalizada' },
+    resolvedContracts: [basePaidContract],
+    studentAccounts: [paidAccount],
+    newPkg: newHigherPkg
+  });
+  assert.ok(infoPaid && infoPaid.isPaid, 'Deve identificar pacote anterior como PAGO');
+  assert.equal(infoPaid.diffFromPaidCents, 45000, 'Diferenca deve ser R$ 1.200 - R$ 750 = R$ 450');
+
+  const resPaidDiff = applyPackageChangeDecision({
+    student: { ...student, pacoteId: 'pkg_1', pacoteNome: 'Aula personalizada' },
+    resolvedContracts: [basePaidContract],
+    info: infoPaid,
+    decision: 'PAGO_TROCAR_DIFERENCA',
+    actorId: instructor.id,
+    actorName: instructor.nome
+  });
+  assert.equal(resPaidDiff.contracts.length, 2, 'Deve manter o anterior + criar novo');
+  assert.equal(resPaidDiff.contracts[0].status, 'ALTERADO', 'Anterior passa para ALTERADO para auditoria');
+  assert.equal(resPaidDiff.contracts[1].status, 'ATIVO', 'Novo passa para ATIVO');
+  assert.equal(resPaidDiff.contracts[1].valorDiferencaCentavos, 45000);
+  assert.ok(resPaidDiff.newAccount);
+  assert.equal(resPaidDiff.newAccount!.saldoDevedorCentavos, 45000, 'Cobranca criada apenas com a diferenca');
+  assert.equal(
+    resolvePendingReceiptAmount(resPaidDiff.contracts[1], [paidAccount, resPaidDiff.newAccount!]),
+    45000,
+    'Recibo deve sair pelo valor pendente atual (R$ 450,00)'
+  );
+  console.log('✓ Teste 5 (Troca de pacote PAGO com diferenca e recibo pendente): OK');
+
+  // TEST 6: Manter pacote anterior PAGO e adicionar novo pacote
+  const resPaidAdd = applyPackageChangeDecision({
+    student: { ...student, pacoteId: 'pkg_1', pacoteNome: 'Aula personalizada' },
+    resolvedContracts: [basePaidContract],
+    info: infoPaid,
+    decision: 'PAGO_ADICIONAR_NOVO',
+    actorId: instructor.id
+  });
+  assert.equal(resPaidAdd.contracts.filter((c) => c.status === 'ATIVO').length, 2, 'Ambos permanecem ATIVOS');
+  assert.equal(resPaidAdd.newTotalLessons, 14, 'Soma 4 + 10 = 14 aulas');
+  assert.equal(resPaidAdd.newAccount!.valorTotalCentavos, 120000);
+  console.log('✓ Teste 6 (Manter pacote anterior pago + adicionar novo): OK');
+
+  // TEST 7: Pacote EM ABERTO -> Troca Integral (cancela anterior para auditoria e cobra novo valor)
+  const openAccount: AccountReceivable = {
+    ...paidAccount,
+    id: 'acc_open_1',
+    valorPagoCentavos: 0,
+    saldoDevedorCentavos: 75000,
+    status: 'PENDENTE'
+  };
+  const baseOpenContract: StudentPackageContract = {
+    ...plan1,
+    pacoteId: 'pkg_1',
+    contaReceberId: openAccount.id
+  };
+  const infoOpen = analyzePackageChange({
+    student: { ...student, pacoteId: 'pkg_1', pacoteNome: 'Aula personalizada' },
+    resolvedContracts: [baseOpenContract],
+    studentAccounts: [openAccount],
+    newPkg: newHigherPkg
+  });
+  assert.ok(infoOpen && !infoOpen.isPaid, 'Deve identificar pacote anterior como EM ABERTO');
+
+  const resOpenIntegral = applyPackageChangeDecision({
+    student: { ...student, pacoteId: 'pkg_1', pacoteNome: 'Aula personalizada' },
+    resolvedContracts: [baseOpenContract],
+    info: infoOpen,
+    decision: 'ABERTO_TROCA_INTEGRAL',
+    actorId: instructor.id
+  });
+  assert.equal(resOpenIntegral.contracts[0].status, 'CANCELADO', 'Contrato anterior fica CANCELADO para auditoria');
+  assert.equal(resOpenIntegral.contracts[1].status, 'ATIVO');
+  assert.equal(resOpenIntegral.updatedPrevAccount?.status, 'CANCELADO', 'Fatura anterior fica CANCELADA');
+  assert.equal(resOpenIntegral.updatedPrevAccount?.saldoDevedorCentavos, 0);
+  assert.equal(resOpenIntegral.newAccount?.valorTotalCentavos, 120000);
+  console.log('✓ Teste 7 (Pacote EM ABERTO -> Troca Integral com cancelamento de auditoria): OK');
+
+  // TEST 8: Pacote EM ABERTO -> Registrar apenas a diferenca
+  const resOpenDiff = applyPackageChangeDecision({
+    student: { ...student, pacoteId: 'pkg_1', pacoteNome: 'Aula personalizada' },
+    resolvedContracts: [baseOpenContract],
+    info: infoOpen,
+    decision: 'ABERTO_REGISTRAR_DIFERENCA',
+    actorId: instructor.id
+  });
+  assert.equal(resOpenDiff.contracts[0].status, 'ALTERADO');
+  assert.equal(resOpenDiff.contracts[1].status, 'ATIVO');
+  assert.equal(resOpenDiff.updatedPrevAccount, undefined, 'Mantem fatura original em aberto');
+  assert.equal(resOpenDiff.newAccount?.saldoDevedorCentavos, 45000, 'Lanca apenas a diferenca');
+  console.log('✓ Teste 8 (Pacote EM ABERTO -> Atualizar e registrar diferenca): OK');
+
+  console.log('=== Todos os 8 testes automatizados passaram! ===');
 }
 
 runTests().catch((err) => {

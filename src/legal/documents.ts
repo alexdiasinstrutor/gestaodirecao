@@ -120,8 +120,11 @@ export function legalContractValuesMulti(
   const money = (cents: number) => (cents / 100).toFixed(2).replace('.', ',');
   const defaults = legalDefaults(instructor, student, studentUser);
 
-  const list = contracts.length > 0
-    ? contracts
+  const activeContracts = contracts.filter((c) => !c.status || c.status === 'ATIVO');
+  const effectiveSource = activeContracts.length > 0 ? activeContracts : contracts;
+
+  const list = effectiveSource.length > 0
+    ? effectiveSource
     : [{
       id: `cnt_summary_${student.id}`,
       alunoId: student.id,

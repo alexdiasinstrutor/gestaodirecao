@@ -125,6 +125,7 @@ export function LegalDocumentsAccess({
       }
 
       const resolved = resolveStudentPackages(candidate, packages, accounts);
+      const activeContracts = resolved.contracts.filter((c) => !c.status || c.status === 'ATIVO');
       const studentWithContracts: Student = {
         ...candidate,
         contratosPacotes: resolved.contracts
@@ -143,7 +144,7 @@ export function LegalDocumentsAccess({
         student: studentWithContracts,
         instructor,
         studentUser,
-        contracts: resolved.contracts,
+        contracts: activeContracts.length > 0 ? activeContracts : resolved.contracts,
         packages
       });
 
@@ -214,6 +215,7 @@ export function LegalDocumentsAccess({
           }
 
           const resolved = resolveStudentPackages(matchedStudent, packages, accounts);
+          const activeContracts = resolved.contracts.filter((c) => !c.status || c.status === 'ATIVO');
           const studentWithContracts: Student = {
             ...matchedStudent,
             contratosPacotes: resolved.contracts
@@ -228,7 +230,7 @@ export function LegalDocumentsAccess({
             student: studentWithContracts,
             instructor,
             studentUser: account,
-            contracts: resolved.contracts,
+            contracts: activeContracts.length > 0 ? activeContracts : resolved.contracts,
             packages
           });
 

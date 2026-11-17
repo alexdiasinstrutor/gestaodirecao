@@ -144,7 +144,13 @@ export type StudentContractType =
   | 'AULA_AVULSA'
   | 'PACOTE_PERSONALIZADO';
 
+export type StudentContractStatus = 'ATIVO' | 'ALTERADO' | 'CANCELADO';
+
 export interface StudentPackageContract {
+  status?: StudentContractStatus;
+  valorDiferencaCentavos?: number;
+  valorAnteriorPagoCentavos?: number;
+  substituiuContratoId?: string;
   duracaoAulaMinutos?: number;
   diasAvisoExame?: number;
   prazoValidadeDias?: number;

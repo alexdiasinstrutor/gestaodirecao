@@ -25,7 +25,9 @@ export function hasAcceptedCurrentContracts(
   if (validReceipts.length === 0) return false;
 
   // Verifica se existe aceite direto para este aluno e seus contratos ativos
-  const activeContracts = (student.contratosPacotes || []).filter((c) => (c.quantidadeAulas || 0) > 0);
+  const activeContracts = (student.contratosPacotes || []).filter(
+    (c) => (!c.status || c.status === 'ATIVO') && (c.quantidadeAulas || 0) > 0
+  );
   const directAcceptance = validReceipts.some((r) => {
     const rec = r as LegalAcceptanceRecord;
     if (rec.student_id && rec.student_id !== student.id) return false;
