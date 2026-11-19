@@ -17,6 +17,7 @@ import {
   AccountReceivable, PaymentRecord, Expense, Investment, PackageOffer,
   AuditLog, WhatsAppReminderLog, StudentTransferHistory,
   DiscountCoupon, CouponRedemption, StudentPackageContract,
+  LessonCheckinRecord,
 } from '../types';
 
 // ─── Helpers de mapeamento: TypeScript camelCase → SQL snake_case ───────────
@@ -686,6 +687,72 @@ function rowToRedemption(r: any): CouponRedemption {
   };
 }
 
+function checkinToRow(c: LessonCheckinRecord): Record<string, any> {
+  return {
+    id: c.id,
+    organizacao_id: c.organizacaoId,
+    aula_id: c.aulaId,
+    aluno_id: c.alunoId,
+    aluno_nome: c.alunoNome,
+    instrutor_id: c.instrutorId,
+    instrutor_nome: c.instrutorNome,
+    veiculo_id: c.veiculoId || null,
+    data_agendamento: c.dataAgendamento,
+    hora_inicio_agendamento: c.horaInicioAgendamento,
+    hora_fim_agendamento: c.horaFimAgendamento,
+    topico_aula: c.topicoAula || null,
+    checkin_em: c.checkinEm,
+    checkout_em: c.checkoutEm || null,
+    iniciado_por_id: c.iniciadoPorId,
+    iniciado_por_papel: c.iniciadoPorPapel,
+    finalizado_por_id: c.finalizadoPorId || null,
+    finalizado_por_papel: c.finalizadoPorPapel || null,
+    tempo_total_segundos: c.tempoTotalSegundos || 0,
+    tempo_deslocamento_segundos: c.tempoDeslocamentoSegundos || 0,
+    tempo_parada_segundos: c.tempoParadaSegundos || 0,
+    distancia_km: c.distanciaKm || 0,
+    coordenadas: c.coordenadas || [],
+    modo_hardware: c.modoHardware,
+    motivo_hardware_limitado: c.motivoHardwareLimitado || null,
+    status: c.status,
+    criado_em: c.criadoEm,
+    atualizado_em: c.atualizadoEm,
+  };
+}
+
+function rowToCheckin(r: any): LessonCheckinRecord {
+  return {
+    id: r.id,
+    organizacaoId: r.organizacao_id,
+    aulaId: r.aula_id,
+    alunoId: r.aluno_id,
+    alunoNome: r.aluno_nome,
+    instrutorId: r.instrutor_id,
+    instrutorNome: r.instrutor_nome,
+    veiculoId: r.veiculo_id || undefined,
+    dataAgendamento: r.data_agendamento,
+    horaInicioAgendamento: r.hora_inicio_agendamento,
+    horaFimAgendamento: r.hora_fim_agendamento,
+    topicoAula: r.topico_aula || undefined,
+    checkinEm: r.checkin_em,
+    checkoutEm: r.checkout_em || undefined,
+    iniciadoPorId: r.iniciado_por_id,
+    iniciadoPorPapel: r.iniciado_por_papel,
+    finalizadoPorId: r.finalizado_por_id || undefined,
+    finalizadoPorPapel: r.finalizado_por_papel || undefined,
+    tempoTotalSegundos: Number(r.tempo_total_segundos) || 0,
+    tempoDeslocamentoSegundos: Number(r.tempo_deslocamento_segundos) || 0,
+    tempoParadaSegundos: Number(r.tempo_parada_segundos) || 0,
+    distanciaKm: Number(r.distancia_km) || 0,
+    coordenadas: Array.isArray(r.coordenadas) ? r.coordenadas : [],
+    modoHardware: r.modo_hardware || 'LIVE_MAP',
+    motivoHardwareLimitado: r.motivo_hardware_limitado || undefined,
+    status: r.status || 'FINALIZADO',
+    criadoEm: r.criado_em,
+    atualizadoEm: r.atualizado_em,
+  };
+}
+
 // ─── Cloud Sync Vault (Sincronização Resiliente p/ Tabelas com RLS Estrito) ───
 export const VAULT_PREFIX = '__agd_vault_';
 
@@ -695,6 +762,7 @@ const VAULT_TABLES = new Set([
   'vehicles',
   'available_slots',
   'lessons',
+  'lesson_checkins',
   'accounts_receivable',
   'payment_records',
   'expenses',
@@ -703,6 +771,21 @@ const VAULT_TABLES = new Set([
   'whatsapp_logs',
   'student_transfers',
 ]);
+
+function isVaultSafeError(table: string, error: { code?: string; message?: string } | null | undefined): boolean {
+  if (!error || !VAULT_TABLES.has(table)) return false;
+  const code = String(error.code || '');
+  const msg = String(error.message || '').toLowerCase();
+  return (
+    code === '42501' ||
+    code === '42P01' ||
+    code === 'PGRST204' ||
+    code === 'PGRST205' ||
+    msg.includes('row-level security') ||
+    msg.includes('does not exist') ||
+    msg.includes('schema cache')
+  );
+}
 
 const vaultWriteQueues = new Map<string, Promise<void>>();
 
@@ -892,8 +975,8 @@ async function performSupabaseUpsert(table: string, row: Record<string, any>): P
   }
   const { error } = await supabase.from(table).upsert(row, { onConflict: 'id' });
   if (error) {
-    // Se a tabela possui RLS restritivo p/ chave anon (42501), o dado já está persistido com segurança no Cloud Vault
-    if (VAULT_TABLES.has(table) && (error.code === '42501' || error.message?.includes('row-level security'))) {
+    // Se a tabela possui RLS restritivo ou ainda não foi migrada no PostgreSQL, o dado já está persistido com segurança no Cloud Vault
+    if (isVaultSafeError(table, error)) {
       return;
     }
 
@@ -968,7 +1051,7 @@ async function performSupabaseDelete(table: string, id: string): Promise<void> {
     await deleteVaultRowsBatch(table, [id]);
   }
   const { error } = await supabase.from(table).delete().eq('id', id);
-  if (error && !(VAULT_TABLES.has(table) && error.code === '42501')) {
+  if (error && !isVaultSafeError(table, error)) {
     throw new Error(`[Supabase] ${table}: ${error.message}`);
   }
 }
@@ -1356,6 +1439,14 @@ export const supabaseAdapter = {
   },
   async saveCouponRedemption(redemption: CouponRedemption): Promise<void> {
     await supabaseUpsert('coupon_redemptions', redemptionToRow(redemption));
+  },
+
+  // Check-in de Aulas & Telemetria GPS
+  async getLessonCheckins(orgId?: string): Promise<LessonCheckinRecord[]> {
+    return supabaseSelect('lesson_checkins', rowToCheckin, orgId ? { organizacao_id: orgId } : undefined);
+  },
+  async saveLessonCheckin(checkin: LessonCheckinRecord): Promise<void> {
+    await supabaseUpsert('lesson_checkins', checkinToRow(checkin));
   },
 
   // Limpeza total de dados para ambiente de produção

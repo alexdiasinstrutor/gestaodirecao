@@ -97,6 +97,13 @@ export const ALL_SYSTEM_MODULES: SystemModule[] = [
     categoria: 'ESTRATEGICO',
     descricao: 'Relatório fiscal anual por aluno pagador (com CPF) e exportação para o contador.'
   },
+  {
+    id: 'LESSON_CHECKIN_GPS',
+    nome: 'Check-in de Aula & Telemetria GPS (Mapa de Percurso)',
+    categoria: 'ESTRATEGICO',
+    descricao: 'Cronômetro de aula com check-in/check-out, rota GPS no Google Maps, verificação de hardware anti-falha e relatório por aluno.',
+    badge: 'NOVO'
+  },
 
   // CFC Enterprise
   {
@@ -231,7 +238,8 @@ const DEFAULT_SAAS_PLANS: Record<string, SaaSPlanDefinition> = {
     limiteInstrutores: 0, // Ilimitado
     diasValidadePadrao: 30,
     corBadge: 'bg-gradient-to-r from-amber-50 to-orange-50 text-amber-900 border-amber-300 font-black',
-    modulosPermitidos: ALL_SYSTEM_MODULES.map((m) => m.id),
+    // Novos módulos avançados iniciam desabilitados nos planos padrão até validação/liberação pelo Administrador Master
+    modulosPermitidos: ALL_SYSTEM_MODULES.filter((m) => m.id !== 'LESSON_CHECKIN_GPS').map((m) => m.id),
     destaques: [
       'Alunos e instrutores ILIMITADOS',
       'Tudo do Plano Avançado +',
@@ -300,6 +308,32 @@ export async function syncSaaSPlans(): Promise<void> {
 }
 export async function resetSaaSPlans(): Promise<void> {
   for (const plan of Object.values(DEFAULT_SAAS_PLANS)) await saveSaaSPlan(plan.id, structuredClone(plan));
+}
+
+/**
+ * Habilita ou remove um módulo em lote nos planos SaaS informados (uso exclusivo Master após homologação).
+ */
+export async function configureModuleAcrossPlans(
+  moduleId: string,
+  enabledPlanIds: string[]
+): Promise<{ savedLocally: boolean; syncedRemote: boolean }> {
+  const plans = getSaaSPlans();
+  const enabledSet = new Set(enabledPlanIds);
+  let syncedRemote = true;
+  for (const plan of Object.values(plans)) {
+    const has = plan.modulosPermitidos.includes(moduleId);
+    const shouldHave = enabledSet.has(plan.id);
+    if (has === shouldHave) continue;
+    const nextModules = shouldHave
+      ? [...plan.modulosPermitidos, moduleId]
+      : plan.modulosPermitidos.filter((m) => m !== moduleId);
+    try {
+      await saveSaaSPlan(plan.id, { ...plan, modulosPermitidos: nextModules });
+    } catch {
+      syncedRemote = false;
+    }
+  }
+  return { savedLocally: true, syncedRemote };
 }
 
 /**

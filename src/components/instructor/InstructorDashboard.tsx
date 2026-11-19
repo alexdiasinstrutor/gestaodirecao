@@ -20,11 +20,12 @@ import {
   ShieldCheck,
   Sparkles,
   MapPin,
-  Bell
+  Bell,
+  Navigation
 } from 'lucide-react';
 import { db } from '../../lib/storage';
 import { formatCurrencyBRL, formatDateBR } from '../../lib/validation';
-import { getPlanDetails } from '../../lib/saasPlans';
+import { getPlanDetails, canAccessModule } from '../../lib/saasPlans';
 import { buildWhatsAppLink } from '../../lib/whatsapp';
 import { User, Organization } from '../../types';
 
@@ -63,6 +64,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
 
   // SaaS Plan & Coupons Information
   const planDetails = getPlanDetails(currentOrg.plano);
+  const hasCheckinModule = canAccessModule(currentOrg, 'LESSON_CHECKIN_GPS', currentUser);
   const instructorCoupons = db.getCoupons({ escopo: 'ALUNO', instrutorId: currentUser.id });
   const activeCouponsCount = instructorCoupons.filter((c) => c.ativo).length;
   const totalCouponsUsed = instructorCoupons.reduce((sum, c) => sum + (c.usosRealizados || 0), 0);
@@ -114,6 +116,17 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {hasCheckinModule && (
+              <button
+                type="button"
+                onClick={() => onNavigate('LESSON_CHECKIN')}
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-extrabold rounded-xl transition-colors cursor-pointer touch-target shadow-md"
+                title="Iniciar Check-in de aula com rastreamento GPS e cronômetro"
+              >
+                <Navigation className="w-4 h-4 shrink-0" />
+                <span>Iniciar Check-in</span>
+              </button>
+            )}
             <button
               onClick={onOpenNewStudent}
               className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer touch-target shadow-sm"
@@ -253,6 +266,21 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
       {/* Essential Mobile Quick-Action Grid (Shown in Simplified Mode) */}
       {isSimplified && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+          {hasCheckinModule && (
+            <button
+              type="button"
+              onClick={() => onNavigate('LESSON_CHECKIN')}
+              className="p-3.5 bg-emerald-50 hover:bg-emerald-100 rounded-2xl border border-emerald-300 shadow-xs flex items-center gap-3 text-left transition-all cursor-pointer"
+            >
+              <div className="p-2.5 rounded-xl bg-emerald-600 text-white shrink-0">
+                <Navigation className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-extrabold text-emerald-950 truncate">Iniciar Check-in</p>
+                <p className="text-xs text-emerald-800 font-bold">GPS & Rota</p>
+              </div>
+            </button>
+          )}
           <button
             type="button"
             onClick={() => onNavigate('SCHEDULE')}

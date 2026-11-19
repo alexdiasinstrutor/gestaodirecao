@@ -38,7 +38,8 @@ import {
   Rocket,
   CreditCard,
   LayoutGrid,
-  Ticket
+  Ticket,
+  Navigation
 } from 'lucide-react';
 import { db, CadastrosIntegrityReport, seedDemoData } from '../../lib/storage';
 import { formatCurrencyBRL, formatDateBR } from '../../lib/validation';
@@ -65,6 +66,7 @@ interface AdminMasterPanelProps {
   currentUser: User;
   onSwitchUser: (email: string) => void;
   onUserUpdated?: (updated: User) => void;
+  onOpenCheckinModule?: () => void;
   isSimplified?: boolean;
   onSwitchToFullMode?: () => void;
 }
@@ -73,6 +75,7 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
   currentUser,
   onSwitchUser,
   onUserUpdated,
+  onOpenCheckinModule,
   isSimplified = false,
   onSwitchToFullMode
 }) => {
@@ -305,6 +308,17 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
+            {onOpenCheckinModule && (
+              <button
+                type="button"
+                onClick={onOpenCheckinModule}
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-extrabold rounded-xl shadow-md transition-colors cursor-pointer"
+                title="Testar e validar o novo módulo de Check-in GPS & Rota antes de liberar nos planos"
+              >
+                <Navigation className="w-4 h-4 shrink-0" />
+                <span>Validar Check-in & Rota GPS</span>
+              </button>
+            )}
             {/* Ações Rápidas do Master Logado */}
             <div className="flex items-center gap-1.5 p-1 bg-white/10 rounded-xl border border-white/15">
               <button

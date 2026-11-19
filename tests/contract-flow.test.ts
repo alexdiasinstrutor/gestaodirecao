@@ -37,7 +37,8 @@ import {
 import type { AccountReceivable, PackageOffer, Student, User, StudentPackageContract } from '../src/types';
 
 const templateDir = path.resolve(
-  'g:/My Drive/Alexdiasinstrutor/site-alex/src/legal/documentos_juridicos_plataforma'
+  import.meta.dirname,
+  '../src/legal/documentos_juridicos_plataforma'
 );
 
 const customSources: Record<string, string> = {
@@ -276,7 +277,7 @@ async function runTests() {
     totalAulas: 10,
     categoriaCnh: 'B',
     valorCentavos: 120000,
-    formaPagamento: 'PIX',
+    formaPagamento: 'A_VISTA',
     descricao: '10 aulas praticas',
     ativo: true
   };

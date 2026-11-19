@@ -18,7 +18,8 @@ import {
   LayoutGrid,
   Minimize2,
   MapPin,
-  Car
+  Car,
+  Navigation
 } from 'lucide-react';
 import { db, initDatabase, syncFromSupabase } from './lib/storage';
 import { User, Organization } from './types';
@@ -44,6 +45,7 @@ import { SecurityAgentsModal } from './components/common/SecurityAgentsModal';
 import { PixConfigModal } from './components/common/PixConfigModal';
 import { InstructorEditModal } from './components/common/InstructorEditModal';
 import { SmartScrollNav } from './components/common/SmartScrollNav';
+import { LessonCheckinView } from './components/common/LessonCheckinView';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { useInterfaceMode } from './hooks/useInterfaceMode';
 import { canAccessModule } from './lib/saasPlans';
@@ -340,6 +342,7 @@ export default function App() {
     { id: 'DASHBOARD', label: 'Painel Geral', shortLabel: 'Início', icon: LayoutDashboard, moduleId: 'DASHBOARD', essential: true },
     { id: 'SCHEDULE', label: 'Agenda & Horários', shortLabel: 'Agenda', icon: Calendar, moduleId: 'SCHEDULE', essential: true },
     { id: 'STUDENTS', label: 'Alunos & Progresso', shortLabel: 'Alunos', icon: Users, moduleId: 'STUDENTS', essential: true },
+    { id: 'LESSON_CHECKIN', label: 'Check-in & Rota GPS', shortLabel: 'Check-in', icon: Navigation, moduleId: 'LESSON_CHECKIN_GPS', essential: true },
     { id: 'VEHICLES', label: 'Meus Veículos', shortLabel: 'Veículos', icon: Car, moduleId: 'VEHICLES', essential: true },
     { id: 'GEO_DEMAND', label: 'Mapa & Notificações', shortLabel: 'Mapa/Avisos', icon: MapPin, moduleId: 'DASHBOARD', essential: true },
     { id: 'WHATSAPP', label: 'Cobrança & PIX', shortLabel: 'Cobrar/PIX', icon: MessageSquare, moduleId: 'WHATSAPP', essential: true },
@@ -504,11 +507,16 @@ export default function App() {
               <ReportsView currentOrg={currentOrg!} currentUser={currentUser} />
             )}
 
+            {activeTab === 'LESSON_CHECKIN' && (
+              <LessonCheckinView currentUser={currentUser} currentOrg={currentOrg!} />
+            )}
+
             {activeTab === 'ADMIN' && (
               <AdminMasterPanel
                 currentUser={currentUser}
                 onSwitchUser={handleSwitchUser}
                 onUserUpdated={(updated) => setCurrentUser(updated)}
+                onOpenCheckinModule={() => setActiveTab('LESSON_CHECKIN')}
                 isSimplified={isSimplified}
                 onSwitchToFullMode={() => setViewMode('FULL')}
               />

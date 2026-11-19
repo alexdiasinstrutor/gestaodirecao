@@ -25,9 +25,13 @@ import {
   Tag,
   Sparkles,
   CalendarClock,
-  MessageCircle
+  MessageCircle,
+  Navigation,
+  ArrowLeft
 } from 'lucide-react';
 import { db, syncFromSupabase } from '../../lib/storage';
+import { canAccessModule } from '../../lib/saasPlans';
+import { LessonCheckinView } from '../common/LessonCheckinView';
 import { formatCurrencyBRL, formatDateBR } from '../../lib/validation';
 import { generatePixCopiaECola, getPixQrCodeImageUrl, buildWhatsAppLink } from '../../lib/whatsapp';
 import {
@@ -56,9 +60,11 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
 }) => {
   const orgId = currentOrg.id;
   const [studentMobileTab, setStudentMobileTab] = useState<'BOOK' | 'PIX' | 'PROGRESS'>('BOOK');
+  const [showCheckinView, setShowCheckinView] = useState<boolean>(false);
   const [portalVersion, setPortalVersion] = useState<number>(0);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const bookingSectionRef = useRef<HTMLDivElement | null>(null);
+  const hasCheckinModule = canAccessModule(currentOrg, 'LESSON_CHECKIN_GPS', currentUser);
 
   // Sincronização automática em tempo real para receber atualizações da agenda e notificações do instrutor
   useEffect(() => {
@@ -494,6 +500,22 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
     );
   }
 
+  if (hasCheckinModule && showCheckinView) {
+    return (
+      <div className="space-y-4">
+        <button
+          type="button"
+          onClick={() => setShowCheckinView(false)}
+          className="inline-flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 rounded-xl text-xs font-bold shadow-xs cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Voltar para Meu Portal</span>
+        </button>
+        <LessonCheckinView currentUser={currentUser} currentOrg={currentOrg} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <ContractReminder student={student} user={currentUser} />
@@ -515,6 +537,18 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
             <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-xl">
               Instrutor Responsável: <strong className="text-white">{instructor?.nome || 'Carlos Eduardo'}</strong> ({instructor?.telefone || '(11) 98765-4321'}).
             </p>
+            {hasCheckinModule && (
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={() => setShowCheckinView(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-extrabold rounded-xl shadow-md transition-colors cursor-pointer"
+                >
+                  <Navigation className="w-4 h-4" />
+                  <span>Iniciar Check-in de Aula (GPS & Percurso)</span>
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="bg-white/10 backdrop-blur-md px-4 sm:px-5 py-3 rounded-2xl border border-white/10 text-left md:text-right">

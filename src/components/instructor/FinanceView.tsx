@@ -43,6 +43,11 @@ import { PaymentReceiptModal } from '../common/PaymentReceiptModal';
 import { PixConfigModal } from '../common/PixConfigModal';
 import { PixQrCodeModal } from '../common/PixQrCodeModal';
 import { ApplyDiscountModal } from '../common/ApplyDiscountModal';
+import {
+  EXPENSE_MAINTENANCE_ITEMS,
+  EXPENSE_OTHER_OPTION,
+  findMaintenanceItemById
+} from '../../lib/expenseMaintenanceCatalog';
 import type { PaymentReceiptData } from '../../lib/receiptPdfGenerator';
 import type {
   Organization,
@@ -134,14 +139,38 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
   });
 
   // New Expense Form State
+  const [selectedMaintenanceType, setSelectedMaintenanceType] = useState<string>(
+    EXPENSE_MAINTENANCE_ITEMS[0].id
+  );
+  const [expenseComplement, setExpenseComplement] = useState<string>('');
   const [expenseForm, setExpenseForm] = useState({
-    descricao: '',
-    categoria: 'COMBUSTIVEL' as ExpenseCategory,
+    descricao: EXPENSE_MAINTENANCE_ITEMS[0].label,
+    categoria: EXPENSE_MAINTENANCE_ITEMS[0].categoria as ExpenseCategory,
     veiculoId: '',
     valorReais: '',
     dataVencimento: new Date().toISOString().slice(0, 10),
     status: 'PAGA' as 'PENDENTE' | 'PAGA'
   });
+
+  const handleMaintenanceTypeChange = (typeId: string) => {
+    setSelectedMaintenanceType(typeId);
+    if (typeId === EXPENSE_OTHER_OPTION) {
+      setExpenseForm((prev) => ({
+        ...prev,
+        descricao: '',
+        categoria: 'OUTROS'
+      }));
+      return;
+    }
+    const item = findMaintenanceItemById(typeId);
+    if (item) {
+      setExpenseForm((prev) => ({
+        ...prev,
+        descricao: item.label,
+        categoria: item.categoria
+      }));
+    }
+  };
 
   // New Investment Form State
   const [investmentForm, setInvestmentForm] = useState({
@@ -229,10 +258,22 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
     const valorCentavos = Math.round(parseFloat(expenseForm.valorReais || '0') * 100);
     if (isNaN(valorCentavos) || valorCentavos <= 0) return;
 
+    const catalogItem =
+      selectedMaintenanceType !== EXPENSE_OTHER_OPTION
+        ? findMaintenanceItemById(selectedMaintenanceType)
+        : undefined;
+    const baseLabel = catalogItem ? catalogItem.label : expenseForm.descricao.trim();
+    const finalDescricao =
+      catalogItem && expenseComplement.trim()
+        ? `${baseLabel} — ${expenseComplement.trim()}`
+        : baseLabel;
+
+    if (!finalDescricao) return;
+
     const newExp: Expense = {
       id: `exp_${Date.now()}`,
       organizacaoId: orgId,
-      descricao: expenseForm.descricao.trim(),
+      descricao: finalDescricao,
       categoria: expenseForm.categoria,
       veiculoId: expenseForm.veiculoId || undefined,
       valorCentavos,
@@ -243,9 +284,11 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
 
     db.createExpense(newExp, currentUser.id);
     setShowNewExpenseModal(false);
+    setSelectedMaintenanceType(EXPENSE_MAINTENANCE_ITEMS[0].id);
+    setExpenseComplement('');
     setExpenseForm({
-      descricao: '',
-      categoria: 'COMBUSTIVEL',
+      descricao: EXPENSE_MAINTENANCE_ITEMS[0].label,
+      categoria: EXPENSE_MAINTENANCE_ITEMS[0].categoria,
       veiculoId: '',
       valorReais: '',
       dataVencimento: new Date().toISOString().slice(0, 10),
@@ -1659,16 +1702,56 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
 
             <form onSubmit={handleCreateExpense} className="mt-4 space-y-3.5 text-xs overflow-y-auto flex-1 pr-0.5">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Descrição do Gasto *</label>
-                <input aria-label="Descrição do Gasto *"
-                  type="text"
-                  required
-                  placeholder="Ex: Abastecimento Gasolina Comum 45L"
-                  value={expenseForm.descricao}
-                  onChange={(e) => setExpenseForm({ ...expenseForm, descricao: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-amber-600 focus:outline-none"
-                />
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Tipo de Manutenção / Despesa *
+                </label>
+                <select
+                  aria-label="Tipo de Manutenção / Despesa *"
+                  value={selectedMaintenanceType}
+                  onChange={(e) => handleMaintenanceTypeChange(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white focus:border-amber-600 focus:outline-none font-medium"
+                >
+                  {EXPENSE_MAINTENANCE_ITEMS.map((item, idx) => (
+                    <option key={item.id} value={item.id}>
+                      {String(idx + 1).padStart(2, '0')}. {item.label}
+                    </option>
+                  ))}
+                  <option value={EXPENSE_OTHER_OPTION}>
+                    Outro (Digitar manualmente...)
+                  </option>
+                </select>
               </div>
+
+              {selectedMaintenanceType === EXPENSE_OTHER_OPTION ? (
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Digite o Tipo / Descrição da Despesa *
+                  </label>
+                  <input
+                    aria-label="Digite o Tipo / Descrição da Despesa *"
+                    type="text"
+                    required
+                    placeholder="Ex: Troca de retrovisor, polimento, estacionamento..."
+                    value={expenseForm.descricao}
+                    onChange={(e) => setExpenseForm({ ...expenseForm, descricao: e.target.value })}
+                    className="w-full px-3 py-2 border border-amber-400 rounded-xl focus:border-amber-600 focus:outline-none bg-amber-50/30"
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Detalhes / Complemento <span className="font-normal text-slate-500">(opcional)</span>
+                  </label>
+                  <input
+                    aria-label="Detalhes ou complemento da despesa"
+                    type="text"
+                    placeholder="Ex: Km 48.200, Posto Shell, Oficina Central..."
+                    value={expenseComplement}
+                    onChange={(e) => setExpenseComplement(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-amber-600 focus:outline-none"
+                  />
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
@@ -1684,6 +1767,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                     <option value="SEGURO">Seguro</option>
                     <option value="ALIMENTACAO">Alimentação</option>
                     <option value="MARKETING">Marketing & Anúncios</option>
+                    <option value="SISTEMAS_TELEFONIA">Sistemas & Telefonia</option>
                     <option value="OUTROS">Outros</option>
                   </select>
                 </div>

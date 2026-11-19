@@ -140,8 +140,9 @@ export function legalContractValuesMulti(
 
   const enriched = list.map((c) => {
     const offer = offers.find((o) => o.id === c.pacoteId);
+    const extraCond = offer?.condicoesContratuais as Partial<StudentPackageContract> | undefined;
     const total = c.valorCentavos ?? offer?.valorCentavos ?? 0;
-    const rental = c.valorLocacaoExameCentavos ?? offer?.condicoesContratuais?.valorLocacaoExameCentavos ?? 0;
+    const rental = c.valorLocacaoExameCentavos ?? extraCond?.valorLocacaoExameCentavos ?? 0;
     const lessons = c.valorAulasCentavos ?? Math.max(0, total - rental);
     return {
       ...c,
@@ -151,7 +152,7 @@ export function legalContractValuesMulti(
       valorCentavos: total,
       valorLocacaoExameCentavos: rental,
       valorAulasCentavos: lessons,
-      locacaoExameContratada: c.locacaoExameContratada ?? offer?.condicoesContratuais?.locacaoExameContratada ?? rental > 0,
+      locacaoExameContratada: c.locacaoExameContratada ?? extraCond?.locacaoExameContratada ?? rental > 0,
       formaPagamento: c.formaPagamento || offer?.formaPagamento || 'A combinar',
       duracaoAulaMinutos: c.duracaoAulaMinutos ?? offer?.condicoesContratuais?.duracaoAulaMinutos ?? 50,
       diasAvisoExame: c.diasAvisoExame ?? offer?.condicoesContratuais?.diasAvisoExame ?? 7,

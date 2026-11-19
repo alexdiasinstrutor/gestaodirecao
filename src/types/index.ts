@@ -555,3 +555,47 @@ export interface StudentLeadRequest {
   criadoEm: string;
 }
 
+export interface LessonGpsPoint {
+  lat: number;
+  lng: number;
+  timestamp: string;
+  speedKmh?: number;
+  accuracy?: number;
+}
+
+export type LessonCheckinStatus = 'EM_ANDAMENTO' | 'FINALIZADO' | 'COMPUTADO_SEM_CHECKIN';
+
+export type LessonCheckinHardwareMode = 'LIVE_MAP' | 'LOW_SPEC_DEFERRED_MAP';
+
+export interface LessonCheckinRecord {
+  id: string;
+  organizacaoId: string;
+  aulaId: string;
+  alunoId: string;
+  alunoNome: string;
+  instrutorId: string;
+  instrutorNome: string;
+  veiculoId?: string;
+  dataAgendamento: string; // YYYY-MM-DD
+  horaInicioAgendamento: string; // HH:mm
+  horaFimAgendamento: string; // HH:mm
+  topicoAula?: string;
+  checkinEm: string; // ISO
+  checkoutEm?: string; // ISO
+  iniciadoPorId: string;
+  iniciadoPorPapel: UserRole;
+  finalizadoPorId?: string;
+  finalizadoPorPapel?: UserRole;
+  tempoTotalSegundos: number;
+  tempoDeslocamentoSegundos: number;
+  tempoParadaSegundos: number;
+  distanciaKm: number;
+  coordenadas: LessonGpsPoint[];
+  modoHardware: LessonCheckinHardwareMode;
+  motivoHardwareLimitado?: string;
+  status: LessonCheckinStatus;
+  criadoEm: string;
+  atualizadoEm: string;
+}
+
+

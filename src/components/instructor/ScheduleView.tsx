@@ -315,11 +315,19 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
     [orgId, selectedDate, syncVersion]
   );
   const students = useMemo(
-    () => db.getStudents(orgId, currentUser.id),
+    () =>
+      db
+        .getStudents(orgId, currentUser.id)
+        .slice()
+        .sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR', { sensitivity: 'base' })),
     [orgId, currentUser.id, syncVersion]
   );
   const allOrgStudents = useMemo(
-    () => db.getStudents(orgId),
+    () =>
+      db
+        .getStudents(orgId)
+        .slice()
+        .sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR', { sensitivity: 'base' })),
     [orgId, syncVersion]
   );
   const vehicles = useMemo(
@@ -715,9 +723,13 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ currentOrg, currentU
   const handleOpenScheduleForSlot = (time: string, dateOverride?: string) => {
     const baseDate = dateOverride || selectedDate;
     setSelectedSlotForSchedule(time);
+    const validSelectedStudent =
+      lessonForm.alunoId && students.some((s) => s.id === lessonForm.alunoId)
+        ? lessonForm.alunoId
+        : students[0]?.id || allOrgStudents[0]?.id || '';
     setLessonForm({
       ...lessonForm,
-      alunoId: lessonForm.alunoId || students[0]?.id || allOrgStudents[0]?.id || '',
+      alunoId: validSelectedStudent,
       veiculoId: lessonForm.veiculoId || vehicles[0]?.id || '',
       horaInicio: time,
       horaFim: getEndTimeForStart(time)

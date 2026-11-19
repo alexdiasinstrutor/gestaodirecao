@@ -25,7 +25,10 @@ import {
   StudentNotification,
   InstructorCoverageProfile,
   StudentLeadRequest,
-  SignatureConfig
+  SignatureConfig,
+  LessonCheckinRecord,
+  LessonCheckinHardwareMode,
+  LessonGpsPoint
 } from '../types';
 import { generateCPFFingerprint, maskCPF, formatDateBR } from './validation';
 import {
@@ -129,6 +132,7 @@ const STORAGE_KEYS = {
   STUDENT_NOTIFICATIONS: 'agd_student_notifications',
   INSTRUCTOR_COVERAGE: 'agd_instructor_coverage',
   STUDENT_LEADS: 'agd_student_leads',
+  LESSON_CHECKINS: 'agd_lesson_checkins',
   SEEDED: 'agd_seeded_v5'
 };
 
@@ -946,7 +950,8 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
       studentLeadLogs,
       packageMetaLogs,
       studentMetaLogs,
-      signatureMetaLogs
+      signatureMetaLogs,
+      lessonCheckins
     ] = await Promise.all([
       supabaseAdapter.getStudents(),
       supabaseAdapter.getVehicles(),
@@ -962,7 +967,8 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
       supabaseAdapter.getStudentLeadAuditLogs(),
       supabaseAdapter.getPackageMetaAuditLogs(),
       supabaseAdapter.getStudentMetaAuditLogs(),
-      supabaseAdapter.getSignatureMetaAuditLogs()
+      supabaseAdapter.getSignatureMetaAuditLogs(),
+      supabaseAdapter.getLessonCheckins().catch(() => [] as LessonCheckinRecord[])
     ]);
 
     // Aplica backup de assinaturas digitais recuperadas do cofre de auditoria
@@ -1521,6 +1527,20 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
       }
     } catch (couponErr) {
       console.warn('[Cupons] Hidratação a partir do Supabase ignorada:', couponErr);
+    }
+
+    // Check-ins e telemetria GPS de aulas (merge seguro pelo timestamp mais recente)
+    if (lessonCheckins && lessonCheckins.length > 0) {
+      const localCheckins = readList<LessonCheckinRecord>(STORAGE_KEYS.LESSON_CHECKINS);
+      const mergedCheckinsMap = new Map<string, LessonCheckinRecord>();
+      localCheckins.forEach((c) => mergedCheckinsMap.set(c.id, c));
+      lessonCheckins.forEach((rc) => {
+        const existing = mergedCheckinsMap.get(rc.id);
+        if (!existing || (rc.atualizadoEm || '') >= (existing.atualizadoEm || '')) {
+          mergedCheckinsMap.set(rc.id, rc);
+        }
+      });
+      hydrateList(STORAGE_KEYS.LESSON_CHECKINS, Array.from(mergedCheckinsMap.values()));
     }
 
     notifyDataChange();
@@ -2246,9 +2266,11 @@ export const db = {
     };
   },
 
-  // Students
+  // Students (sempre retornados em ordem alfabética A-Z para facilitar seleção em toda a plataforma)
   getStudents(orgId: string, instrutorId?: string): Student[] {
-    const list = readList<Student>(STORAGE_KEYS.STUDENTS).filter((s) => s.organizacaoId === orgId);
+    const list = readList<Student>(STORAGE_KEYS.STUDENTS)
+      .filter((s) => s.organizacaoId === orgId)
+      .sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR', { sensitivity: 'base' }));
     if (!instrutorId) return list;
     return list.filter((s) => !s.instrutorId || s.instrutorId === instrutorId);
   },
@@ -3484,25 +3506,249 @@ export const db = {
 
   /**
    * Registra automaticamente como realizadas as aulas agendadas (não canceladas/não alteradas
-   * após o horário) cujo horário de término já passou.
+   * após o horário) cujo horário de término já passou, e também dá baixa automática em
+   * check-ins em aberto caso instrutor e aluno esqueçam de finalizar.
    */
   autoCompleteElapsedLessons(params: { orgId?: string; instrutorId?: string; alunoId?: string; actorId: string }): number {
     const now = Date.now();
-    const pending = readList<Lesson>(STORAGE_KEYS.LESSONS).filter((l) => {
-      if (l.status !== 'AGENDADA') return false;
+    const graceForOpenCheckinMs = 30 * 60 * 1000;
+    const allLessons = readList<Lesson>(STORAGE_KEYS.LESSONS);
+    const pending = allLessons.filter((l) => {
+      if (l.status !== 'AGENDADA' && l.status !== 'EM_ANDAMENTO') return false;
       if (params.orgId && l.organizacaoId !== params.orgId) return false;
       if (params.instrutorId && l.instrutorId && l.instrutorId !== params.instrutorId) return false;
       if (params.alunoId && l.alunoId !== params.alunoId) return false;
       if (!l.data || !l.horaFim) return false;
       const endMs = new Date(`${l.data}T${l.horaFim}:00`).getTime();
-      return Number.isFinite(endMs) && endMs <= now;
+      if (!Number.isFinite(endMs)) return false;
+      if (l.status === 'EM_ANDAMENTO') {
+        return endMs + graceForOpenCheckinMs <= now;
+      }
+      return endMs <= now;
     });
     let count = 0;
+    const checkins = readList<LessonCheckinRecord>(STORAGE_KEYS.LESSON_CHECKINS);
+    let checkinsChanged = false;
+    const nowIso = new Date().toISOString();
+
     for (const l of pending) {
+      if (l.status === 'EM_ANDAMENTO') {
+        const idx = checkins.findIndex((c) => c.aulaId === l.id && c.status === 'EM_ANDAMENTO');
+        if (idx >= 0) {
+          const startedMs = new Date(checkins[idx].checkinEm).getTime();
+          const computedElapsed = Number.isFinite(startedMs)
+            ? Math.max(checkins[idx].tempoTotalSegundos || 0, Math.max(60, Math.round((now - startedMs) / 1000)))
+            : checkins[idx].tempoTotalSegundos || 0;
+          const updatedCheckin: LessonCheckinRecord = {
+            ...checkins[idx],
+            checkoutEm: nowIso,
+            finalizadoPorId: params.actorId,
+            tempoTotalSegundos: computedElapsed,
+            status: 'FINALIZADO',
+            atualizadoEm: nowIso
+          };
+          checkins[idx] = updatedCheckin;
+          checkinsChanged = true;
+          supabaseAdapter.saveLessonCheckin(updatedCheckin).catch(console.error);
+        }
+      }
       this.completeLessonWithCredit(l, { automatica: true }, params.actorId);
       count++;
     }
+    if (checkinsChanged) {
+      writeList(STORAGE_KEYS.LESSON_CHECKINS, checkins);
+      notifyDataChange();
+    }
     return count;
+  },
+
+  // ==========================================================================
+  // MÓDULO DE CHECK-IN DE AULAS & TELEMETRIA GPS
+  // ==========================================================================
+
+  getLessonCheckins(
+    orgId: string,
+    filters?: { instrutorId?: string; alunoId?: string; aulaId?: string }
+  ): LessonCheckinRecord[] {
+    return readList<LessonCheckinRecord>(STORAGE_KEYS.LESSON_CHECKINS)
+      .filter((c) => {
+        if (orgId && c.organizacaoId !== orgId) return false;
+        if (filters?.instrutorId && c.instrutorId !== filters.instrutorId) return false;
+        if (filters?.alunoId && c.alunoId !== filters.alunoId) return false;
+        if (filters?.aulaId && c.aulaId !== filters.aulaId) return false;
+        return true;
+      })
+      .sort((a, b) => (b.checkinEm || b.criadoEm || '').localeCompare(a.checkinEm || a.criadoEm || ''));
+  },
+
+  getActiveLessonCheckin(
+    orgId: string,
+    filters?: { instrutorId?: string; alunoId?: string; aulaId?: string }
+  ): LessonCheckinRecord | undefined {
+    return this.getLessonCheckins(orgId, filters).find((c) => c.status === 'EM_ANDAMENTO');
+  },
+
+  startLessonCheckin(params: {
+    lesson: Lesson;
+    student: Student;
+    instructor?: User;
+    actor: User;
+    modoHardware: LessonCheckinHardwareMode;
+    motivoHardwareLimitado?: string;
+    initialPoint?: LessonGpsPoint;
+  }): LessonCheckinRecord {
+    const checkins = readList<LessonCheckinRecord>(STORAGE_KEYS.LESSON_CHECKINS);
+    const existing = checkins.find((c) => c.aulaId === params.lesson.id && c.status === 'EM_ANDAMENTO');
+    if (existing) {
+      return existing;
+    }
+
+    const nowIso = new Date().toISOString();
+    const record: LessonCheckinRecord = {
+      id: `chk_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      organizacaoId: params.lesson.organizacaoId,
+      aulaId: params.lesson.id,
+      alunoId: params.student.id,
+      alunoNome: params.student.nome,
+      instrutorId: params.lesson.instrutorId || params.instructor?.id || params.actor.id,
+      instrutorNome: params.instructor?.nome || 'Instrutor Credenciado',
+      veiculoId: params.lesson.veiculoId,
+      dataAgendamento: params.lesson.data,
+      horaInicioAgendamento: params.lesson.horaInicio,
+      horaFimAgendamento: params.lesson.horaFim,
+      topicoAula: params.lesson.topico,
+      checkinEm: nowIso,
+      iniciadoPorId: params.actor.id,
+      iniciadoPorPapel: params.actor.papel,
+      tempoTotalSegundos: 0,
+      tempoDeslocamentoSegundos: 0,
+      tempoParadaSegundos: 0,
+      distanciaKm: 0,
+      coordenadas: params.initialPoint ? [params.initialPoint] : [],
+      modoHardware: params.modoHardware,
+      motivoHardwareLimitado: params.motivoHardwareLimitado,
+      status: 'EM_ANDAMENTO',
+      criadoEm: nowIso,
+      atualizadoEm: nowIso
+    };
+
+    checkins.unshift(record);
+    writeList(STORAGE_KEYS.LESSON_CHECKINS, checkins);
+
+    // Atualiza aula agendada para EM_ANDAMENTO
+    const lessons = readList<Lesson>(STORAGE_KEYS.LESSONS);
+    const lIdx = lessons.findIndex((l) => l.id === params.lesson.id);
+    if (lIdx >= 0 && lessons[lIdx].status === 'AGENDADA') {
+      lessons[lIdx] = { ...lessons[lIdx], status: 'EM_ANDAMENTO' };
+      writeList(STORAGE_KEYS.LESSONS, lessons);
+      supabaseAdapter.saveLesson(lessons[lIdx]).catch(console.error);
+    }
+
+    supabaseAdapter.saveLessonCheckin(record).catch(console.error);
+    this.addAuditLog(
+      record.organizacaoId,
+      params.actor.id,
+      'INICIAR_CHECKIN_AULA',
+      'LessonCheckin',
+      record.id,
+      `Check-in iniciado para aluno ${record.alunoNome} (${record.dataAgendamento} ${record.horaInicioAgendamento}) por ${params.actor.nome} [Modo: ${record.modoHardware}]`
+    );
+    notifyDataChange();
+    return record;
+  },
+
+  updateLessonCheckinProgress(
+    checkinId: string,
+    patch: Partial<
+      Pick<
+        LessonCheckinRecord,
+        | 'tempoTotalSegundos'
+        | 'tempoDeslocamentoSegundos'
+        | 'tempoParadaSegundos'
+        | 'distanciaKm'
+        | 'coordenadas'
+        | 'modoHardware'
+        | 'motivoHardwareLimitado'
+      >
+    >
+  ): LessonCheckinRecord | undefined {
+    const checkins = readList<LessonCheckinRecord>(STORAGE_KEYS.LESSON_CHECKINS);
+    const idx = checkins.findIndex((c) => c.id === checkinId);
+    if (idx < 0) return undefined;
+
+    const updated: LessonCheckinRecord = {
+      ...checkins[idx],
+      ...patch,
+      atualizadoEm: new Date().toISOString()
+    };
+    checkins[idx] = updated;
+    writeList(STORAGE_KEYS.LESSON_CHECKINS, checkins);
+    supabaseAdapter.saveLessonCheckin(updated).catch(console.error);
+    return updated;
+  },
+
+  finishLessonCheckin(params: {
+    checkinId: string;
+    actor: User;
+    tempoTotalSegundos?: number;
+    tempoDeslocamentoSegundos?: number;
+    tempoParadaSegundos?: number;
+    distanciaKm?: number;
+    coordenadas?: LessonGpsPoint[];
+    notaAula?: number;
+    observacaoInstrutor?: string;
+  }): { checkin?: LessonCheckinRecord; lessonCompleted: boolean } {
+    const checkins = readList<LessonCheckinRecord>(STORAGE_KEYS.LESSON_CHECKINS);
+    const idx = checkins.findIndex((c) => c.id === params.checkinId);
+    if (idx < 0) return { lessonCompleted: false };
+
+    const base = checkins[idx];
+    const nowIso = new Date().toISOString();
+    const updated: LessonCheckinRecord = {
+      ...base,
+      checkoutEm: nowIso,
+      finalizadoPorId: params.actor.id,
+      finalizadoPorPapel: params.actor.papel,
+      tempoTotalSegundos: params.tempoTotalSegundos ?? base.tempoTotalSegundos,
+      tempoDeslocamentoSegundos: params.tempoDeslocamentoSegundos ?? base.tempoDeslocamentoSegundos,
+      tempoParadaSegundos: params.tempoParadaSegundos ?? base.tempoParadaSegundos,
+      distanciaKm: params.distanciaKm ?? base.distanciaKm,
+      coordenadas: params.coordenadas ?? base.coordenadas,
+      status: 'FINALIZADO',
+      atualizadoEm: nowIso
+    };
+    checkins[idx] = updated;
+    writeList(STORAGE_KEYS.LESSON_CHECKINS, checkins);
+    supabaseAdapter.saveLessonCheckin(updated).catch(console.error);
+
+    let lessonCompleted = false;
+    const lessons = readList<Lesson>(STORAGE_KEYS.LESSONS);
+    const targetLesson = lessons.find((l) => l.id === updated.aulaId);
+    if (targetLesson) {
+      this.completeLessonWithCredit(
+        targetLesson,
+        {
+          notaAula: params.notaAula,
+          observacaoInstrutor:
+            params.observacaoInstrutor ??
+            (targetLesson.observacaoInstrutor || `Check-out concluído via GPS (${updated.distanciaKm.toFixed(2)} km).`),
+          automatica: false
+        },
+        params.actor.id
+      );
+      lessonCompleted = true;
+    }
+
+    this.addAuditLog(
+      updated.organizacaoId,
+      params.actor.id,
+      'FINALIZAR_CHECKOUT_AULA',
+      'LessonCheckin',
+      updated.id,
+      `Check-out realizado para ${updated.alunoNome}: ${updated.tempoTotalSegundos}s totais, ${updated.distanciaKm.toFixed(2)} km`
+    );
+    notifyDataChange();
+    return { checkin: updated, lessonCompleted };
   },
 
   // Accounts Receivable
@@ -5036,7 +5282,9 @@ export const db = {
 
     // 6. Relações Detalhadas de cada Instrutor e seus Alunos
     const instructorRelations = instructors.map((instructor) => {
-      const myStudents = allStudents.filter((s) => s.instrutorId === instructor.id);
+      const myStudents = allStudents
+        .filter((s) => s.instrutorId === instructor.id)
+        .sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR', { sensitivity: 'base' }));
       const myLessons = allLessons.filter((l) => l.instrutorId === instructor.id && l.status !== 'CANCELADA');
       const myStudentIds = new Set(myStudents.map((s) => s.id));
       const myAccounts = allAccounts.filter((a) => myStudentIds.has(a.alunoId));
@@ -5120,6 +5368,7 @@ export const db = {
       expenses: readList<Expense>(STORAGE_KEYS.EXPENSES),
       investments: readList<Investment>(STORAGE_KEYS.INVESTMENTS),
       packages: readList<PackageOffer>(STORAGE_KEYS.PACKAGES),
+      lessonCheckins: readList<LessonCheckinRecord>(STORAGE_KEYS.LESSON_CHECKINS),
       auditLogs: readList<AuditLog>(STORAGE_KEYS.AUDIT),
       whatsappLogs: readList<WhatsAppReminderLog>(STORAGE_KEYS.WHATSAPP_LOGS)
     };
