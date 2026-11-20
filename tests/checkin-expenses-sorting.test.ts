@@ -239,38 +239,55 @@ async function runTests() {
   );
   console.log('[OK] Teste 2: Listagem de alunos classificada em ordem alfabética (A-Z) confirmada.');
 
-  // 3. Teste: Permissão SaaS — liberado apenas para Master até que seja adicionado ao plano
+  // 3. Teste: Permissão SaaS — liberado após homologação para todos os perfis e configurável pelo Master
   assert.equal(
     canAccessModule(org, 'LESSON_CHECKIN_GPS', masterUser),
     true,
-    'Administrador Master deve ter acesso imediato para testar/validar o módulo'
+    'Administrador Master deve ter acesso completo ao módulo'
+  );
+  assert.equal(
+    canAccessModule(org, 'LESSON_CHECKIN_GPS', instructorUser),
+    true,
+    'Instrutor deve acessar o módulo Check-in & Rota GPS após liberação nos planos'
+  );
+  assert.equal(
+    canAccessModule(org, 'LESSON_CHECKIN_GPS', studentUser),
+    true,
+    'Aluno deve visualizar o módulo Check-in & Rota GPS após liberação nos planos'
+  );
+
+  // Simula login Master, testa restrição de planos e re-liberação configurável
+  db.setCurrentUser(masterUser);
+  await configureModuleAcrossPlans('LESSON_CHECKIN_GPS', []);
+  assert.equal(
+    canAccessModule(org, 'LESSON_CHECKIN_GPS', masterUser),
+    true,
+    'Administrador Master mantém acesso mesmo quando o módulo está restrito nos planos'
   );
   assert.equal(
     canAccessModule(org, 'LESSON_CHECKIN_GPS', instructorUser),
     false,
-    'Instrutor NÃO deve ver o módulo antes do Master liberá-lo no plano de assinatura'
+    'Instrutor perde acesso quando o Master remove o módulo dos planos'
   );
   assert.equal(
     canAccessModule(org, 'LESSON_CHECKIN_GPS', studentUser),
     false,
-    'Aluno NÃO deve ver o módulo antes do Master liberá-lo no plano de assinatura'
+    'Aluno perde acesso quando o Master remove o módulo dos planos'
   );
 
-  // Simula login Master e libera módulo no plano MASTER
-  db.setCurrentUser(masterUser);
-  await configureModuleAcrossPlans('LESSON_CHECKIN_GPS', ['MASTER']);
+  await configureModuleAcrossPlans('LESSON_CHECKIN_GPS', ['DEMO', 'BASICO', 'AVANCADO', 'MASTER']);
   assert.ok(getSaaSPlans().MASTER.modulosPermitidos.includes('LESSON_CHECKIN_GPS'));
   assert.equal(
     canAccessModule(org, 'LESSON_CHECKIN_GPS', instructorUser),
     true,
-    'Após Master liberar no plano MASTER, instrutor passa a acessar o módulo'
+    'Após Master liberar nos planos, instrutor volta a acessar o módulo'
   );
   assert.equal(
     canAccessModule(org, 'LESSON_CHECKIN_GPS', studentUser),
     true,
-    'Após Master liberar no plano MASTER, aluno da organização passa a acessar o módulo'
+    'Após Master liberar nos planos, aluno volta a visualizar o módulo'
   );
-  console.log('[OK] Teste 3: Controle de plano SaaS e homologação Master verificados.');
+  console.log('[OK] Teste 3: Liberação para instrutores/alunos e controle configurável nos planos SaaS verificados.');
 
   // 4. Teste: Verificação de Hardware Anti-Falha
   const strongHw = evaluateHardwareForLiveMap({

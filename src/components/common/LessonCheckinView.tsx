@@ -46,6 +46,7 @@ import { resolveStudentIdentity } from '../../legal/studentIdentity';
 interface LessonCheckinViewProps {
   currentUser: User;
   currentOrg: Organization;
+  initialTab?: CheckinTab;
 }
 
 type ViewDisplayMode = 'AMBOS' | 'TEMPO' | 'MAPA';
@@ -53,14 +54,18 @@ type CheckinTab = 'OPERACAO' | 'RELATORIO';
 
 export const LessonCheckinView: React.FC<LessonCheckinViewProps> = ({
   currentUser,
-  currentOrg
+  currentOrg,
+  initialTab = 'OPERACAO'
 }) => {
   const orgId = currentOrg?.id || currentUser.organizacaoId || 'org_direcao_certa_01';
   const isMaster =
     currentUser.papel === 'SUPER_ADMIN' || currentUser.email.toLowerCase() === 'cassiordcosta@gmail.com';
   const isStudent = currentUser.papel === 'ALUNO';
 
-  const [activeTab, setActiveTab] = useState<CheckinTab>('OPERACAO');
+  const [activeTab, setActiveTab] = useState<CheckinTab>(initialTab);
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
   const [dataVersion, setDataVersion] = useState<number>(0);
 
   // Master validation & hardware contingency simulation controls

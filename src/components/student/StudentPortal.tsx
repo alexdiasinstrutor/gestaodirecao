@@ -61,6 +61,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
   const orgId = currentOrg.id;
   const [studentMobileTab, setStudentMobileTab] = useState<'BOOK' | 'PIX' | 'PROGRESS'>('BOOK');
   const [showCheckinView, setShowCheckinView] = useState<boolean>(false);
+  const [checkinInitialTab, setCheckinInitialTab] = useState<'OPERACAO' | 'RELATORIO'>('OPERACAO');
   const [portalVersion, setPortalVersion] = useState<number>(0);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const bookingSectionRef = useRef<HTMLDivElement | null>(null);
@@ -511,7 +512,11 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
           <ArrowLeft className="w-4 h-4" />
           <span>Voltar para Meu Portal</span>
         </button>
-        <LessonCheckinView currentUser={currentUser} currentOrg={currentOrg} />
+        <LessonCheckinView
+          currentUser={currentUser}
+          currentOrg={currentOrg}
+          initialTab={checkinInitialTab}
+        />
       </div>
     );
   }
@@ -538,14 +543,28 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
               Instrutor Responsável: <strong className="text-white">{instructor?.nome || 'Carlos Eduardo'}</strong> ({instructor?.telefone || '(11) 98765-4321'}).
             </p>
             {hasCheckinModule && (
-              <div className="mt-3">
+              <div className="mt-3 flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowCheckinView(true)}
+                  onClick={() => {
+                    setCheckinInitialTab('OPERACAO');
+                    setShowCheckinView(true);
+                  }}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-extrabold rounded-xl shadow-md transition-colors cursor-pointer"
                 >
                   <Navigation className="w-4 h-4" />
-                  <span>Iniciar Check-in de Aula (GPS & Percurso)</span>
+                  <span>Iniciar Check-in de Aula (GPS)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCheckinInitialTab('RELATORIO');
+                    setShowCheckinView(true);
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-white/15 hover:bg-white/25 text-white border border-white/25 text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+                >
+                  <Clock className="w-4 h-4 text-emerald-300" />
+                  <span>Ver Meus Percursos & Mapas</span>
                 </button>
               </div>
             )}
@@ -678,6 +697,20 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
             <Award className="w-4 h-4 shrink-0" />
             <span>Aulas & Notas</span>
           </button>
+
+          {hasCheckinModule && (
+            <button
+              type="button"
+              onClick={() => {
+                setCheckinInitialTab('OPERACAO');
+                setShowCheckinView(true);
+              }}
+              className="flex-none shrink-0 min-w-[130px] flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-bold whitespace-nowrap bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition-all cursor-pointer touch-target"
+            >
+              <Navigation className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Check-in & Rota GPS</span>
+            </button>
+          )}
 
           {onSwitchToFullMode && (
             <button

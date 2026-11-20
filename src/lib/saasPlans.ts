@@ -155,12 +155,14 @@ const DEFAULT_SAAS_PLANS: Record<string, SaaSPlanDefinition> = {
       'DASHBOARD',
       'STUDENTS',
       'SCHEDULE',
-      'VEHICLES'
+      'VEHICLES',
+      'LESSON_CHECKIN_GPS'
     ],
     destaques: [
       'Até 3 alunos de teste cadastrados',
       'Agenda de horários demonstrativa (06h às 00h)',
       'Painel geral simplificado',
+      'Check-in de aula com cronômetro e rota GPS',
       'Sem emissão de recibos nem relatórios fiscais'
     ],
     recomendadoPara: 'Visitantes e instrutores avaliando o sistema'
@@ -181,12 +183,14 @@ const DEFAULT_SAAS_PLANS: Record<string, SaaSPlanDefinition> = {
       'SCHEDULE',
       'VEHICLES',
       'FINANCE_RECEIVABLES',
-      'FINANCE_PACKAGES'
+      'FINANCE_PACKAGES',
+      'LESSON_CHECKIN_GPS'
     ],
     destaques: [
       'Até 25 alunos ativos simultâneos',
       '1 Instrutor credenciado titular',
       'Agenda prática completa (dia e noite)',
+      'Check-in de aula com cronômetro, telemetria GPS e percurso',
       'Contas a receber com cobrança PIX Copia e Cola',
       'Catálogo comercial de pacotes e planos'
     ],
@@ -214,7 +218,8 @@ const DEFAULT_SAAS_PLANS: Record<string, SaaSPlanDefinition> = {
       'FINANCE_DRE',
       'FINANCE_RECEIPTS',
       'WHATSAPP',
-      'REPORTS'
+      'REPORTS',
+      'LESSON_CHECKIN_GPS'
     ],
     destaques: [
       'Até 100 alunos ativos simultâneos',
@@ -238,8 +243,8 @@ const DEFAULT_SAAS_PLANS: Record<string, SaaSPlanDefinition> = {
     limiteInstrutores: 0, // Ilimitado
     diasValidadePadrao: 30,
     corBadge: 'bg-gradient-to-r from-amber-50 to-orange-50 text-amber-900 border-amber-300 font-black',
-    // Novos módulos avançados iniciam desabilitados nos planos padrão até validação/liberação pelo Administrador Master
-    modulosPermitidos: ALL_SYSTEM_MODULES.filter((m) => m.id !== 'LESSON_CHECKIN_GPS').map((m) => m.id),
+    // Todos os módulos homologados ativos por padrão no Plano Master
+    modulosPermitidos: ALL_SYSTEM_MODULES.map((m) => m.id),
     destaques: [
       'Alunos e instrutores ILIMITADOS',
       'Tudo do Plano Avançado +',
@@ -256,13 +261,38 @@ const DEFAULT_SAAS_PLANS: Record<string, SaaSPlanDefinition> = {
 export const SAAS_PLANS = DEFAULT_SAAS_PLANS;
 
 const STORAGE_KEY_PLANS = 'agd_saas_custom_plans_v1';
+const CHECKIN_GPS_ROLLOUT_KEY = 'agd_checkin_gps_released_v1';
+const CHECKIN_GPS_RELEASE_ISO = '2026-11-19T23:00:00.000Z';
+
+function ensureCheckinModuleInPlan(plan: SaaSPlanDefinition): SaaSPlanDefinition {
+  if (!plan || !Array.isArray(plan.modulosPermitidos) || plan.modulosPermitidos.includes('LESSON_CHECKIN_GPS')) {
+    return plan;
+  }
+  return {
+    ...plan,
+    modulosPermitidos: [...plan.modulosPermitidos, 'LESSON_CHECKIN_GPS']
+  };
+}
 
 export function getSaaSPlans(): Record<string, SaaSPlanDefinition> {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_PLANS);
     if (raw) {
       const parsed = JSON.parse(raw);
-      return { ...DEFAULT_SAAS_PLANS, ...parsed };
+      const merged = { ...DEFAULT_SAAS_PLANS, ...parsed };
+      if (!localStorage.getItem(CHECKIN_GPS_ROLLOUT_KEY)) {
+        for (const planId of Object.keys(DEFAULT_SAAS_PLANS)) {
+          if (merged[planId]) {
+            merged[planId] = ensureCheckinModuleInPlan(merged[planId]);
+          }
+        }
+        localStorage.setItem(STORAGE_KEY_PLANS, JSON.stringify(merged));
+        localStorage.setItem(CHECKIN_GPS_ROLLOUT_KEY, '1');
+      }
+      return merged;
+    }
+    if (!localStorage.getItem(CHECKIN_GPS_ROLLOUT_KEY)) {
+      localStorage.setItem(CHECKIN_GPS_ROLLOUT_KEY, '1');
     }
   } catch (e) {
     console.warn('Erro ao ler planos customizados', e);
@@ -278,6 +308,7 @@ export async function saveSaaSPlan(planId: string, planDef: SaaSPlanDefinition):
   plans[planId] = updated;
   const previous = localStorage.getItem(STORAGE_KEY_PLANS);
   const next = JSON.stringify(plans);
+  localStorage.setItem(CHECKIN_GPS_ROLLOUT_KEY, '1');
   localStorage.setItem(STORAGE_KEY_PLANS, next);
   localStorage.setItem('agd_pending_saas_' + planId, updated.atualizadoEm);
   recordDataChange(STORAGE_KEY_PLANS, previous, next);
@@ -299,9 +330,20 @@ export async function syncSaaSPlans(): Promise<void> {
   plans = getSaaSPlans();
   for (const log of remote) {
     try {
-      const plan = JSON.parse(log.detalhes || '{}') as SaaSPlanDefinition;
-      if (!DEFAULT_SAAS_PLANS[plan.id] || !Array.isArray(plan.modulosPermitidos)) continue;
-      if (!localStorage.getItem('agd_pending_saas_' + plan.id) && (!plans[plan.id].atualizadoEm || (plan.atualizadoEm || '') > plans[plan.id].atualizadoEm!)) plans[plan.id] = plan;
+      const parsedPlan = JSON.parse(log.detalhes || '{}') as SaaSPlanDefinition;
+      if (!DEFAULT_SAAS_PLANS[parsedPlan.id] || !Array.isArray(parsedPlan.modulosPermitidos)) continue;
+      // Planos salvos no Supabase antes da liberação global recebem LESSON_CHECKIN_GPS automaticamente;
+      // alterações explícitas após a liberação são preservadas integralmente.
+      const normalizedPlan =
+        (parsedPlan.atualizadoEm || '') < CHECKIN_GPS_RELEASE_ISO
+          ? ensureCheckinModuleInPlan(parsedPlan)
+          : parsedPlan;
+      if (
+        !localStorage.getItem('agd_pending_saas_' + normalizedPlan.id) &&
+        (!plans[normalizedPlan.id].atualizadoEm || (normalizedPlan.atualizadoEm || '') > plans[normalizedPlan.id].atualizadoEm!)
+      ) {
+        plans[normalizedPlan.id] = normalizedPlan;
+      }
     } catch { /* Invalid legacy records do not replace valid plans. */ }
   }
   localStorage.setItem(STORAGE_KEY_PLANS, JSON.stringify(plans));
@@ -356,15 +398,20 @@ export function canAccessModule(
     return false;
   }
 
-  // Se tiver módulos customizados definidos pelo Master, respeita rigorosamente essa lista
-  if (org.modulosCustomizados && Array.isArray(org.modulosCustomizados) && org.modulosCustomizados.length > 0) {
-    return org.modulosCustomizados.includes(moduleId);
-  }
-
-  // Senão, pega a lista padrão do plano contratado
+  // Resolve a definição do plano contratado pela organização
   const plans = getSaaSPlans();
   const normalizedPlan = org.plano === 'PRO' ? 'AVANCADO' : org.plano;
   const planDef = plans[normalizedPlan] || plans.BASICO || DEFAULT_SAAS_PLANS.BASICO;
+
+  // Se tiver módulos customizados definidos pelo Master, respeita rigorosamente essa lista;
+  // caso a lista customizada seja anterior ao módulo LESSON_CHECKIN_GPS, herda a liberação do plano ativo.
+  if (org.modulosCustomizados && Array.isArray(org.modulosCustomizados) && org.modulosCustomizados.length > 0) {
+    if (moduleId === 'LESSON_CHECKIN_GPS' && !org.modulosCustomizados.includes(moduleId)) {
+      return planDef.modulosPermitidos.includes(moduleId);
+    }
+    return org.modulosCustomizados.includes(moduleId);
+  }
+
   return planDef.modulosPermitidos.includes(moduleId);
 }
 
