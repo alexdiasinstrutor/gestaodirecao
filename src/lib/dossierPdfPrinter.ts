@@ -2,8 +2,8 @@
 
 export const DOSSIER_METADATA = {
   title: 'Dossiê Técnico Homologado - Gestão AD (Auto Direção)',
-  version: 'v8.0 — Revisão local de UX/UI, persistência e backups; migração confirmada',
-  date: 'Novembro de 2026',
+  version: 'v8.1 — Homologada (Check-in & Rota GPS, 25 Manutenções, Ordem A–Z e RLS Supabase)',
+  date: '19 de Novembro de 2026',
   masterAdmin: 'cassiordcosta@gmail.com',
   regulations: 'CTB, CONTRAN e LGPD (Lei 13.709/2018)'
 };
@@ -11,7 +11,7 @@ export const DOSSIER_METADATA = {
 export function getOfficialDossierHtml(): string {
   return `
   <div class="dossier-document">
-    <section class="doc-section"><h2>Revisão de 16/11/2026 — em avaliação local</h2><p>Menu lateral e navegação móvel espaçada; gravações confirmadas e fila persistente; assinatura no cadastro; planos SaaS sincronizados; data da alteração e histórico com exportação JSON. Campos da migração SQL confirmados em 16/11/2026; homologação em produção pendente. Detalhes atuais: dossie.md, seção 16. As seções históricas abaixo descrevem versões anteriores.</p></section>
+    <section class="doc-section"><h2>Revisão Homologada de 19/11/2026 (v8.1 — Vercel HTTPS + Supabase RLS)</h2><p>Implantado e homologado no celular o módulo <strong>Check-in &amp; Rota GPS</strong> (cronômetro com deslocamento/parada, mapa OpenStreetMap + Google Maps, detecção anti-falha de hardware, fallback anti-esquecimento, relatório individual por aluno/instrutor e tabela <code>lesson_checkins</code> com RLS), além da classificação alfabética <strong>A–Z</strong> dos alunos em todas as seleções e do catálogo de <strong>25 tipos de manutenção/despesa + opção "Outro"</strong>. Liberado nos planos para instrutores e visualização dos alunos (commits <code>c742391</code> e <code>ea453fa</code>). Detalhes completos em <code>dossie.md</code>, seções 16 a 19.</p></section>
     <!-- Header Oficial de Homologação -->
     <header class="doc-header">
       <div class="header-badges">
@@ -689,11 +689,17 @@ export function printOfficialDossier(): boolean {
 
 export function downloadDossierMarkdownFile(): void {
   const markdownContent = `# DOSSIÊ COMPLETO DO SISTEMA — GESTÃO AD (AUTO DIREÇÃO)
-Versão: v6.8 Estável e Homologada (Mapa 5–40 km + Blindagem Cloud Vault de Pacotes + Gestão de Veículos + 17/17 Testes) | Novembro de 2026
+Versão: v8.1 Homologada (Check-in & Rota GPS + 25 Manutenções + Ordem A–Z + RLS Supabase + 7/7 e 8/8 Testes) | 19 de Novembro de 2026
 Administrador Master: cassiordcosta@gmail.com
 Normativas: CTB, CONTRAN e LGPD
 
-## Melhorias Homologadas na v6.8
+## Novidades Homologadas na v8.1 (19/11/2026)
+1. Segurança RLS no Supabase: Row-Level Security ativo nas tabelas operacionais + nova tabela lesson_checkins (supabase_migracao_checkin_gps_20261119.sql) com fallback Cloud Vault.
+2. Classificação Alfabética (A–Z) Global dos Alunos: todas as listagens e seletores de alunos na Agenda, Finanças, Contratos, Relatórios e Check-in ordenados alfabeticamente (pt-BR).
+3. Catálogo de 25 Tipos de Manutenção/Despesa + Opção "Outro": seleção padronizada em FinanceView.tsx com categorização automática e campo livre para opções personalizadas.
+4. Módulo Check-in & Rota GPS: início/término de aula com cronômetro (Total, Deslocamento e Parada), integração Google Maps + OpenStreetMap, verificação anti-falha de hardware com fallback pós-aula, baixa automática anti-esquecimento, relatório individual por aluno/instrutor e liberação para instrutores e portal do aluno.
+
+## Base Histórica Homologada (v6.8–v8.0)
 1. Cadastro de Aluno em 3 Etapas (Wizard) com exibição fiel de todos os pacotes do instrutor.
 2. Confidencialidade de Instrutores no Auto-Cadastro (busca exclusiva por Código do Instrutor ou link do WhatsApp).
 3. Localizador Geográfico de Instrutores (Mapa 5 a 40 km) com seleção de Estado (UF) primeiro, auto-preenchimento por CEP, ocultação de bairro residencial (exibindo apenas cidades atendidas) e contato direto via WhatsApp.
@@ -701,16 +707,16 @@ Normativas: CTB, CONTRAN e LGPD
 5. Liberação e remoção de agenda por período (Semanal, Mensal, Anual) com alerta de conflito e notificação automática na tela do aluno para remarcação.
 6. Edição e persistência imediata de mudança de plano e evolução na Ficha do Aluno.
 7. Blindagem absoluta contra perda de pacotes criados pelos instrutores (PACKAGES_BACKUP + Cloud Sync Vault __agd_vault_package_offers).
-8. Nova tela "Meus Veículos" (VehiclesView.tsx) para cadastro de carros/motos dos instrutores (câmbio manual/automático, placa, ano, duplo comando, PCD, km e revisão).
-9. Sanitização global de telefone (proibindo máscara como número) e validação com 17/17 testes automatizados aprovados.
+8. Tela "Meus Veículos" (VehiclesView.tsx) para cadastro de carros/motos dos instrutores (câmbio manual/automático, placa, ano, duplo comando, PCD, km e revisão).
+9. Contratos digitais, aceites jurídicos autenticados, assinatura eletrônica, fila cloudOutbox e histórico com pontos de recuperação.
 
-Documento completo disponível na raiz do repositório em DOSSIE.md.`;
+Documento completo disponível na raiz do repositório em dossie.md.`;
 
   const blob = new Blob([markdownContent], { type: 'text/markdown;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'DOSSIE_GESTAO_AD_v6.8.md';
+  a.download = 'DOSSIE_GESTAO_AD_v8.1.md';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -751,7 +757,7 @@ export function downloadDossierHtmlFile(): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'DOSSIE_OFICIAL_GESTAO_AD_v6.8.html';
+  a.download = 'DOSSIE_OFICIAL_GESTAO_AD_v8.1.html';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

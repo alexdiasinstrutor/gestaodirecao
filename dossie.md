@@ -1,8 +1,8 @@
 # DOSSIÊ COMPLETO DO SISTEMA — GESTÃO AD (AUTO DIREÇÃO)
 
-> **Revisão de 16/11/2026 — v8.0 em avaliação local.** Veja a seção 16 para melhorias, testes e limitações atuais. Migração SQL confirmada em 16/11/2026; homologação de produção pendente. Nenhum commit ou deploy realizado.
-**Documento Oficial de Registro Técnico, Arquitetura de Software, Interface Adaptativa, Mapa Geográfico (5–40 km), Blindagem Cloud Vault, Frota de Veículos, Pacotes Adicionais e Aulas Extras, Recibos Flexíveis, Blindagem Global Anti-Crash (ErrorBoundary), Regras de Negócio e Agentes de Segurança**  
-*Data de Homologação: Novembro de 2026 | Versão da Plataforma: v7.6 Auditada, Com Blindagem Global Anti-Crash (ErrorBoundary), Fallback de Organização, Tolerância JSON em Contratos, Adição de Pacotes Adicionais, Aulas Avulsas, Pacotes Personalizados, Emissão de Recibos por Pacote e Aulas Ministradas, Exclusão Definitiva de Veículos e Sincronização em Tempo Real no Supabase*
+> **Revisão de 19/11/2026 — v8.1 Homologada em Produção (Vercel + Supabase).** Veja a seção 19 para a ativação de RLS no Supabase, classificação alfabética (A–Z) dos alunos, catálogo padronizado de 25 despesas/manutenções + opção "Outro", módulo completo **Check-in & Rota GPS (Google Maps + OpenStreetMap)** com proteção anti-falha de hardware/esquecimento e liberação nos planos para instrutores e alunos (commits `c742391` e `ea453fa`).
+**Documento Oficial de Registro Técnico, Arquitetura de Software, Interface Adaptativa, Mapa Geográfico (5–40 km), Blindagem Cloud Vault, Frota de Veículos, Pacotes Adicionais e Aulas Extras, Recibos Flexíveis, Check-in & Telemetria GPS, Ordem Alfabética A–Z, Catálogo de 25 Manutenções, Blindagem Global Anti-Crash (ErrorBoundary), Regras de Negócio e Agentes de Segurança**  
+*Data de Homologação: 19 de Novembro de 2026 | Versão da Plataforma: v8.1 Homologada (Vercel HTTPS + Supabase RLS Ativo + Cloud Sync Vault + Módulo Check-in & Rota GPS para Instrutores e Portal do Aluno)*
 
 ---
 
@@ -1491,3 +1491,46 @@ Validação: cenário de 10 aulas por R$ 950,00 aprovado em 1440×900 e 390×844
 Corrigidos os campos numéricos que convertiam o conteúdo vazio imediatamente em 1 ou restauravam 20 aulas ao perder o foco. Durante a digitação, os campos de total da ficha, aulas avulsas, pacote personalizado e cadastro/edição do pacote podem permanecer vazios, permitindo apagar o valor anterior e informar outro. A validação ocorre no salvamento: quantidades inválidas, vazias ou fora do intervalo permitido não são persistidas.
 
 Validação automatizada aprovada em 1440×900 e 390×844 nos quatro campos, incluindo apagar, trocar o foco, redigitar e preservar o novo valor. A regressão de consistência do pacote de 10 aulas por R$ 950,00 permaneceu aprovada. TypeScript aprovado. Nenhum dado de produção foi alterado; sem commit ou push.
+
+---
+
+## 19. HOMOLOGAÇÃO DE 19/11/2026 — SEGURANÇA RLS SUPABASE, ORDEM ALFABÉTICA (A–Z), CATÁLOGO DE 25 MANUTENÇÕES E MÓDULO CHECK-IN & ROTA GPS (v8.1)
+
+### 19.1 Blindagem de Segurança RLS no Supabase (`ozizhwejagjlhmaygvlf`)
+- **Contexto:** Após alerta de segurança do Supabase sobre exposição de tabelas públicas sem *Row-Level Security* (`rls_disabled_in_public`), o projeto `ozizhwejagjlhmaygvlf` teve o RLS habilitado nas 16 tabelas operacionais (`organizations`, `users`, `students`, `vehicles`, `lessons`, `accounts_receivable`, `payment_records`, `expenses`, `investments`, `package_offers`, `audit_logs`, `available_slots`, `student_transfers`, `whatsapp_logs`, `discount_coupons`, `coupon_redemptions`) com políticas `app_full_access_*` e manutenção da camada de resiliência **Cloud Sync Vault** (`__agd_vault_*` + fila `cloudOutbox`) em `src/lib/supabaseAdapter.ts`.
+- **Nova tabela `public.lesson_checkins`:** Criada de forma aditiva em `supabase_migracao_checkin_gps_20261119.sql`, vinculada à `public.organizations(id)` (`ON DELETE CASCADE`), com 5 índices (`idx_lesson_checkins_org`, `idx_lesson_checkins_instrutor`, `idx_lesson_checkins_aluno`, `idx_lesson_checkins_aula`, `idx_lesson_checkins_data`), `ENABLE ROW LEVEL SECURITY` e política `app_full_access_lesson_checkins`.
+- **Anti-Falha (`VAULT_TABLES`):** A coleção `lesson_checkins` integra o conjunto `VAULT_TABLES` com detector `isVaultSafeError` em `src/lib/supabaseAdapter.ts`, espelhando automaticamente os registros em `__agd_vault_lesson_checkins` e na fila `cloudOutbox` caso ocorra erro de rede ou esquema ausente antes de eventual migração.
+
+### 19.2 Classificação Alfabética (`A–Z`) Global de Alunos (`storage.ts`, `ScheduleView.tsx`, `FinanceView.tsx`, `LessonCheckinView.tsx`)
+- O método central `db.getStudents()` e a rotina `verifyCadastrosIntegrity()` em `src/lib/storage.ts` passaram a retornar todos os cadastros de alunos ordenados alfabeticamente (`localeCompare('pt-BR', { sensitivity: 'base' })`).
+- Todas as telas operacionais com listas e seletores (`<select>`) de alunos — incluindo Agenda e Horários, Filtro de Aulas Realizadas, Cadastro/Gestão de Alunos, Contas a Receber, Contratos, Relatórios e Check-in GPS — consomem e preservam a ordenação `A–Z`.
+
+### 19.3 Catálogo Padronizado com 25 Tipos de Manutenção/Despesa Veicular + Opção `"Outro"` (`src/lib/expenseMaintenanceCatalog.ts` & `src/components/instructor/FinanceView.tsx`)
+- O modal **Lançar Nova Despesa** passou a disponibilizar um seletor padronizado (`EXPENSE_MAINTENANCE_ITEMS`) com os **25 principais serviços e custos da frota de instrução** (incluindo *Troca de Óleo do Motor*, *Abastecimento (Gasolina / Etanol / GNV / Diesel)*, *Troca de Pneu*, *Compra de Pneu(s) Novo(s)*, *Troca de Embreagem (Kit Embreagem / Platô / Disco)*, *Pastilhas de Freio*, *Discos / Tambores de Freio*, *Fluido de Freio*, *Alinhamento e Balanceamento*, *Correia Dentada*, *Velas e Cabos de Ignição*, *Filtros Gerais*, *Bateria Automotiva*, *Amortecedores e Molas*, *Reparo de Suspensão*, *Limpeza de Bicos Injetores*, *Arrefecimento / Radiador*, *Duplo Comando (Pedais de Instrução)*, *Câmbio / Transmissão*, *Elétrica Automotiva*, *Ar-Condicionado*, *Palhetas do Limpador*, *Lavagem e Higienização*, *Borracharia / Rodízio* e *Vistoria Veicular / Taxas DETRAN*), associando automaticamente a categoria contábil correspondente (`COMBUSTIVEL`, `MANUTENCAO_VEICULO` ou `TAXAS_DETRAN`).
+- Ao selecionar **`Outro (Digitar manualmente...)`** (`EXPENSE_OTHER_OPTION = 'OUTRO'`), o formulário exibe um campo obrigatório para digitação livre da descrição da despesa.
+
+### 19.4 Módulo Check-in / Check-out de Aula Prática com Rota GPS, Medidor de Tempo e Contingência Anti-Falha (`LessonCheckinView.tsx`, `LessonRouteMap.tsx`, `lessonCheckinService.ts`, `storage.ts`)
+- **Fluxo de Check-in e Check-out com Baixa Automática:**
+  - Acessível pela página principal (`"Iniciar Check-in"` no painel do instrutor, `"Iniciar Check-in de Aula (GPS)"` / `"Ver Meus Percursos & Mapas"` no portal do aluno) e pelo item de menu **`Check-in & Rota GPS`**.
+  - Ao iniciar o check-in da aula agendada (`db.startLessonCheckin`), o sistema solicita permissão ao GPS do navegador/celular (`navigator.geolocation`), inicia o cronômetro e grava continuamente os pontos geográficos (`LessonGpsPoint[]`), velocidade e timestamps (`db.updateLessonCheckinProgress`).
+  - Ao finalizar o check-out (`db.finishLessonCheckin`), o instrutor pode registrar nota e observação rápida; a aula passa para `CONCLUIDA` com crédito idempotente de `+1` aula em `aulasCumpridas` do aluno.
+- **Fallback Anti-Esquecimento (`db.autoCompleteElapsedLessons`):**
+  - Caso o instrutor e o aluno esqueçam de iniciar o check-in — ou iniciem o check-in e esqueçam de clicar em check-out — a rotina automática continua computando e dando baixa normalmente na aula agendada após o término do horário previsto, encerrando eventuais check-ins pendentes da aula sem perda de carga horária.
+- **Verificação de Hardware Anti-Falha (`evaluateHardwareForLiveMap`):**
+  - Antes de inicializar o mapa ao vivo, o módulo avalia capacidade de `<canvas>`, memória (`deviceMemory`), núcleos de CPU (`hardwareConcurrency`) e rede (`saveData` / `2g`).
+  - Quando o dispositivo é limitado (ou no simulador de contingência Master), o sistema exibe alerta explicativo, oculta o mapa ao vivo para evitar travamentos e apresenta tela leve responsiva contendo os botões de início/término, medidor de tempo, **Nome do Aluno**, **Nome do Instrutor**, **Data** e **Horário da Aula**. Mesmo em modo de contingência, as coordenadas GPS são gravadas em segundo plano e o trajeto completo no mapa é apresentado ao término (check-out).
+- **Alternância de Visualização e Telemetria (`computeRouteTelemetry` & `LessonRouteMap.tsx`):**
+  - Em dispositivos compatíveis, o usuário alterna livremente entre **`Ambos (Tempo + Mapa)`**, **`Somente Medidor de Tempo`** e **`Somente Mapa`**.
+  - O medidor apresenta **Tempo Total Computado**, **Em Deslocamento**, **Tempo de Parada** e **Distância percorrida (km)** calculada via Haversine (`calculateHaversineDistanceKm`).
+  - O mapa integra visualização interativa sobre OpenStreetMap com polilinha e marcadores de início/parada/fim, aba **Google Maps** embutida (`buildGoogleMapsEmbedUrl`) e botão externo **"Abrir Rota Google Maps"** (`buildGoogleMapsDirectionsUrl`).
+- **Relatório Individual por Instrutor e Aluno:**
+  - Aba dedicada **`Relatório de Percursos`** com filtros por instrutor e por aluno (em ordem alfabética `A–Z`), listando data, horário do agendamento, métricas de tempo/distância e mapa completo do trajeto percorrido; alunos visualizam estritamente seus próprios percursos.
+
+### 19.5 Homologação Mobile (Vercel HTTPS), Liberação nos Planos SaaS e Testes Automatizados
+- **Homologação Real no Celular (Vercel HTTPS):** Validada pelo Administrador Master (`cassiordcosta@gmail.com`) em navegador móvel real na Vercel (que fornece HTTPS obrigatório para `navigator.geolocation` no Android/iOS).
+- **Disponibilização nos Planos SaaS (`src/lib/saasPlans.ts`):** Após validação positiva em 19/11/2026 (`c742391` → `ea453fa`), o módulo `LESSON_CHECKIN_GPS` foi liberado em todos os planos padrão (`DEMO`, `BASICO`, `AVANCADO` e `MASTER`), incluindo migração automática de caches antigos (`agd_checkin_gps_released_v1`) e compatibilidade com organizações com listas legadas em `modulosCustomizados`, mantendo o controle configurável pelo Master no painel de planos (`configureModuleAcrossPlans`).
+- **Verificações Automatizadas Executadas após a Liberação Final (`ea453fa`):**
+  - **TypeScript (`tsc --noEmit` / `npm run lint`):** 0 erros.
+  - **Build de Produção (`vite build` / `npm run build`):** 2.022 módulos compilados com sucesso.
+  - **`tests/checkin-expenses-sorting.test.ts`:** **7/7 testes aprovados** (catálogo de 25 manutenções + `"OUTRO"`, ordenação alfabética `A–Z`, permissão SaaS configurável para Master/Instrutor/Aluno, diagnóstico de hardware anti-falha, telemetria GPS Haversine e URL Google Maps, check-in/check-out com baixa de aula e fallback anti-esquecimento).
+  - **`tests/contract-flow.test.ts`:** **8/8 testes aprovados** (regressão completa de contratos e aceites eletrônicos).

@@ -42,7 +42,7 @@ export function generateOfficialDossierPdf(options: DossierPdfOptions = {}): jsP
 
   doc.setFontSize(7.5);
   doc.setTextColor(...greenColor);
-  doc.text('HOMOLOGAÇÃO OFICIAL v6.8 ESTÁVEL (17/17 TESTES)', pageWidth - margin, currentY, { align: 'right' });
+  doc.text('HOMOLOGAÇÃO OFICIAL v8.1 ESTÁVEL (RLS + GPS + TESTES OK)', pageWidth - margin, currentY, { align: 'right' });
   currentY += 6;
 
   // Título Principal
@@ -56,7 +56,7 @@ export function generateOfficialDossierPdf(options: DossierPdfOptions = {}): jsP
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9.5);
   doc.setTextColor(...slateColor);
-  doc.text('Dossiê Técnico, Mapa Geográfico (5–40 km), Blindagem Cloud Vault de Pacotes, Gestão de Veículos e Supabase', margin, currentY);
+  doc.text('Dossiê Técnico, Check-in & Rota GPS, 25 Manutenções, Ordem A-Z, Mapa Geográfico, Cloud Vault e Supabase RLS', margin, currentY);
   currentY += 6;
 
   // Caixa de Metadados
@@ -69,7 +69,7 @@ export function generateOfficialDossierPdf(options: DossierPdfOptions = {}): jsP
   doc.setTextColor(...darkColor);
   doc.text('Versão da Plataforma:', margin + 4, currentY + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text('v6.8 (Mapa 5–40km + Veículos + Cloud Vault)', margin + 35, currentY + 5);
+  doc.text('v8.1 (Check-in GPS + 25 Manutenções + Ordem A-Z)', margin + 35, currentY + 5);
 
   doc.setFont('helvetica', 'bold');
   doc.text('Administrador Master:', margin + 4, currentY + 10);
@@ -82,13 +82,13 @@ export function generateOfficialDossierPdf(options: DossierPdfOptions = {}): jsP
   doc.text('Banco de Dados:', margin + 4, currentY + 15);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...greenColor);
-  doc.text('Supabase SQL + Cloud Vault + Backup Local', margin + 35, currentY + 15);
+  doc.text('Supabase RLS + Cloud Vault + Backup Local', margin + 35, currentY + 15);
 
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...darkColor);
   doc.text('Data de Homologação:', margin + 105, currentY + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text('Novembro de 2026', margin + 140, currentY + 5);
+  doc.text('19 de Novembro de 2026', margin + 140, currentY + 5);
 
   doc.setFont('helvetica', 'bold');
   doc.text('Normativas Legais:', margin + 105, currentY + 10);
@@ -98,7 +98,7 @@ export function generateOfficialDossierPdf(options: DossierPdfOptions = {}): jsP
   doc.setFont('helvetica', 'bold');
   doc.text('Integridade & Testes:', margin + 105, currentY + 15);
   doc.setFont('helvetica', 'normal');
-  doc.text('17/17 Testes Aprovados · Zero Data Loss', margin + 140, currentY + 15);
+  doc.text('Check-in 7/7 + Contratos 8/8 · Zero Data Loss', margin + 140, currentY + 15);
 
   currentY += 28;
 
@@ -106,7 +106,7 @@ export function generateOfficialDossierPdf(options: DossierPdfOptions = {}): jsP
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.setTextColor(...primaryColor);
-  doc.text('1. RESUMO EXECUTIVO E NOVAS MELHORIAS HOMOLOGADAS (v6.8)', margin, currentY);
+  doc.text('1. RESUMO EXECUTIVO E EVOLUÇÃO HOMOLOGADA (v6.8 -> v8.1)', margin, currentY);
   currentY += 5;
 
   doc.setFont('helvetica', 'normal');
@@ -114,11 +114,11 @@ export function generateOfficialDossierPdf(options: DossierPdfOptions = {}): jsP
   doc.setTextColor(...darkColor);
   const resumoText = [
     'O Gestão AD (Auto Direção) é uma solução full-stack de nível corporativo e pedagógico para CFCs, Instrutores e Alunos.',
-    'Novidades v6.8: Auto-cadastro de aluno em 3 etapas com confidencialidade por código do instrutor (ou link WhatsApp),',
-    'Mapa Geográfico (5 a 40 km) com seleção de Estado primeiro, CEP auto-preenchimento, ocultação de bairro e contato WhatsApp,',
-    'Demanda Reversa de alunos procurando instrutor + Mapa Interno exclusivo para instrutores logados, Agenda por período (Semanal,',
-    'Mensal, Anual) com notificação automática ao aluno em desmarcação, edição persistente de plano na Ficha do Aluno, blindagem',
-    'Cloud Vault contra perda de pacotes e módulo completo "Meus Veículos" para cadastro de carros/motos dos instrutores.'
+    'Novidades v8.1 (19/11/2026): Check-in & Rota GPS com medidor de tempo (deslocamento/parada), integração Google Maps/OSM,',
+    'verificação anti-falha de hardware, fallback anti-esquecimento, relatório individual por aluno/instrutor e liberação nos planos.',
+    'Inclui classificação alfabética (A-Z) global de alunos, catálogo de 25 despesas/manutenções + opção "Outro", segurança RLS',
+    'no Supabase (tabela lesson_checkins + Cloud Vault), Mapa Geográfico (5-40 km), contratos digitais e gestão completa de frota,',
+    'contas a receber PIX, DRE e livro fiscal IRPF com execução verificada em HTTPS (Vercel) e suítes automatizadas aprovadas.'
   ];
   doc.text(resumoText, margin, currentY);
   currentY += 23;
@@ -388,12 +388,12 @@ export function generateOfficialDossierPdf(options: DossierPdfOptions = {}): jsP
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8.5);
   doc.setTextColor(...greenColor);
-  doc.text('HOMOLOGAÇÃO OFICIAL CONCLUÍDA COM SUCESSO · VERSÃO v6.8 ESTÁVEL (17/17 TESTES)', margin + 4, currentY + 5);
+  doc.text('HOMOLOGAÇÃO OFICIAL CONCLUÍDA COM SUCESSO · VERSÃO v8.1 ESTÁVEL (RLS + GPS)', margin + 4, currentY + 5);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(...darkColor);
-  doc.text('Hash Criptográfico de Auditoria: SHA256-AGD-V68-VAULT-GEO-VEHICLES-2026-STABLE', margin + 4, currentY + 10);
+  doc.text('Hash Criptográfico de Auditoria: SHA256-AGD-V81-CHECKIN-GPS-25EXP-AZ-2026', margin + 4, currentY + 10);
   doc.text(`Responsável Master: ${masterEmail}`, margin + 115, currentY + 10);
 
   currentY += 30;
@@ -425,7 +425,7 @@ export function generateOfficialDossierPdf(options: DossierPdfOptions = {}): jsP
   doc.setFontSize(7.5);
   doc.setTextColor(...slateColor);
   doc.text('Segurança da Informação e Proteção LGPD', rightSignX + signWidth / 2, currentY + 8, { align: 'center' });
-  doc.text('Certificação Digital v6.8 Homologada', rightSignX + signWidth / 2, currentY + 12, { align: 'center' });
+  doc.text('Certificação Digital v8.1 Homologada', rightSignX + signWidth / 2, currentY + 12, { align: 'center' });
 
   // --- CABEÇALHO E RODAPÉ EM TODAS AS PÁGINAS ---
   const totalPages = doc.internal.pages.length - 1;
@@ -440,7 +440,7 @@ export function generateOfficialDossierPdf(options: DossierPdfOptions = {}): jsP
     doc.setFontSize(7);
     doc.setTextColor(...slateColor);
     doc.text(
-      'Gestão AD (Auto Direção) · Dossiê Técnico Oficial v6.8 · Homologado para cassiordcosta@gmail.com',
+      'Gestão AD (Auto Direção) · Dossiê Técnico Oficial v8.1 · Homologado para cassiordcosta@gmail.com',
       margin,
       pageHeight - 6
     );
@@ -457,7 +457,7 @@ export function generateOfficialDossierPdf(options: DossierPdfOptions = {}): jsP
   return doc;
 }
 
-export function downloadOfficialDossierPdf(filename = 'DOSSIE_OFICIAL_GESTAO_AD_v6.8.pdf'): boolean {
+export function downloadOfficialDossierPdf(filename = 'DOSSIE_OFICIAL_GESTAO_AD_v8.1.pdf'): boolean {
   try {
     const doc = generateOfficialDossierPdf({ filename });
     doc.save(filename);
@@ -475,7 +475,7 @@ export function openOfficialDossierPdfInNewTab(): boolean {
     const newWindow = window.open(blobUrl, '_blank');
     if (!newWindow) {
       // If popup blocked, download directly
-      doc.save('DOSSIE_OFICIAL_GESTAO_AD_v6.8.pdf');
+      doc.save('DOSSIE_OFICIAL_GESTAO_AD_v8.1.pdf');
     }
     return true;
   } catch (err) {

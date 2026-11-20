@@ -41,7 +41,9 @@ export const OfficialDossierPdfViewer: React.FC<OfficialDossierPdfViewerProps> =
 }) => {
   return (
     <div className="space-y-4">
-      <p className="p-4 rounded-xl bg-amber-50 text-amber-900 text-sm">Revisão de 16/11/2026: menu lateral, persistência confirmada, assinatura no cadastro e histórico de backups. Campos da migração do banco confirmados em 16/11/2026; homologação em produção pendente. A seção 16 do dossie.md registra evidências e limitações; o PDF anterior permanece como registro histórico.</p>
+      <p className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-950 text-sm">
+        <strong>Revisão Homologada de 19/11/2026 (v8.1 — Vercel HTTPS &amp; Supabase RLS):</strong> Liberado nos pacotes para instrutores e portal do aluno o módulo <strong>Check-in &amp; Rota GPS</strong> (cronômetro deslocamento/parada, mapa Google Maps/OSM, detecção anti-falha de hardware, fallback anti-esquecimento e relatório individual), além da classificação alfabética <strong>A–Z</strong> dos alunos e catálogo de <strong>25 despesas/manutenções + opção "Outro"</strong>. Detalhes completos na seção 19 do <code>dossie.md</code>; o registro base abaixo preserva o histórico estrutural.
+      </p>
       {/* Top Document Toolbar */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-3  z-10 backdrop-blur-md bg-white/95">
         <div>
@@ -347,7 +349,7 @@ export const OfficialDossierPdfViewer: React.FC<OfficialDossierPdfViewerProps> =
         <section className="space-y-2.5">
           <h2 className="text-base font-bold text-slate-900 border-b border-slate-200 pb-1 flex items-center gap-2">
             <span className="w-5 h-5 rounded bg-blue-600 text-white flex items-center justify-center text-xs font-bold">4</span>
-            Dicionário de Banco de Dados e Entidades (19 Coleções Homologadas)
+            Dicionário de Banco de Dados e Entidades (20 Coleções Homologadas)
           </h2>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border border-slate-200">
@@ -395,6 +397,12 @@ export const OfficialDossierPdfViewer: React.FC<OfficialDossierPdfViewerProps> =
                   <td className="p-2 border-r border-slate-200">PK: <code>id</code><br />FKs: <code>alunoId, instrutorId, veiculoId</code></td>
                   <td className="p-2 border-r border-slate-200">data, horaInicio, horaFim, topico, status, notaAula</td>
                   <td className="p-2">Grade ampliada das 06:00 às 00:00.</td>
+                </tr>
+                <tr className="bg-emerald-50/40">
+                  <td className="p-2 font-bold border-r border-slate-200">lessonCheckins</td>
+                  <td className="p-2 border-r border-slate-200">PK: <code>id</code><br />FKs: <code>aulaId, alunoId, instrutorId, veiculoId</code></td>
+                  <td className="p-2 border-r border-slate-200">checkinEm, checkoutEm, tempoTotalSegundos, tempoDeslocamentoSegundos, tempoParadaSegundos, distanciaKm, coordenadas, modoHardware, status</td>
+                  <td className="p-2">Telemetria GPS, tempo de aula, contingência de hardware e tabela nativa <code>public.lesson_checkins</code> (RLS + Cloud Vault).</td>
                 </tr>
                 <tr>
                   <td className="p-2 font-bold border-r border-slate-200">availableSlots</td>
