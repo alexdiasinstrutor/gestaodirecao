@@ -21,10 +21,20 @@ export function useInterfaceMode() {
   );
 
   // User manual override ('SIMPLIFIED' | 'FULL' | null for automatic based on device)
+  // Persisted in localStorage (with fallback read from sessionStorage) so setup is never lost across restarts/deploys.
   const [manualOverride, setManualOverride] = useState<ViewComplexityMode | null>(() => {
     if (typeof window === 'undefined') return null;
-    const saved = sessionStorage.getItem(STORAGE_KEY_OVERRIDE);
-    if (saved === 'SIMPLIFIED' || saved === 'FULL') return saved;
+    try {
+      const persistent = localStorage.getItem(STORAGE_KEY_OVERRIDE);
+      if (persistent === 'SIMPLIFIED' || persistent === 'FULL') return persistent;
+      const legacySession = sessionStorage.getItem(STORAGE_KEY_OVERRIDE);
+      if (legacySession === 'SIMPLIFIED' || legacySession === 'FULL') {
+        localStorage.setItem(STORAGE_KEY_OVERRIDE, legacySession);
+        return legacySession;
+      }
+    } catch {
+      // ignore storage errors
+    }
     return null;
   });
 
@@ -53,6 +63,7 @@ export function useInterfaceMode() {
   const setViewMode = useCallback((mode: ViewComplexityMode) => {
     setManualOverride(mode);
     try {
+      localStorage.setItem(STORAGE_KEY_OVERRIDE, mode);
       sessionStorage.setItem(STORAGE_KEY_OVERRIDE, mode);
     } catch {
       // ignore storage errors
@@ -68,6 +79,7 @@ export function useInterfaceMode() {
   const resetToAutoDevice = useCallback(() => {
     setManualOverride(null);
     try {
+      localStorage.removeItem(STORAGE_KEY_OVERRIDE);
       sessionStorage.removeItem(STORAGE_KEY_OVERRIDE);
     } catch {
       // ignore

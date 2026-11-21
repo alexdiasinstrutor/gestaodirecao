@@ -764,8 +764,10 @@ export function seedDemoData() {
 }
 
 // Inicializa o banco de dados limpo e oficial para produção (Sem dados fictícios)
-export function seedCleanProductionData(): { org: Organization; user: User } {
+// Quando forceReset !== true, preserva integralmente configurações, setups e registros já existentes.
+export function seedCleanProductionData(options?: { forceReset?: boolean }): { org: Organization; user: User } {
   const orgId = 'org_direcao_certa_01';
+  const forceReset = Boolean(options?.forceReset);
 
   const defaultOrg: Organization = {
     id: orgId,
@@ -781,7 +783,7 @@ export function seedCleanProductionData(): { org: Organization; user: User } {
     criadoEm: new Date().toISOString()
   };
 
-  const masterUser: User = {
+  const defaultMasterUser: User = {
     id: 'usr_admin_cassio',
     organizacaoId: orgId,
     nome: 'Cássio Costa (Administrador Master)',
@@ -797,12 +799,27 @@ export function seedCleanProductionData(): { org: Organization; user: User } {
     aprovadoPorMaster: true
   };
 
-  const existingOrgs = readList<Organization>(STORAGE_KEYS.ORGANIZATIONS).filter(
-    (o) => o.id !== orgId
-  );
-  const existingUsers = readList<User>(STORAGE_KEYS.USERS).filter(
+  const currentOrgs = readList<Organization>(STORAGE_KEYS.ORGANIZATIONS);
+  const existingDefaultOrg = !forceReset ? currentOrgs.find((o) => o.id === orgId) : undefined;
+  const effectiveOrg: Organization = existingDefaultOrg
+    ? { ...defaultOrg, ...existingDefaultOrg, status: existingDefaultOrg.status || 'ATIVO' }
+    : defaultOrg;
+
+  const currentUsers = readList<User>(STORAGE_KEYS.USERS);
+  const existingMaster = !forceReset
+    ? currentUsers.find(
+        (u) => u.id === defaultMasterUser.id || u.email.toLowerCase() === 'cassiordcosta@gmail.com'
+      )
+    : undefined;
+  const masterUser: User = existingMaster
+    ? { ...defaultMasterUser, ...existingMaster, papel: 'SUPER_ADMIN' }
+    : defaultMasterUser;
+
+  const existingOrgs = currentOrgs.filter((o) => o.id !== orgId);
+  const existingUsers = currentUsers.filter(
     (u) =>
       u.id !== masterUser.id &&
+      u.email.toLowerCase() !== 'cassiordcosta@gmail.com' &&
       u.id !== 'usr_carlos_01' &&
       u.id !== 'usr_roberto_02' &&
       u.id !== 'usr_aluno_pedro'
@@ -844,46 +861,68 @@ export function seedCleanProductionData(): { org: Organization; user: User } {
   existingBackupPackages.forEach((p) => mergedPackagesMap.set(p.id, p));
   existingPackages.forEach((p) => mergedPackagesMap.set(p.id, p));
 
-  writeList(STORAGE_KEYS.ORGANIZATIONS, [defaultOrg, ...existingOrgs]);
-  writeList(STORAGE_KEYS.USERS, [masterUser, ...existingUsers]);
-  writeList(STORAGE_KEYS.STUDENTS, existingStudents);
-  writeList(STORAGE_KEYS.VEHICLES, Array.from(mergedVehiclesMap.values()));
-  writeList(STORAGE_KEYS.VEHICLES_BACKUP, Array.from(mergedVehiclesMap.values()));
-  writeList(STORAGE_KEYS.SLOTS, readList<AvailableSlot>(STORAGE_KEYS.SLOTS));
-  writeList(STORAGE_KEYS.LESSONS, readList<Lesson>(STORAGE_KEYS.LESSONS));
-  writeList(STORAGE_KEYS.PACKAGES, Array.from(mergedPackagesMap.values()));
-  writeList(STORAGE_KEYS.PACKAGES_BACKUP, Array.from(mergedPackagesMap.values()));
-  writeList(STORAGE_KEYS.ACCOUNTS, readList<AccountReceivable>(STORAGE_KEYS.ACCOUNTS));
-  writeList(STORAGE_KEYS.PAYMENTS, readList<PaymentRecord>(STORAGE_KEYS.PAYMENTS));
-  writeList(STORAGE_KEYS.EXPENSES, readList<Expense>(STORAGE_KEYS.EXPENSES));
-  writeList(STORAGE_KEYS.INVESTMENTS, readList<Investment>(STORAGE_KEYS.INVESTMENTS));
-  writeList(STORAGE_KEYS.AUDIT, readList<AuditLog>(STORAGE_KEYS.AUDIT));
-  writeList(STORAGE_KEYS.WHATSAPP_LOGS, readList<WhatsAppReminderLog>(STORAGE_KEYS.WHATSAPP_LOGS));
-  writeList(STORAGE_KEYS.SYNC_QUEUE, readList<SyncQueueItem>(STORAGE_KEYS.SYNC_QUEUE));
+  hydrateList(STORAGE_KEYS.ORGANIZATIONS, [effectiveOrg, ...existingOrgs]);
+  hydrateList(STORAGE_KEYS.USERS, [masterUser, ...existingUsers]);
+  hydrateList(STORAGE_KEYS.STUDENTS, existingStudents);
+  hydrateList(STORAGE_KEYS.VEHICLES, Array.from(mergedVehiclesMap.values()));
+  hydrateList(STORAGE_KEYS.VEHICLES_BACKUP, Array.from(mergedVehiclesMap.values()));
+  hydrateList(STORAGE_KEYS.SLOTS, readList<AvailableSlot>(STORAGE_KEYS.SLOTS));
+  hydrateList(STORAGE_KEYS.LESSONS, readList<Lesson>(STORAGE_KEYS.LESSONS));
+  hydrateList(
+    STORAGE_KEYS.LESSON_CHECKINS,
+    forceReset ? [] : readList<LessonCheckinRecord>(STORAGE_KEYS.LESSON_CHECKINS)
+  );
+  hydrateList(STORAGE_KEYS.PACKAGES, Array.from(mergedPackagesMap.values()));
+  hydrateList(STORAGE_KEYS.PACKAGES_BACKUP, Array.from(mergedPackagesMap.values()));
+  hydrateList(STORAGE_KEYS.ACCOUNTS, readList<AccountReceivable>(STORAGE_KEYS.ACCOUNTS));
+  hydrateList(STORAGE_KEYS.PAYMENTS, readList<PaymentRecord>(STORAGE_KEYS.PAYMENTS));
+  hydrateList(STORAGE_KEYS.EXPENSES, readList<Expense>(STORAGE_KEYS.EXPENSES));
+  hydrateList(STORAGE_KEYS.INVESTMENTS, readList<Investment>(STORAGE_KEYS.INVESTMENTS));
+  hydrateList(STORAGE_KEYS.AUDIT, readList<AuditLog>(STORAGE_KEYS.AUDIT));
+  hydrateList(STORAGE_KEYS.WHATSAPP_LOGS, readList<WhatsAppReminderLog>(STORAGE_KEYS.WHATSAPP_LOGS));
+  hydrateList(STORAGE_KEYS.SYNC_QUEUE, readList<SyncQueueItem>(STORAGE_KEYS.SYNC_QUEUE));
   localStorage.setItem(STORAGE_KEYS.SEEDED, 'true');
 
-  // Nunca auto-loga em nenhum usuário (incluindo Master): exige login manual com e-mail e senha
-  localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
-  localStorage.removeItem(STORAGE_KEYS.SESSION_EXPIRY);
-
-  // Persiste no Supabase caso esteja conectado
-  if (supabaseAdapter.enabled) {
-    supabaseAdapter.saveOrganization(defaultOrg).catch(console.error);
-    supabaseAdapter.saveUser(masterUser).catch(console.error);
+  if (forceReset) {
+    // Em limpeza explícita de produção, exige novo login manual com e-mail e senha
+    localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+    localStorage.removeItem(STORAGE_KEYS.SESSION_EXPIRY);
   }
 
-  return { org: defaultOrg, user: masterUser };
+  // Persiste no Supabase apenas quando a entidade ainda não existia ou em reset explícito,
+  // evitando sobrescrever setups remotos já configurados pelo usuário.
+  if (supabaseAdapter.enabled && (forceReset || !existingDefaultOrg || !existingMaster)) {
+    if (forceReset || !existingDefaultOrg) {
+      supabaseAdapter.saveOrganization(effectiveOrg).catch(console.error);
+    }
+    if (forceReset || !existingMaster) {
+      supabaseAdapter.saveUser(masterUser).catch(console.error);
+    }
+  }
+
+  return { org: effectiveOrg, user: masterUser };
 }
 
-// Sincronização inicial com o Supabase (Hydration & Safe Merge)
-export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'supabase' | 'clean' }> {
-  if (!supabaseAdapter.enabled) return { synced: false, source: 'clean' };
+// Sincronização inicial e manual com o Supabase (Hydration & Non-Destructive Bidirectional Merge)
+export async function syncFromSupabase(): Promise<{
+  synced: boolean;
+  source: 'supabase' | 'clean';
+  flushedCount?: number;
+  failedCount?: number;
+  checkinsCount?: number;
+  error?: string;
+}> {
+  if (!supabaseAdapter.enabled) return { synced: false, source: 'clean', error: 'Supabase desativado.' };
 
   try {
-    await supabaseAdapter.flushPendingWrites();
-    await syncSaaSPlans();
+    const flushResult = await supabaseAdapter.flushPendingWrites();
+    await syncSaaSPlans().catch((planErr) => console.warn('[SaaSPlans] Aviso ao sincronizar planos:', planErr));
     const historyUser = db.getCurrentUser();
-    if (historyUser) await hydrateDataHistory(await supabaseAdapter.getDataCheckpointAuditLogs(), historyUser);
+    if (historyUser) {
+      await hydrateDataHistory(await supabaseAdapter.getDataCheckpointAuditLogs(), historyUser).catch((histErr) =>
+        console.warn('[DataHistory] Aviso ao hidratar histórico:', histErr)
+      );
+    }
     for (const id of readList<string>('agd_pending_signatures')) {
       const user = readList<User>(STORAGE_KEYS.USERS).find(u => u.id === id);
       if (user) {
@@ -911,14 +950,33 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
       } else {
         seedCleanProductionData();
       }
-      return { synced: true, source: 'clean' };
+      return {
+        synced: true,
+        source: 'clean',
+        flushedCount: flushResult.flushed,
+        failedCount: flushResult.failed
+      };
     }
 
-    // Merge seguro com precedência no Supabase (garante que instrutores cadastrados no banco apareçam localmente)
+    // Merge seguro com precedência no Supabase preservando setups locais caso ausentes no remoto
     const localOrgs = readList<Organization>(STORAGE_KEYS.ORGANIZATIONS);
     const mergedOrgsMap = new Map<string, Organization>();
     localOrgs.forEach((o) => mergedOrgsMap.set(o.id, o));
-    remoteOrgs.forEach((o) => mergedOrgsMap.set(o.id, o));
+    remoteOrgs.forEach((o) => {
+      const existing = mergedOrgsMap.get(o.id);
+      mergedOrgsMap.set(o.id, {
+        ...existing,
+        ...o,
+        modulosCustomizados:
+          Array.isArray(o.modulosCustomizados) && o.modulosCustomizados.length > 0
+            ? o.modulosCustomizados
+            : existing?.modulosCustomizados || [],
+        chavePix: o.chavePix || existing?.chavePix,
+        tipoChavePix: o.tipoChavePix || existing?.tipoChavePix,
+        beneficiarioPix: o.beneficiarioPix || existing?.beneficiarioPix,
+        cidadePix: o.cidadePix || existing?.cidadePix
+      });
+    });
     hydrateList(STORAGE_KEYS.ORGANIZATIONS, Array.from(mergedOrgsMap.values()));
 
     const localUsers = readList<User>(STORAGE_KEYS.USERS);
@@ -1232,7 +1290,37 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
       }
     }
 
-    if (lessons && lessons.length > 0) hydrateList(STORAGE_KEYS.LESSONS, lessons);
+    // Merge não-destrutivo de aulas (preserva aulas locais recém-criadas/concluídas enquanto sincroniza com a nuvem)
+    {
+      const localLessons = readList<Lesson>(STORAGE_KEYS.LESSONS);
+      const remoteLessons = lessons || [];
+      const remoteLessonIds = new Set(remoteLessons.map((l) => l.id));
+      const mergedLessonsMap = new Map<string, Lesson>();
+      localLessons.forEach((l) => mergedLessonsMap.set(l.id, l));
+      const rankStatus = (s: Lesson['status']) =>
+        s === 'CANCELADA' ? 4 : s === 'CONCLUIDA' ? 3 : s === 'EM_ANDAMENTO' ? 2 : 1;
+
+      remoteLessons.forEach((rl) => {
+        const local = mergedLessonsMap.get(rl.id);
+        if (!local) {
+          mergedLessonsMap.set(rl.id, rl);
+          return;
+        }
+        const localWin =
+          rankStatus(local.status) > rankStatus(rl.status) ||
+          (local.status === rl.status && (local.concluidaEm || '') > (rl.concluidaEm || ''));
+        mergedLessonsMap.set(rl.id, localWin ? { ...rl, ...local } : { ...local, ...rl });
+      });
+
+      const finalLessons = Array.from(mergedLessonsMap.values());
+      hydrateList(STORAGE_KEYS.LESSONS, finalLessons);
+
+      for (const ls of finalLessons) {
+        if (!remoteLessonIds.has(ls.id)) {
+          supabaseAdapter.saveLesson(ls).catch(() => { });
+        }
+      }
+    }
 
     // Gestão segura e bidirecional de slots (agenda de horários disponíveis)
     const deletedSlotIds = new Set(readList<string>(STORAGE_KEYS.DELETED_SLOTS));
@@ -1334,9 +1422,24 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
       accounts.forEach((a) => mergedAccountsMap.set(a.id, a));
       hydrateList(STORAGE_KEYS.ACCOUNTS, Array.from(mergedAccountsMap.values()));
     }
-    if (payments && payments.length > 0) hydrateList(STORAGE_KEYS.PAYMENTS, payments);
-    if (expenses && expenses.length > 0) hydrateList(STORAGE_KEYS.EXPENSES, expenses);
-    if (investments && investments.length > 0) hydrateList(STORAGE_KEYS.INVESTMENTS, investments);
+    if (payments && payments.length > 0) {
+      const mergedPay = new Map<string, PaymentRecord>();
+      readList<PaymentRecord>(STORAGE_KEYS.PAYMENTS).forEach((p) => mergedPay.set(p.id, p));
+      payments.forEach((p) => mergedPay.set(p.id, p));
+      hydrateList(STORAGE_KEYS.PAYMENTS, Array.from(mergedPay.values()));
+    }
+    if (expenses && expenses.length > 0) {
+      const mergedExp = new Map<string, Expense>();
+      readList<Expense>(STORAGE_KEYS.EXPENSES).forEach((e) => mergedExp.set(e.id, e));
+      expenses.forEach((e) => mergedExp.set(e.id, e));
+      hydrateList(STORAGE_KEYS.EXPENSES, Array.from(mergedExp.values()));
+    }
+    if (investments && investments.length > 0) {
+      const mergedInv = new Map<string, Investment>();
+      readList<Investment>(STORAGE_KEYS.INVESTMENTS).forEach((i) => mergedInv.set(i.id, i));
+      investments.forEach((i) => mergedInv.set(i.id, i));
+      hydrateList(STORAGE_KEYS.INVESTMENTS, Array.from(mergedInv.values()));
+    }
     // Sincronização bidirecional e protegida de pacotes e planos dos instrutores (PROIBIDO apagar ou inventar pacotes)
     {
       const deletedPkgIds = new Set(readList<string>(STORAGE_KEYS.DELETED_PACKAGES));
@@ -1529,25 +1632,70 @@ export async function syncFromSupabase(): Promise<{ synced: boolean; source: 'su
       console.warn('[Cupons] Hidratação a partir do Supabase ignorada:', couponErr);
     }
 
-    // Check-ins e telemetria GPS de aulas (merge seguro pelo timestamp mais recente)
-    if (lessonCheckins && lessonCheckins.length > 0) {
+    // Check-ins e telemetria GPS de aulas (merge bidirecional não-destrutivo)
+    let totalMergedCheckins = 0;
+    {
       const localCheckins = readList<LessonCheckinRecord>(STORAGE_KEYS.LESSON_CHECKINS);
+      const remoteCheckins = lessonCheckins || [];
+      const remoteMap = new Map<string, LessonCheckinRecord>(remoteCheckins.map((rc) => [rc.id, rc]));
       const mergedCheckinsMap = new Map<string, LessonCheckinRecord>();
       localCheckins.forEach((c) => mergedCheckinsMap.set(c.id, c));
-      lessonCheckins.forEach((rc) => {
+
+      remoteCheckins.forEach((rc) => {
         const existing = mergedCheckinsMap.get(rc.id);
-        if (!existing || (rc.atualizadoEm || '') >= (existing.atualizadoEm || '')) {
+        if (!existing) {
           mergedCheckinsMap.set(rc.id, rc);
+          return;
+        }
+        const localDone = existing.status === 'FINALIZADO';
+        const remoteDone = rc.status === 'FINALIZADO';
+        const richerPoints =
+          (existing.coordenadas?.length || 0) >= (rc.coordenadas?.length || 0)
+            ? existing.coordenadas
+            : rc.coordenadas;
+
+        if (remoteDone && !localDone) {
+          mergedCheckinsMap.set(rc.id, { ...existing, ...rc, coordenadas: richerPoints });
+        } else if (localDone && !remoteDone) {
+          mergedCheckinsMap.set(rc.id, { ...rc, ...existing, coordenadas: richerPoints });
+        } else if ((rc.atualizadoEm || '') > (existing.atualizadoEm || '')) {
+          mergedCheckinsMap.set(rc.id, { ...existing, ...rc, coordenadas: richerPoints });
+        } else {
+          mergedCheckinsMap.set(rc.id, { ...rc, ...existing, coordenadas: richerPoints });
         }
       });
-      hydrateList(STORAGE_KEYS.LESSON_CHECKINS, Array.from(mergedCheckinsMap.values()));
+
+      const finalCheckins = Array.from(mergedCheckinsMap.values()).sort((a, b) =>
+        (b.checkinEm || b.criadoEm || '').localeCompare(a.checkinEm || a.criadoEm || '')
+      );
+      hydrateList(STORAGE_KEYS.LESSON_CHECKINS, finalCheckins);
+      totalMergedCheckins = finalCheckins.length;
+
+      // Envia para a nuvem check-ins criados ou mais recentes localmente
+      for (const chk of finalCheckins) {
+        const rem = remoteMap.get(chk.id);
+        const needsPush =
+          !rem ||
+          (chk.status === 'FINALIZADO' && rem.status !== 'FINALIZADO') ||
+          (chk.atualizadoEm || '') > (rem.atualizadoEm || '') ||
+          (chk.coordenadas?.length || 0) > (rem.coordenadas?.length || 0);
+        if (needsPush) {
+          await supabaseAdapter.saveLessonCheckin(chk).catch(() => { });
+        }
+      }
     }
 
     notifyDataChange();
-    return { synced: true, source: 'supabase' };
+    return {
+      synced: true,
+      source: 'supabase',
+      flushedCount: flushResult.flushed,
+      failedCount: flushResult.failed,
+      checkinsCount: totalMergedCheckins
+    };
   } catch (err) {
     console.error('Erro na sincronização com Supabase:', err);
-    return { synced: false, source: 'clean' };
+    return { synced: false, source: 'clean', error: err instanceof Error ? err.message : String(err) };
   }
 }
 
@@ -3670,7 +3818,8 @@ export const db = {
         | 'modoHardware'
         | 'motivoHardwareLimitado'
       >
-    >
+    >,
+    options?: { persistRemote?: boolean }
   ): LessonCheckinRecord | undefined {
     const checkins = readList<LessonCheckinRecord>(STORAGE_KEYS.LESSON_CHECKINS);
     const idx = checkins.findIndex((c) => c.id === checkinId);
@@ -3682,8 +3831,10 @@ export const db = {
       atualizadoEm: new Date().toISOString()
     };
     checkins[idx] = updated;
-    writeList(STORAGE_KEYS.LESSON_CHECKINS, checkins);
-    supabaseAdapter.saveLessonCheckin(updated).catch(console.error);
+    hydrateList(STORAGE_KEYS.LESSON_CHECKINS, checkins);
+    if (options?.persistRemote !== false) {
+      supabaseAdapter.saveLessonCheckin(updated).catch(console.error);
+    }
     return updated;
   },
 
@@ -5074,6 +5225,7 @@ export const db = {
       packages: 0,
       vehicles: 0,
       lessons: 0,
+      lessonCheckins: 0,
       slots: 0,
       coupons: 0
     };
@@ -5166,6 +5318,17 @@ export const db = {
           stats.coupons++;
         } catch (e: any) {
           errors.push(`Cupom ${cp.codigo}: ${e.message}`);
+        }
+      }
+
+      // 8. Registros de Check-in e Percursos GPS
+      const checkins = readList<LessonCheckinRecord>(STORAGE_KEYS.LESSON_CHECKINS);
+      for (const chk of checkins) {
+        try {
+          await supabaseAdapter.saveLessonCheckin(chk);
+          stats.lessonCheckins++;
+        } catch (e: any) {
+          errors.push(`Check-in ${chk.id}: ${e.message}`);
         }
       }
 
@@ -5339,7 +5502,7 @@ export const db = {
     if (supabaseAdapter.enabled) {
       await supabaseAdapter.wipeAllData({ keepMasterAdmin: true });
     }
-    seedCleanProductionData();
+    seedCleanProductionData({ forceReset: true });
     localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
     localStorage.removeItem(STORAGE_KEYS.SESSION_EXPIRY);
   },
@@ -5350,7 +5513,7 @@ export const db = {
     if (supabaseAdapter.enabled) {
       await supabaseAdapter.wipeAllData({ keepMasterAdmin: true });
     }
-    seedCleanProductionData();
+    seedCleanProductionData({ forceReset: true });
     localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
     localStorage.removeItem(STORAGE_KEYS.SESSION_EXPIRY);
   },

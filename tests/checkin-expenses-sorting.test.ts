@@ -116,9 +116,15 @@ async function runTests() {
     computeRouteTelemetry,
     formatDurationHMS,
     buildGoogleMapsDirectionsUrl,
-    generateSimulatedGpsStep
+    buildGoogleMapsEmbedUrl,
+    generateSimulatedGpsStep,
+    filterEligibleCheckinLessons,
+    shouldAcceptGpsPoint
   } = await import('../src/lib/lessonCheckinService.ts');
-  const { db } = await import('../src/lib/storage.ts');
+  const { mobileGpsKeepAlive } = await import('../src/lib/mobileGpsKeepAlive.ts');
+  const { queueCloudWrite, getPendingWrites, acknowledgeCloudWrite } = await import('../src/lib/cloudOutbox.ts');
+  const { supabaseAdapter } = await import('../src/lib/supabaseAdapter.ts');
+  const { db, initDatabase, seedCleanProductionData } = await import('../src/lib/storage.ts');
   const {
     canAccessModule,
     configureModuleAcrossPlans,
@@ -331,7 +337,43 @@ async function runTests() {
 
   const gmapsUrl = buildGoogleMapsDirectionsUrl(route);
   assert.ok(gmapsUrl.startsWith('https://www.google.com/maps/dir/?api=1'));
-  console.log('[OK] Teste 5: Telemetria GPS (tempo total, deslocamento, parada, km e Google Maps URL) validada.');
+
+  const gmapsEmbedUrl = buildGoogleMapsEmbedUrl(route);
+  assert.ok(gmapsEmbedUrl.includes('maps.google.com/maps?q='), 'Embed deve usar formato q=lat,lng');
+  assert.ok(gmapsEmbedUrl.includes('output=embed'), 'Embed deve incluir output=embed');
+  assert.equal(gmapsEmbedUrl.includes('saddr='), false, 'Embed não deve usar saddr/daddr bloqueado em iframe');
+
+  // Telemetria após desbloqueio de tela (intervalo longo de 300s com speedKmh=0 no despertar e deslocamento ~1.2km)
+  const wakeGapRoute = [
+    { lat: -19.9678, lng: -44.1984, timestamp: '2026-11-19T10:00:00.000Z', speedKmh: 20, accuracy: 8 },
+    { lat: -19.957, lng: -44.1984, timestamp: '2026-11-19T10:05:00.000Z', speedKmh: 0, accuracy: 10 }
+  ];
+  const wakeTelemetry = computeRouteTelemetry(wakeGapRoute, 300);
+  assert.ok(wakeTelemetry.distanceKm > 1.0, 'Deslocamento após desbloqueio da tela deve ser contabilizado');
+  assert.equal(wakeTelemetry.movingSeconds, 300, 'Tempo em movimento após lacuna de bloqueio deve ser preservado');
+
+  // Filtro GPS (shouldAcceptGpsPoint): rejeita ruído > 120m e spam duplicado, aceita deslocamento >=5m ou >=10s
+  assert.equal(
+    shouldAcceptGpsPoint([p0], { lat: -19.9679, lng: -44.1985, timestamp: '2026-11-19T10:00:05.000Z', accuracy: 250 }),
+    false,
+    'Leitura GPS com precisão > 120m após ponto inicial deve ser descartada'
+  );
+  assert.equal(
+    shouldAcceptGpsPoint([p0], { lat: p0.lat, lng: p0.lng, timestamp: '2026-11-19T10:00:03.000Z', accuracy: 10 }),
+    false,
+    'Spam estacionário < 5m e < 10s deve ser ignorado'
+  );
+  assert.equal(
+    shouldAcceptGpsPoint([p0], { lat: p0.lat, lng: p0.lng, timestamp: '2026-11-19T10:00:12.000Z', accuracy: 10 }),
+    true,
+    'Heartbeat >= 10s deve ser aceito para computar tempo de parada com precisão'
+  );
+  assert.equal(
+    shouldAcceptGpsPoint([p0], p1),
+    true,
+    'Movimento real >= 5m deve ser aceito imediatamente'
+  );
+  console.log('[OK] Teste 5: Telemetria GPS (despertar pós-bloqueio, filtro anti-ruído e Google Maps embed/rotas) validada.');
 
   // 6. Teste: Fluxo Check-in -> Registro em progresso (modo hardware fraco) -> Check-out computa aula agendada
   const lessonCheckin: Lesson = {
@@ -439,7 +481,140 @@ async function runTests() {
   assert.equal(autoClosedCheckin?.status, 'FINALIZADO');
   console.log('[OK] Teste 7: Fallback anti-esquecimento (baixa automática com e sem check-in aberto) validado.');
 
-  console.log('=== Todos os 7 testes automatizados de Ordenação, 25 Despesas e Check-in GPS passaram com sucesso! ===');
+  // 8. Teste: Filtro estrito de aulas elegíveis para Check-in (somente aulas futuras / em andamento)
+  const testNowMs = new Date(2026, 10, 20, 14, 0, 0).getTime(); // 20/11/2026 14:00 local
+  const filterTestLessons: Lesson[] = [
+    {
+      id: 'lsn_filter_past',
+      organizacaoId: orgId,
+      alunoId: 'stu_a',
+      instrutorId: instructorUser.id,
+      veiculoId: 'veh_1',
+      data: '2026-11-20',
+      horaInicio: '10:00',
+      horaFim: '10:50',
+      topico: 'Aula Passada Não Deve Aparecer',
+      status: 'AGENDADA',
+      criadoEm: '2026-11-19T10:00:00Z'
+    },
+    {
+      id: 'lsn_filter_done_status',
+      organizacaoId: orgId,
+      alunoId: 'stu_a',
+      instrutorId: instructorUser.id,
+      veiculoId: 'veh_1',
+      data: '2026-11-25',
+      horaInicio: '10:00',
+      horaFim: '10:50',
+      topico: 'Aula Já Concluída',
+      status: 'CONCLUIDA',
+      criadoEm: '2026-11-19T10:00:00Z'
+    },
+    {
+      id: 'lsn_filter_already_checked_out',
+      organizacaoId: orgId,
+      alunoId: 'stu_b',
+      instrutorId: instructorUser.id,
+      veiculoId: 'veh_1',
+      data: '2026-11-25',
+      horaInicio: '11:00',
+      horaFim: '11:50',
+      topico: 'Aula com Check-in Já Finalizado',
+      status: 'AGENDADA',
+      criadoEm: '2026-11-19T10:00:00Z'
+    },
+    {
+      id: 'lsn_filter_future',
+      organizacaoId: orgId,
+      alunoId: 'stu_b',
+      instrutorId: instructorUser.id,
+      veiculoId: 'veh_1',
+      data: '2026-11-20',
+      horaInicio: '15:00',
+      horaFim: '15:50',
+      topico: 'Aula Futura Elegível',
+      status: 'AGENDADA',
+      criadoEm: '2026-11-19T10:00:00Z'
+    },
+    {
+      id: 'lsn_filter_active',
+      organizacaoId: orgId,
+      alunoId: 'stu_c',
+      instrutorId: instructorUser.id,
+      veiculoId: 'veh_1',
+      data: '2026-11-20',
+      horaInicio: '13:00',
+      horaFim: '13:50',
+      topico: 'Aula em Andamento Ativa',
+      status: 'EM_ANDAMENTO',
+      criadoEm: '2026-11-19T10:00:00Z'
+    }
+  ];
+  const fakeFinishedCheckin = {
+    ...finishedRes.checkin!,
+    id: 'chk_done_filter',
+    aulaId: 'lsn_filter_already_checked_out',
+    status: 'FINALIZADO' as const
+  };
+  const eligible = filterEligibleCheckinLessons(filterTestLessons, [fakeFinishedCheckin], testNowMs);
+  assert.deepEqual(
+    eligible.map((l) => l.id),
+    ['lsn_filter_future', 'lsn_filter_active'],
+    'Apenas aulas futuras agendadas ou em andamento devem aparecer para iniciar check-in'
+  );
+  console.log('[OK] Teste 8: Filtro futuro-only de aulas elegíveis para Check-in validado.');
+
+  // 9. Teste: Preservação não-destrutiva de setup/dados e resiliência da outbox / keep-alive
+  const customOrg: Organization = {
+    id: 'org_direcao_certa_01',
+    nome: 'Minha Autoescola Setup Personalizado',
+    tipo: 'INSTRUTOR_AUTONOMO',
+    cnpjCpf: '32.194.852/0001-44',
+    telefone: '(31) 98888-7777',
+    email: 'cassiordcosta@gmail.com',
+    cidade: 'Contagem',
+    estado: 'MG',
+    status: 'ATIVO',
+    plano: 'AVANCADO',
+    chavePix: 'chave-pix-personalizada-nao-resetar',
+    modulosCustomizados: ['DASHBOARD', 'STUDENTS', 'SCHEDULE', 'LESSON_CHECKIN_GPS'],
+    criadoEm: '2026-01-10T08:00:00Z'
+  };
+  db.saveOrganization(customOrg);
+  localStorage.removeItem('agd_seeded_v5');
+  initDatabase();
+  const orgAfterInit = db.getOrganization('org_direcao_certa_01');
+  assert.equal(
+    orgAfterInit?.chavePix,
+    'chave-pix-personalizada-nao-resetar',
+    'initDatabase/seedCleanProductionData não pode resetar setups já salvos da organização'
+  );
+  assert.equal(orgAfterInit?.nome, 'Minha Autoescola Setup Personalizado');
+  assert.equal(orgAfterInit?.plano, 'AVANCADO');
+  assert.ok(
+    db.getLessonCheckins(orgId).length >= 2,
+    'Registros de percursos GPS existentes não podem ser apagados ao reinicializar o banco'
+  );
+
+  // Outbox resiliente + mobileGpsKeepAlive seguro em ambiente sem navegador
+  const qEntry = queueCloudWrite('lessons', { id: 'lsn_q1' }, 'upsert');
+  assert.equal(getPendingWrites().some((e) => e.revision === qEntry.revision), true);
+  acknowledgeCloudWrite(qEntry);
+  assert.equal(getPendingWrites().some((e) => e.revision === qEntry.revision), false);
+  const flushEmpty = await supabaseAdapter.flushPendingWrites();
+  assert.equal(flushEmpty.failed, 0);
+
+  const kaStarted = await mobileGpsKeepAlive.start('Aluno Teste');
+  assert.equal(kaStarted.active, true);
+  await mobileGpsKeepAlive.stop();
+  assert.equal(mobileGpsKeepAlive.getStatus().active, false);
+
+  // Evita aviso caso explicit reset limpe
+  seedCleanProductionData({ forceReset: true });
+  assert.equal(db.getOrganization('org_direcao_certa_01')?.nome, 'Gestão AD (Auto Direção)');
+  console.log('[OK] Teste 9: Preservação de setup (zero reset), resiliência da outbox e keep-alive validados.');
+
+  console.log('=== Todos os 9 testes automatizados de Ordenação, 25 Despesas e Check-in GPS passaram com sucesso! ===');
 }
 
 runTests().catch((err) => {

@@ -14,16 +14,33 @@ export function useOnlineStatus() {
     const saas = ['DEMO', 'BASICO', 'AVANCADO', 'MASTER'].filter(id => localStorage.getItem('agd_pending_saas_' + id)).length;
     setPendingCount(getPendingWrites().length + db.getSyncQueue().length + list('agd_pending_packages') + list('agd_pending_signatures') + saas);
   }, []);
-  const triggerSync = useCallback(async () => {
-    setIsSyncing(true); setSyncError(null);
+  const triggerSync = useCallback(async (): Promise<boolean> => {
+    setIsSyncing(true);
+    setSyncError(null);
     try {
       const result = await syncFromSupabase();
-      if (!result.synced) throw new Error('O banco não confirmou a sincronização.');
+      if (!result.synced) {
+        throw new Error(result.error || 'O banco não confirmou a sincronização.');
+      }
       const user = db.getCurrentUser();
-      if (user) await retryDataBackups(user);
+      if (user) {
+        await retryDataBackups(user).catch(() => {});
+      }
+      if (result.failedCount && result.failedCount > 0) {
+        setSyncError(`${result.failedCount} item(ns) pendente(s) de reenvio.`);
+      }
       setLastSyncTime(new Date().toLocaleTimeString('pt-BR'));
-    } catch (error) { setSyncError(String(error)); }
-    finally { checkPendingQueue(); setIsSyncing(false); }
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('agd:data-synced'));
+      }
+      return true;
+    } catch (error) {
+      setSyncError(error instanceof Error ? error.message : String(error));
+      return false;
+    } finally {
+      checkPendingQueue();
+      setIsSyncing(false);
+    }
   }, [checkPendingQueue]);
   useEffect(() => {
     checkPendingQueue();

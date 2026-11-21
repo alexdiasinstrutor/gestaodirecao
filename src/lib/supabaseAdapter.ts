@@ -1127,10 +1127,35 @@ async function supabaseSelect<T>(
  * Use junto com a camada localStorage como dual-write durante a transição.
  */
 export const supabaseAdapter = {
-  async flushPendingWrites(): Promise<void> {
-    const priority = (table: string) => table === 'organizations' ? 0 : table === 'users' ? 1 : table === 'students' ? 2 : 3;
-    const snapshot = getPendingWrites().sort((a,b) => priority(a.table) - priority(b.table));
-    for (const entry of snapshot) await sendPendingWrite(entry);
+  async flushPendingWrites(): Promise<{ flushed: number; failed: number; errors: string[] }> {
+    const priority = (table: string) =>
+      table === 'organizations' ? 0 : table === 'users' ? 1 : table === 'students' ? 2 : 3;
+    const snapshot = getPendingWrites().sort((a, b) => priority(a.table) - priority(b.table));
+    let flushed = 0;
+    let failed = 0;
+    const errors: string[] = [];
+
+    for (const entry of snapshot) {
+      try {
+        await sendPendingWrite(entry);
+        flushed++;
+      } catch (err: any) {
+        const msg = err instanceof Error ? err.message : String(err);
+        // Logs de auditoria órfãos (ex: FK 23503 em org de teste) não devem travar a fila de sincronização
+        if (
+          entry.table === 'audit_logs' &&
+          (msg.includes('23503') || msg.toLowerCase().includes('foreign key constraint'))
+        ) {
+          console.warn('[CloudOutbox] Descartando log de auditoria órfão:', entry.key, msg);
+          acknowledgeCloudWrite(entry);
+          continue;
+        }
+        failed++;
+        errors.push(`${entry.table}: ${msg}`);
+      }
+    }
+
+    return { flushed, failed, errors };
   },
   get enabled(): boolean {
     return isSupabaseEnabled();

@@ -1,4 +1,4 @@
-import type { LessonGpsPoint } from '../types';
+import type { Lesson, LessonCheckinRecord, LessonGpsPoint } from '../types';
 
 export interface HardwareCheckResult {
   canRunLiveMap: boolean;
@@ -169,8 +169,12 @@ export function computeRouteTelemetry(
         : 0;
 
     const inferredSpeedKmh = dtSec > 0 ? segKm / (dtSec / 3600) : 0;
+    const reportedSpeed =
+      curr.speedKmh !== undefined && Number.isFinite(curr.speedKmh) ? curr.speedKmh : 0;
     const effectiveSpeed =
-      curr.speedKmh !== undefined && Number.isFinite(curr.speedKmh)
+      segKm >= 0.012
+        ? Math.max(reportedSpeed, inferredSpeedKmh)
+        : curr.speedKmh !== undefined && Number.isFinite(curr.speedKmh)
         ? curr.speedKmh
         : inferredSpeedKmh;
 
@@ -243,19 +247,83 @@ export function buildGoogleMapsDirectionsUrl(points: LessonGpsPoint[]): string {
 }
 
 /**
- * URL de embed público do Google Maps para exibição integrada da rota / localização.
+ * URL de embed público do Google Maps compatível com iframe para exibição integrada.
  */
 export function buildGoogleMapsEmbedUrl(points: LessonGpsPoint[]): string {
   if (!points || points.length === 0) {
-    return `https://maps.google.com/maps?q=${DEFAULT_BASE_COORDS.lat},${DEFAULT_BASE_COORDS.lng}&z=14&output=embed`;
+    return `https://maps.google.com/maps?q=${DEFAULT_BASE_COORDS.lat},${DEFAULT_BASE_COORDS.lng}&z=15&hl=pt-BR&output=embed`;
   }
-  if (points.length === 1) {
-    const p = points[0];
-    return `https://maps.google.com/maps?q=${p.lat},${p.lng}&z=16&output=embed`;
+  const target = points[points.length - 1];
+  return `https://maps.google.com/maps?q=${target.lat},${target.lng}&z=16&hl=pt-BR&output=embed`;
+}
+
+/**
+ * Converte data (YYYY-MM-DD) e hora (HH:MM) da aula para timestamp local em milissegundos.
+ */
+export function parseLocalLessonTimestamp(dateStr: string, timeStr: string): number {
+  if (!dateStr || !timeStr) return NaN;
+  const dateParts = dateStr.split('-').map((v) => parseInt(v, 10));
+  const timeParts = timeStr.split(':').map((v) => parseInt(v, 10));
+  if (dateParts.length !== 3 || timeParts.length < 2) return NaN;
+  const [year, month, day] = dateParts;
+  const [hour, minute] = timeParts;
+  if ([year, month, day, hour, minute].some((n) => !Number.isFinite(n))) return NaN;
+  return new Date(year, month - 1, day, hour, minute, 0, 0).getTime();
+}
+
+/**
+ * Filtra estritamente as aulas elegíveis para iniciar/continuar o Check-in:
+ * - Nunca exibe aulas concluídas, canceladas ou que já possuam check-in finalizado;
+ * - Nunca exibe aulas agendadas cujo horário de término já passou (apenas futuras/em andamento).
+ */
+export function filterEligibleCheckinLessons(
+  lessons: Lesson[],
+  checkins: LessonCheckinRecord[],
+  nowMs: number = Date.now()
+): Lesson[] {
+  const completedCheckinLessonIds = new Set(
+    (checkins || []).filter((c) => c.status === 'FINALIZADO').map((c) => c.aulaId)
+  );
+
+  return (lessons || []).filter((lesson) => {
+    if (lesson.status === 'CONCLUIDA' || lesson.status === 'CANCELADA') return false;
+    if (completedCheckinLessonIds.has(lesson.id)) return false;
+    if (lesson.status === 'EM_ANDAMENTO') return true;
+    if (lesson.status !== 'AGENDADA') return false;
+
+    const endMs = parseLocalLessonTimestamp(lesson.data, lesson.horaFim || lesson.horaInicio || '23:59');
+    return Number.isFinite(endMs) && endMs > nowMs;
+  });
+}
+
+/**
+ * Filtra leituras de GPS para evitar ruído grosseiro de torre celular (>120m) e spam parado.
+ */
+export function shouldAcceptGpsPoint(
+  existingPoints: LessonGpsPoint[],
+  candidate: LessonGpsPoint
+): boolean {
+  if (!candidate || !Number.isFinite(candidate.lat) || !Number.isFinite(candidate.lng)) {
+    return false;
   }
-  const start = points[0];
-  const end = points[points.length - 1];
-  return `https://maps.google.com/maps?saddr=${start.lat},${start.lng}&daddr=${end.lat},${end.lng}&output=embed`;
+  if (!existingPoints || existingPoints.length === 0) {
+    return true;
+  }
+  if (candidate.accuracy !== undefined && Number.isFinite(candidate.accuracy) && candidate.accuracy > 120) {
+    return false;
+  }
+
+  const last = existingPoints[existingPoints.length - 1];
+  const tLast = new Date(last.timestamp).getTime();
+  const tCurr = new Date(candidate.timestamp).getTime();
+  const dtSec = Number.isFinite(tLast) && Number.isFinite(tCurr) ? (tCurr - tLast) / 1000 : 10;
+
+  if (dtSec < 1) {
+    return false;
+  }
+
+  const distMeters = calculateHaversineDistanceKm(last, candidate) * 1000;
+  return distMeters >= 5 || dtSec >= 10;
 }
 
 /**

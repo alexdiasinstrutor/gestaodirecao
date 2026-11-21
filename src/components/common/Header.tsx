@@ -50,7 +50,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenEditProfile,
   onNavigate
 }) => {
-  const { isOnline, isSyncing, pendingCount, triggerSync } = useOnlineStatus();
+  const { isOnline, isSyncing, pendingCount, lastSyncTime, syncError, triggerSync } = useOnlineStatus();
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
   const {
     deviceType,
@@ -181,17 +181,33 @@ export const Header: React.FC<HeaderProps> = ({
                 <div className="flex items-center gap-1 px-1.5 py-1 rounded-lg bg-emerald-950/60 border border-emerald-600/40 text-emerald-300 text-xs sm:text-xs">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
                   <span className="hidden md:inline font-medium">Online</span>
-                  {pendingCount > 0 && (
-                    <button
-                      onClick={triggerSync}
-                      disabled={isSyncing}
-                      className="ml-0.5 px-1.5 py-0.5 rounded bg-emerald-700/60 hover:bg-emerald-600 text-xs font-mono flex items-center gap-1 cursor-pointer"
-                      title="Sincronizar dados pendentes com a nuvem"
-                    >
-                      <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
-                      <span className="hidden sm:inline">Sync</span> ({pendingCount})
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void triggerSync();
+                    }}
+                    disabled={isSyncing}
+                    className={`ml-0.5 px-1.5 py-0.5 rounded text-xs font-mono flex items-center gap-1 cursor-pointer transition-colors ${
+                      syncError
+                        ? 'bg-amber-700/70 hover:bg-amber-600 text-amber-100'
+                        : pendingCount > 0
+                        ? 'bg-emerald-700/80 hover:bg-emerald-600 text-white'
+                        : 'bg-emerald-800/50 hover:bg-emerald-700/70 text-emerald-200'
+                    }`}
+                    title={
+                      syncError
+                        ? `Erro parcial ao sincronizar: ${syncError}. Clique para tentar novamente.`
+                        : lastSyncTime
+                        ? `Último sincronismo às ${lastSyncTime}. Clique para sincronizar agora.`
+                        : 'Sincronizar dados com a nuvem agora'
+                    }
+                  >
+                    <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
+                    <span className="hidden sm:inline">
+                      {isSyncing ? 'Sincronizando...' : pendingCount > 0 ? 'Sync' : 'Sincronizar'}
+                    </span>
+                    {pendingCount > 0 && !isSyncing && <span>({pendingCount})</span>}
+                  </button>
                 </div>
               ) : (
                 <div className="flex items-center gap-1 px-1.5 py-1 rounded-lg bg-amber-950/70 border border-amber-600/50 text-amber-300 text-xs sm:text-xs font-medium">
