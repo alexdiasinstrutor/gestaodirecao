@@ -614,7 +614,79 @@ async function runTests() {
   assert.equal(db.getOrganization('org_direcao_certa_01')?.nome, 'Gestão AD (Auto Direção)');
   console.log('[OK] Teste 9: Preservação de setup (zero reset), resiliência da outbox e keep-alive validados.');
 
-  console.log('=== Todos os 9 testes automatizados de Ordenação, 25 Despesas e Check-in GPS passaram com sucesso! ===');
+  // 10. Teste: Mapa livre de Carto API Key + Integridade Master (SUPER_ADMIN não é órfão) + exclusão de aula órfã
+  const fsMod = await import('node:fs');
+  const pathMod = await import('node:path');
+  const mapSource = fsMod.readFileSync(
+    pathMod.resolve(process.cwd(), 'src/components/common/LessonRouteMap.tsx'),
+    'utf-8'
+  );
+  assert.equal(
+    mapSource.includes('cartocdn.com'),
+    false,
+    'LessonRouteMap não pode usar basemaps.cartocdn.com (exige API key)'
+  );
+  assert.equal(
+    mapSource.includes('tile.openstreetmap.org'),
+    true,
+    'LessonRouteMap deve usar OpenStreetMap como provedor primário gratuito'
+  );
+  assert.equal(
+    mapSource.includes('arcgisonline.com'),
+    true,
+    'LessonRouteMap deve manter ArcGIS World Street Map como fallback gratuito'
+  );
+
+  // Recria cenário limpo com SUPER_ADMIN + aluno/aula de validação Master GPS
+  const masterIntegrityUser = db.getUsers().find((u) => u.papel === 'SUPER_ADMIN');
+  assert.ok(masterIntegrityUser, 'Deve existir usuário SUPER_ADMIN após seedCleanProductionData');
+  const masterStudent: Student = {
+    ...makeStudent('stu_master_gps', 'Aluno Validação Master GPS'),
+    organizacaoId: masterIntegrityUser!.organizacaoId,
+    instrutorId: masterIntegrityUser!.id
+  };
+  db.saveStudent(masterStudent, masterIntegrityUser!.id);
+  const masterLesson: Lesson = {
+    id: 'lsn_master_gps_ok',
+    organizacaoId: masterIntegrityUser!.organizacaoId,
+    alunoId: masterStudent.id,
+    instrutorId: masterIntegrityUser!.id,
+    veiculoId: 'veh_master_1',
+    data: '2026-11-28',
+    horaInicio: '10:00',
+    horaFim: '10:50',
+    topico: 'Validação Master GPS',
+    status: 'AGENDADA',
+    criadoEm: '2026-11-23T12:00:00Z'
+  };
+  db.createLesson(masterLesson, masterIntegrityUser!.id);
+
+  const reportMasterOk = db.verifyCadastrosIntegrity(masterIntegrityUser!.organizacaoId);
+  assert.equal(reportMasterOk.orphanStudents.length, 0, 'Aluno vinculado a SUPER_ADMIN não deve ser marcado como órfão');
+  assert.equal(reportMasterOk.orphanLessons.length, 0, 'Aula vinculada a SUPER_ADMIN não deve ser marcada como órfã');
+  assert.equal(reportMasterOk.score, 100, 'Score de integridade deve permanecer 100% com validação Master');
+
+  // Agora injeta uma aula verdadeiramente órfã e confirma detecção + remoção via db.deleteOrphanLesson
+  const orphanLesson: Lesson = {
+    ...masterLesson,
+    id: 'lsn_orphan_real',
+    alunoId: 'stu_inexistente_999',
+    horaInicio: '14:00',
+    horaFim: '14:50'
+  };
+  db.createLesson(orphanLesson, masterIntegrityUser!.id);
+  const reportWithOrphan = db.verifyCadastrosIntegrity(masterIntegrityUser!.organizacaoId);
+  assert.equal(reportWithOrphan.orphanLessons.length, 1, 'Aula órfã real deve ser detectada pelo verificador');
+  assert.equal(reportWithOrphan.isAllConsistent, false);
+
+  const removed = db.deleteOrphanLesson('lsn_orphan_real', masterIntegrityUser!.id);
+  assert.equal(removed, true, 'db.deleteOrphanLesson deve remover a aula órfã');
+  const reportAfterFix = db.verifyCadastrosIntegrity(masterIntegrityUser!.organizacaoId);
+  assert.equal(reportAfterFix.orphanLessons.length, 0);
+  assert.equal(reportAfterFix.score, 100);
+  console.log('[OK] Teste 10: Mapa sem Carto API Key, integridade SUPER_ADMIN 100% e remoção de aula órfã validados.');
+
+  console.log('=== Todos os 10 testes automatizados de Ordenação, 25 Despesas, Check-in GPS, Mapa e Integridade passaram com sucesso! ===');
 }
 
 runTests().catch((err) => {

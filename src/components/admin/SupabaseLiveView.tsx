@@ -18,16 +18,27 @@ import {
   Check,
   X,
   Clock,
-  Sparkles
+  Sparkles,
+  GitBranch
 } from 'lucide-react';
 import { supabase, supabaseUrl, testSupabaseClientConnection } from '../../lib/supabaseClient';
 import { supabaseAdapter } from '../../lib/supabaseAdapter';
 import { db } from '../../lib/storage';
 import { User, Organization, Student, PackageOffer, DiscountCoupon } from '../../types';
 import { formatCurrencyBRL } from '../../lib/validation';
+import { SupabaseFlowTester } from './SupabaseFlowTester';
 
-export const SupabaseLiveView: React.FC = () => {
+interface SupabaseLiveViewProps {
+  initialShowFlowTester?: boolean;
+  onIntegrityChanged?: () => void;
+}
+
+export const SupabaseLiveView: React.FC<SupabaseLiveViewProps> = ({
+  initialShowFlowTester = false,
+  onIntegrityChanged
+}) => {
   const [activeTab, setActiveTab] = useState<'USERS' | 'ORGS' | 'STUDENTS' | 'PACKAGES' | 'COUPONS'>('USERS');
+  const [showFlowTester, setShowFlowTester] = useState<boolean>(initialShowFlowTester);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [connectionStatus, setConnectionStatus] = useState<{ connected: boolean; message: string; latencyMs?: number }>({
@@ -89,6 +100,12 @@ export const SupabaseLiveView: React.FC = () => {
   useEffect(() => {
     fetchLiveSupabaseData();
   }, []);
+
+  useEffect(() => {
+    if (initialShowFlowTester) {
+      setShowFlowTester(true);
+    }
+  }, [initialShowFlowTester]);
 
   // Executa o envio completo dos dados locais para o Supabase
   const handleForcePushToSupabase = async () => {
@@ -202,6 +219,19 @@ export const SupabaseLiveView: React.FC = () => {
 
           <div className="flex items-center gap-2 w-full xl:w-auto flex-wrap shrink-0">
             <button
+              onClick={() => setShowFlowTester((prev) => !prev)}
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all border cursor-pointer shadow-xs ${
+                showFlowTester
+                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500'
+                  : 'bg-slate-800 hover:bg-slate-700 text-emerald-300 border-emerald-500/40'
+              }`}
+              title="Abre o validador visual estilo n8n de conexões, sincronismo e todas as tabelas do Supabase"
+            >
+              <GitBranch className="w-3.5 h-3.5" />
+              <span>{showFlowTester ? 'Ocultar Validador n8n' : 'Testar Conexões & Tabelas (n8n)'}</span>
+            </button>
+
+            <button
               onClick={fetchLiveSupabaseData}
               disabled={loading || isPushing}
               className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition-all border border-slate-700 cursor-pointer shadow-xs"
@@ -259,6 +289,17 @@ export const SupabaseLiveView: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Validador Visual de Conexões & Tabelas estilo n8n */}
+      {showFlowTester && (
+        <SupabaseFlowTester
+          autoRun={true}
+          onSyncComplete={() => {
+            fetchLiveSupabaseData();
+            if (onIntegrityChanged) onIntegrityChanged();
+          }}
+        />
+      )}
 
       {/* Cartões de Métricas Ao Vivo direto do Supabase */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">

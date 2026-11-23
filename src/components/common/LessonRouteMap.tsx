@@ -28,7 +28,6 @@ interface LessonRouteMapProps {
 const FALLBACK_CENTER = { lat: -19.9678, lng: -44.1984 };
 
 const TILE_PROVIDERS: Array<(z: number, x: number, y: number) => string> = [
-  (z, x, y) => `https://a.basemaps.cartocdn.com/rastertiles/voyager/${z}/${x}/${y}.png`,
   (z, x, y) => `https://tile.openstreetmap.org/${z}/${x}/${y}.png`,
   (z, x, y) => `https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/${z}/${y}/${x}`
 ];
@@ -378,7 +377,6 @@ export const LessonRouteMap: React.FC<LessonRouteMapProps> = ({
                 src={TILE_PROVIDERS[0](t.z, t.x, t.y)}
                 alt=""
                 draggable={false}
-                referrerPolicy="no-referrer"
                 data-provider-idx="0"
                 onError={(e) => {
                   const img = e.currentTarget as HTMLImageElement;

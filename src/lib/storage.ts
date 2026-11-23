@@ -5386,6 +5386,25 @@ export const db = {
     return true;
   },
 
+  // Remove uma aula órfã diretamente pelo Verificador Master
+  deleteOrphanLesson(lessonId: string, actorId: string): boolean {
+    const lessons = readList<Lesson>(STORAGE_KEYS.LESSONS);
+    const target = lessons.find((l) => l.id === lessonId);
+    if (!target) return false;
+    const updated = lessons.filter((l) => l.id !== lessonId);
+    writeList(STORAGE_KEYS.LESSONS, updated);
+    this.addAuditLog(
+      target.organizacaoId || 'org_direcao_certa_01',
+      actorId,
+      'EXCLUSAO_AULA_ORFA_ADMIN',
+      'Lesson',
+      lessonId,
+      `Aula órfã (${target.data} ${target.horaInicio}) removida via Verificador Master`
+    );
+    notifyDataChange();
+    return true;
+  },
+
   // Verificador de Integridade dos Cadastros (Ambiente do Administrador)
   verifyCadastrosIntegrity(orgId?: string): CadastrosIntegrityReport {
     const allUsers = this.getUsers();
@@ -5398,15 +5417,20 @@ export const db = {
     const allAccounts = readList<AccountReceivable>(STORAGE_KEYS.ACCOUNTS);
     const allPayments = readList<PaymentRecord>(STORAGE_KEYS.PAYMENTS);
 
-    const instructorIdSet = new Set(instructors.map((i) => i.id));
+    // Inclui SUPER_ADMIN como proprietário válido (ex.: aluno e aulas de validação Master GPS)
+    const validOwnerIds = new Set(
+      allUsers
+        .filter((u) => u.papel === 'INSTRUTOR' || u.papel === 'ADMIN_ORG' || u.papel === 'SUPER_ADMIN')
+        .map((u) => u.id)
+    );
     const studentIdSet = new Set(allStudents.map((s) => s.id));
 
-    // 1. Alunos Órfãos (sem instrutor válido)
-    const orphanStudents = allStudents.filter((s) => !s.instrutorId || !instructorIdSet.has(s.instrutorId));
+    // 1. Alunos Órfãos (sem instrutor ou gestor válido)
+    const orphanStudents = allStudents.filter((s) => !s.instrutorId || !validOwnerIds.has(s.instrutorId));
 
-    // 2. Aulas Órfãs (sem aluno ou sem instrutor válido)
+    // 2. Aulas Órfãs (sem aluno ou sem instrutor/gestor válido)
     const orphanLessons = allLessons.filter(
-      (l) => !l.alunoId || !studentIdSet.has(l.alunoId) || !l.instrutorId || !instructorIdSet.has(l.instrutorId)
+      (l) => !l.alunoId || !studentIdSet.has(l.alunoId) || !l.instrutorId || !validOwnerIds.has(l.instrutorId)
     );
 
     // 3. Contas Financeiras Órfãs (sem aluno válido)

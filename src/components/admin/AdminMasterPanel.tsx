@@ -125,6 +125,7 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
   const [showNewOrgModal, setShowNewOrgModal] = useState<boolean>(false);
   const [selectedUserForResetPass, setSelectedUserForResetPass] = useState<User | null>(null);
   const [showSupabaseModal, setShowSupabaseModal] = useState<boolean>(false);
+  const [autoOpenFlowTester, setAutoOpenFlowTester] = useState<boolean>(false);
 
   // Reassignment Modal state
   const [studentToReassign, setStudentToReassign] = useState<Student | null>(null);
@@ -143,6 +144,17 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
       setIntegrityReport(report);
       setIsScanning(false);
     }, 450);
+  };
+
+  const handleDeleteOrphanLesson = (lessonId: string) => {
+    if (!window.confirm('Deseja remover esta aula órfã da base local?')) return;
+    const ok = db.deleteOrphanLesson(lessonId, currentUser.id);
+    if (ok) {
+      showFeedback('Aula órfã removida com sucesso.');
+      runIntegrityScan();
+    } else {
+      showFeedback('Não foi possível remover a aula órfã.', 'error');
+    }
   };
 
   const handleReassignSubmit = (e: React.FormEvent) => {
@@ -587,15 +599,171 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
               </div>
             </div>
 
-            <button
-              onClick={runIntegrityScan}
-              disabled={isScanning}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isScanning ? 'animate-spin' : ''}`} />
-              <span>{isScanning ? 'Varrendo Banco...' : 'Executar Nova Varredura'}</span>
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => {
+                  setAutoOpenFlowTester(true);
+                  setActiveSubTab('SUPABASE_LIVE');
+                }}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+                title="Abre o validador visual estilo n8n de conexões, sincronismo e tabelas do Supabase"
+              >
+                <Database className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Testar Conexões & Tabelas (n8n)</span>
+              </button>
+              <button
+                onClick={runIntegrityScan}
+                disabled={isScanning}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isScanning ? 'animate-spin' : ''}`} />
+                <span>{isScanning ? 'Varrendo Banco...' : 'Executar Nova Varredura'}</span>
+              </button>
+            </div>
           </div>
+
+          {/* Painel Acionável de Diagnóstico de Inconsistências */}
+          {!integrityReport.isAllConsistent && (
+            <div className="bg-red-50/70 rounded-2xl border border-red-200 p-5 shadow-xs space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5">
+                  <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
+                  <div>
+                    <h4 className="text-sm font-bold text-red-900">
+                      Diagnóstico de Inconsistências & Correção Rápida
+                    </h4>
+                    <p className="text-xs text-red-700">
+                      Resolva cada item abaixo para restaurar o índice de saúde da base para 100%.
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-lg bg-red-100 text-red-800 self-start sm:self-auto">
+                  {integrityReport.orphanStudents.length +
+                    integrityReport.orphanLessons.length +
+                    integrityReport.orphanAccounts.length +
+                    integrityReport.duplicateStudentCPFs.length +
+                    integrityReport.scheduleConflicts.length}{' '}
+                  ocorrência(s)
+                </span>
+              </div>
+
+              {/* 1. Alunos Órfãos */}
+              {integrityReport.orphanStudents.length > 0 && (
+                <div className="bg-white rounded-xl border border-red-200 p-4 space-y-2">
+                  <h5 className="text-xs font-bold text-red-800 uppercase tracking-wide flex items-center gap-1.5">
+                    <GraduationCap className="w-4 h-4" />
+                    <span>Alunos sem Instrutor Válido ({integrityReport.orphanStudents.length})</span>
+                  </h5>
+                  <div className="space-y-2">
+                    {integrityReport.orphanStudents.map((student) => (
+                      <div
+                        key={student.id}
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-lg bg-red-50/50 border border-red-100 text-xs"
+                      >
+                        <div>
+                          <span className="font-bold text-slate-900">{student.nome}</span>
+                          <span className="text-slate-500 font-mono ml-2">
+                            CPF: {student.cpfMascarado} · instrutorId: {student.instrutorId || 'vazio'}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => setStudentToReassign(student)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold cursor-pointer self-start sm:self-auto"
+                        >
+                          <ArrowRightLeft className="w-3.5 h-3.5" />
+                          <span>Reatribuir Instrutor</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 2. Aulas Órfãs */}
+              {integrityReport.orphanLessons.length > 0 && (
+                <div className="bg-white rounded-xl border border-red-200 p-4 space-y-2">
+                  <h5 className="text-xs font-bold text-red-800 uppercase tracking-wide flex items-center gap-1.5">
+                    <Calendar className="w-4 h-4" />
+                    <span>Aulas sem Aluno ou Instrutor Válido ({integrityReport.orphanLessons.length})</span>
+                  </h5>
+                  <div className="space-y-2">
+                    {integrityReport.orphanLessons.map((lesson) => (
+                      <div
+                        key={lesson.id}
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-lg bg-red-50/50 border border-red-100 text-xs"
+                      >
+                        <div>
+                          <span className="font-bold text-slate-900">
+                            {formatDateBR(lesson.data)} · {lesson.horaInicio}–{lesson.horaFim}
+                          </span>
+                          <span className="text-slate-500 font-mono ml-2">
+                            alunoId: {lesson.alunoId || 'vazio'} · instrutorId: {lesson.instrutorId || 'vazio'}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteOrphanLesson(lesson.id)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold cursor-pointer self-start sm:self-auto"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Remover Aula Órfã</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 3. Contas Financeiras Órfãs */}
+              {integrityReport.orphanAccounts.length > 0 && (
+                <div className="bg-white rounded-xl border border-amber-200 p-4 space-y-1.5">
+                  <h5 className="text-xs font-bold text-amber-800 uppercase tracking-wide flex items-center gap-1.5">
+                    <DollarSign className="w-4 h-4" />
+                    <span>Contas Financeiras sem Aluno Vinculado ({integrityReport.orphanAccounts.length})</span>
+                  </h5>
+                  <p className="text-xs text-slate-600">
+                    IDs detectados:{' '}
+                    <span className="font-mono">
+                      {integrityReport.orphanAccounts.map((a) => a.id).join(', ')}
+                    </span>
+                  </p>
+                </div>
+              )}
+
+              {/* 4. CPFs Duplicados */}
+              {integrityReport.duplicateStudentCPFs.length > 0 && (
+                <div className="bg-white rounded-xl border border-amber-200 p-4 space-y-1.5">
+                  <h5 className="text-xs font-bold text-amber-800 uppercase tracking-wide flex items-center gap-1.5">
+                    <AlertCircle className="w-4 h-4" />
+                    <span>CPFs Duplicados ({integrityReport.duplicateStudentCPFs.length})</span>
+                  </h5>
+                  <ul className="text-xs text-slate-600 space-y-1">
+                    {integrityReport.duplicateStudentCPFs.map((dup) => (
+                      <li key={dup.cpfFingerprint} className="font-mono">
+                        Fingerprint {dup.cpfFingerprint.slice(0, 12)}… · {dup.count} cadastros ({dup.studentIds.join(', ')})
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* 5. Conflitos de Agenda */}
+              {integrityReport.scheduleConflicts.length > 0 && (
+                <div className="bg-white rounded-xl border border-amber-200 p-4 space-y-1.5">
+                  <h5 className="text-xs font-bold text-amber-800 uppercase tracking-wide flex items-center gap-1.5">
+                    <Clock className="w-4 h-4" />
+                    <span>Conflitos de Horário na Agenda ({integrityReport.scheduleConflicts.length})</span>
+                  </h5>
+                  <ul className="text-xs text-slate-600 space-y-1">
+                    {integrityReport.scheduleConflicts.map((c, idx) => (
+                      <li key={idx} className="font-mono">
+                        {formatDateBR(c.date)} às {c.time} · Instrutor {c.instructorId} · {c.lessonIds.length} aulas sobrepostas
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Lista de Instrutores e Alunos Vinculados */}
           <div className="space-y-3">
@@ -1259,7 +1427,10 @@ export const AdminMasterPanel: React.FC<AdminMasterPanelProps> = ({
 
       {/* SUB-ABA 7: LISTAGEM DE TODOS OS CADASTROS DO BANCO SUPABASE (AO VIVO) */}
       {activeSubTab === 'SUPABASE_LIVE' && (
-        <SupabaseLiveView />
+        <SupabaseLiveView
+          initialShowFlowTester={autoOpenFlowTester}
+          onIntegrityChanged={runIntegrityScan}
+        />
       )}
 
       {/* MODAL: CONSULTA DETALHADA DE INSTITUIÇÃO */}
