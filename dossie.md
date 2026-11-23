@@ -1,8 +1,8 @@
 # DOSSIÊ COMPLETO DO SISTEMA — GESTÃO AD (AUTO DIREÇÃO)
 
-> **Revisão de 19/11/2026 — v8.1 Homologada em Produção (Vercel + Supabase).** Veja a seção 19 para a ativação de RLS no Supabase, classificação alfabética (A–Z) dos alunos, catálogo padronizado de 25 despesas/manutenções + opção "Outro", módulo completo **Check-in & Rota GPS (Google Maps + OpenStreetMap)** com proteção anti-falha de hardware/esquecimento e liberação nos planos para instrutores e alunos (commits `c742391` e `ea453fa`).
-**Documento Oficial de Registro Técnico, Arquitetura de Software, Interface Adaptativa, Mapa Geográfico (5–40 km), Blindagem Cloud Vault, Frota de Veículos, Pacotes Adicionais e Aulas Extras, Recibos Flexíveis, Check-in & Telemetria GPS, Ordem Alfabética A–Z, Catálogo de 25 Manutenções, Blindagem Global Anti-Crash (ErrorBoundary), Regras de Negócio e Agentes de Segurança**  
-*Data de Homologação: 19 de Novembro de 2026 | Versão da Plataforma: v8.1 Homologada (Vercel HTTPS + Supabase RLS Ativo + Cloud Sync Vault + Módulo Check-in & Rota GPS para Instrutores e Portal do Aluno)*
+> **Revisão de 23/11/2026 — v8.2 Homologada em Produção (Vercel + Supabase).** Veja a seção 19 para a ativação de RLS no Supabase, classificação alfabética (A–Z), catálogo de 25 despesas/manutenções e o módulo **Check-in & Rota GPS**, e a seção 20 para a sincronização bidirecional resiliente, captura GPS em segundo plano (Wake Lock + áudio silencioso), relatório em grid, mapa OpenStreetMap/ArcGIS sem API key, **Motor de Precisão GPS + Snap-to-Road (OSRM)**, diagnóstico acionável de integridade Master e o **Validador Visual estilo n8n** de conexões e 20 tabelas PostgreSQL (commits `b849e49`, `635c789`, `8b7b76e` e `6593d3c`).
+**Documento Oficial de Registro Técnico, Arquitetura de Software, Interface Adaptativa, Mapa Geográfico (5–40 km), Blindagem Cloud Vault, Frota de Veículos, Pacotes Adicionais e Aulas Extras, Recibos Flexíveis, Check-in & Telemetria GPS com Snap-to-Road, Validador Visual n8n, Ordem Alfabética A–Z, Catálogo de 25 Manutenções, Blindagem Global Anti-Crash (ErrorBoundary), Regras de Negócio e Agentes de Segurança**  
+*Data de Homologação: 23 de Novembro de 2026 | Versão da Plataforma: v8.2 Homologada (Vercel HTTPS + Supabase RLS Ativo + Cloud Sync Vault + GPS Snap-to-Road OSRM + Validador Visual n8n)*
 
 ---
 
@@ -1534,3 +1534,45 @@ Validação automatizada aprovada em 1440×900 e 390×844 nos quatro campos, inc
   - **Build de Produção (`vite build` / `npm run build`):** 2.022 módulos compilados com sucesso.
   - **`tests/checkin-expenses-sorting.test.ts`:** **7/7 testes aprovados** (catálogo de 25 manutenções + `"OUTRO"`, ordenação alfabética `A–Z`, permissão SaaS configurável para Master/Instrutor/Aluno, diagnóstico de hardware anti-falha, telemetria GPS Haversine e URL Google Maps, check-in/check-out com baixa de aula e fallback anti-esquecimento).
   - **`tests/contract-flow.test.ts`:** **8/8 testes aprovados** (regressão completa de contratos e aceites eletrônicos).
+
+---
+
+## 20. ATUALIZAÇÃO DE 23/11/2026 — MOTOR DE PRECISÃO GPS (SNAP-TO-ROAD OSRM), BACKGROUND MOBILE, RELATÓRIO EM GRID, INTEGRIDADE MASTER E VALIDADOR VISUAL ESTILO N8N (v8.2)
+
+### 20.1 Sincronização Bidirecional Real, Operação em Segundo Plano no Celular e Relatório em Grid (`b849e49` / `635c789`)
+- **Sincronização real (`Header.tsx`, `LessonCheckinView.tsx`, `supabaseAdapter.ts`):** Os botões **Sincronizar** (cabeçalho global) e **Sincronizar Relatório** (aba de percursos) passaram a disparar o envio efetivo da fila local (`supabaseAdapter.flushPendingWrites()`) seguido da atualização completa a partir do Supabase (`syncFromSupabase()`), com descarte seguro de logs de auditoria órfãos (FK `23503`) para nunca travar a fila.
+- **Rastreamento GPS resiliente com tela bloqueada (`src/lib/mobileGpsKeepAlive.ts`):**
+  - Integração de **Screen Wake Lock API**, canal de áudio silencioso (para manter o contexto ativo no mobile durante o check-in) e recuperação automática no evento `visibilitychange` (ao desbloquear a tela, solicita nova leitura GPS imediatamente e preserva distância e tempo em deslocamento no intervalo).
+- **Relatório de Percursos em Grid sob Demanda & Filtro Futuro-Only (`LessonCheckinView.tsx` & `lessonCheckinService.ts`):**
+  - A aba **Relatório de Percursos** passou a exibir os percursos finalizados em **tabela/grid compacto**, carregando os detalhes completos e o mapa do trajeto somente ao clicar em **"Abrir Percurso"**.
+  - O seletor de aula na tela de check-in aplica `filterEligibleCheckinLessons()`, exibindo estritamente aulas futuras agendadas ou em andamento (aulas passadas, concluídas ou com check-in já finalizado não reaparecem para novo check-in).
+- **Preservação Não-Destrutiva de Setup (`storage.ts`):**
+  - `initDatabase()` e `seedCleanProductionData()` passaram a exigir `{ forceReset: true }` explícito para sobrescrever dados; melhorias ou atualizações do sistema preservam integralmente organizações, planos, chave PIX, módulos customizados e percursos já gravados.
+
+### 20.2 Remoção de CartoDB API Key e Motor de Precisão GPS + *Snap-to-Road* OSRM (`8b7b76e` / `6593d3c`)
+- **Mapa livre de marca d'água / API Key (`src/components/common/LessonRouteMap.tsx`):**
+  - Removido o provedor `basemaps.cartocdn.com` (que passou a retornar imagem HTTP 200 com aviso `"API KEY REQUIRED"`) e removido `referrerPolicy="no-referrer"`.
+  - O mapa interativo utiliza **OpenStreetMap** (`tile.openstreetmap.org`) como provedor primário e **ArcGIS World Street Map** como fallback — ambos gratuitos e sem necessidade de API key.
+- **Filtro GPS de Alta Precisão (`src/lib/lessonCheckinService.ts`):**
+  - `shouldAcceptGpsPoint()` passou a rejeitar leituras imprecisas `> 45m` (anteriormente `120m`) e saltos fisicamente impossíveis (*anti-teletransporte* `> 135 km/h`).
+  - Nova função `sanitizeGpsTrack()` remove *spikes* isolados e estabiliza ruído estacionário (veículo parado no semáforo) mesmo em trajetos já gravados.
+- **Ajuste Automático às Vias Reais — *Snap-to-Road* (`src/lib/routeSnapToRoad.ts`):**
+  - Novo motor gratuito baseado na malha viária do OpenStreetMap via **OSRM**:
+    - Usa **OSRM Map Matching (HMM)** para trajetos contínuos e **OSRM Route** automaticamente quando há lacunas longas (`> 110m`, ex.: bloqueio de tela), eliminando linhas retas cortando sobre casas e quarteirões.
+    - Inclui cache persistente em `localStorage` (`agd_snapped_route_cache_v1`), timeout seguro (`8s`) e fallback automático offline.
+    - Integrado em `LessonRouteMap.tsx` com botão **`Precisão Ruas: ON / GPS Bruto`** ativado por padrão para todos os percursos (inclusive históricos já salvos).
+
+### 20.3 Verificador de Integridade Master Acionável e Validador Visual Estilo n8n (`8b7b76e` / `6593d3c`)
+- **Correção da Auditoria de Integridade (`src/lib/storage.ts` & `src/components/admin/AdminMasterPanel.tsx`):**
+  - `verifyCadastrosIntegrity()` passou a incluir `SUPER_ADMIN` em `validOwnerIds`, eliminando o falso positivo (score `20%`) causado pelo `Aluno Validação Master GPS` e suas aulas de homologação.
+  - Adicionado `db.deleteOrphanLesson(lessonId, actorId)` e renderizado o painel **"Diagnóstico de Inconsistências & Correção Rápida"** abaixo do score com ações diretas (**Reatribuir Instrutor** para alunos órfãos e **Remover Aula Órfã** para aulas órfãs), além de atalho direto para o validador n8n.
+- **Validador Visual de Conexões, Sincronismo e Tabelas — Estilo n8n (`src/components/admin/SupabaseFlowTester.tsx`, `SupabaseLiveView.tsx`, `cloudOutbox.ts`):**
+  - Canvas interativo em estilo *workflow* n8n acessível pelo botão **"Testar Conexões & Tabelas (n8n)"** na aba **Supabase / PostgreSQL**.
+  - Executa pipeline em 5 estágios: **1. Trigger (App Frontend)** → **2. Gateway Supabase REST** (latência ms) → **3. Sincronismo & Fila Outbox** (`flushPendingWrites()` + `syncFromSupabase()` + botão **`Limpar Pendências`** via `clearPendingWrites()`) → **4. Integridade Relacional** (score %) → **5. Grid de Conexão das 20 Tabelas PostgreSQL**.
+  - Valida individualmente as **17 tabelas operacionais** e as **3 tabelas jurídicas** (`legal_templates`, `legal_contract_versions`, `legal_acceptances`) via `GET .limit(0)` com leitura exata do código HTTP/PostgreSQL, classificando corretamente as 3 tabelas jurídicas como **`RLS PROTEGIDO`** (proteção intencional `REVOKE ALL FROM anon` da migração de 16/11) sem falso alerta de erro.
+
+### 20.4 Validação Automatizada Final (v8.2 — `6593d3c`)
+- **TypeScript (`tsc --noEmit` / `npm run lint`):** 0 erros.
+- **Build de Produção (`vite build` / `npm run build`):** 2.025 módulos compilados em `814ms`, 0 erros.
+- **`tests/checkin-expenses-sorting.test.ts`:** **11/11 testes aprovados** (incluindo Testes 8–11: filtro futuro-only, preservação não-destrutiva de setup, mapa sem `cartocdn.com`, integridade `SUPER_ADMIN` 100%, remoção de aula órfã, filtro GPS `45m`, anti-teletransporte `135 km/h`, limpeza de *spikes* e amostragem *Snap-to-Road*).
+- **`tests/contract-flow.test.ts`:** **8/8 testes aprovados**.
