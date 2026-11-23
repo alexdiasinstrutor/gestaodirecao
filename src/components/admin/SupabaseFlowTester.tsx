@@ -14,11 +14,13 @@ import {
   Server,
   ShieldCheck,
   Table2,
+  Trash2,
   UploadCloud,
   XCircle
 } from 'lucide-react';
 import { supabase, supabaseUrl, testSupabaseClientConnection } from '../../lib/supabaseClient';
-import { getPendingWrites } from '../../lib/cloudOutbox';
+import { supabaseAdapter } from '../../lib/supabaseAdapter';
+import { clearPendingWrites, getPendingWrites } from '../../lib/cloudOutbox';
 import { db, syncFromSupabase } from '../../lib/storage';
 
 type NodeStatus = 'IDLE' | 'RUNNING' | 'OK' | 'RLS' | 'WARNING' | 'ERROR';
@@ -104,9 +106,9 @@ function getStatusClasses(status: NodeStatus): {
       };
     case 'RLS':
       return {
-        border: 'border-amber-400/60',
-        badge: 'bg-amber-500/15 text-amber-200 border-amber-400/35',
-        dot: 'bg-amber-400',
+        border: 'border-cyan-500/50',
+        badge: 'bg-cyan-500/15 text-cyan-200 border-cyan-500/35',
+        dot: 'bg-cyan-400',
         label: 'RLS PROTEGIDO'
       };
     case 'WARNING':
@@ -145,6 +147,8 @@ export const SupabaseFlowTester: React.FC<SupabaseFlowTesterProps> = ({
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [lastRunAt, setLastRunAt] = useState<string | null>(null);
   const [filterMode, setFilterMode] = useState<'ALL' | 'ISSUES'>('ALL');
+  const [pendingOutboxCount, setPendingOutboxCount] = useState<number>(() => getPendingWrites().length);
+  const [outboxErrors, setOutboxErrors] = useState<string[]>([]);
   const hasAutoRunRef = useRef<boolean>(false);
 
   const [gatewayNode, setGatewayNode] = useState<CoreNodeState>({
@@ -196,24 +200,31 @@ export const SupabaseFlowTester: React.FC<SupabaseFlowTesterProps> = ({
       metric: conn.latencyMs !== undefined ? `${conn.latencyMs}ms` : 'offline'
     });
 
-    // 2. Sincronismo & Outbox
-    setSyncNode({ status: 'RUNNING', detail: 'Sincronizando base com Supabase e checando Outbox...' });
+    // 2. Sincronismo & Outbox (primeiro envia pendências locais, depois puxa do Supabase)
+    setSyncNode({ status: 'RUNNING', detail: 'Reprocessando fila Outbox e sincronizando com Supabase...' });
     const syncStart = performance.now();
     try {
+      const flushRes = await supabaseAdapter.flushPendingWrites();
       await syncFromSupabase();
       const syncLatency = Math.round(performance.now() - syncStart);
       const pending = getPendingWrites().length;
+      setPendingOutboxCount(pending);
+      setOutboxErrors(flushRes.errors || []);
       setSyncNode({
         status: pending > 0 ? 'WARNING' : 'OK',
         latencyMs: syncLatency,
         detail:
           pending > 0
-            ? `Sincronismo concluído com ${pending} pendência(s) na fila local (Outbox).`
+            ? `${flushRes.flushed} enviada(s) · ${pending} pendência(s) travada(s) na fila local (clique abaixo para limpar).`
+            : flushRes.flushed > 0
+            ? `${flushRes.flushed} pendência(s) sincronizada(s) com sucesso · Fila Outbox zerada.`
             : 'Sincronismo bidirecional em dia · Fila Outbox zerada.',
         metric: `${pending} pendente(s)`
       });
     } catch (err: any) {
       const syncLatency = Math.round(performance.now() - syncStart);
+      const pending = getPendingWrites().length;
+      setPendingOutboxCount(pending);
       setSyncNode({
         status: 'ERROR',
         latencyMs: syncLatency,
@@ -263,19 +274,30 @@ export const SupabaseFlowTester: React.FC<SupabaseFlowTesterProps> = ({
           const start = performance.now();
           const localCount = getLocalListCount(spec.localKey);
           try {
-            const { count, error } = await supabase
+            // Usa GET com limit(0) em vez de HEAD para que o PostgREST retorne o código/mensagem JSON exatos em caso de RLS ou ausência
+            const { count, error, status } = await supabase
               .from(spec.table)
-              .select('id', { count: 'exact', head: true });
+              .select('*', { count: 'exact' })
+              .limit(0);
             const latencyMs = Math.round(performance.now() - start);
 
             if (error) {
-              const rawMsg = error.message || error.code || 'Erro ao consultar tabela';
+              const rawMsg = error.message || error.details || error.hint || error.code || `HTTP ${status || 'erro'}`;
               const lower = rawMsg.toLowerCase();
+              const isMissing =
+                status === 404 ||
+                error.code === '42P01' ||
+                error.code === 'PGRST205' ||
+                lower.includes('could not find the table') ||
+                lower.includes('does not exist');
               const isRls =
-                error.code === '42501' ||
-                lower.includes('row-level security') ||
-                lower.includes('permission denied') ||
-                lower.includes('jwt');
+                !isMissing &&
+                (status === 401 ||
+                  status === 403 ||
+                  error.code === '42501' ||
+                  lower.includes('row-level security') ||
+                  lower.includes('permission denied') ||
+                  lower.includes('jwt'));
               return {
                 ...spec,
                 status: isRls ? 'RLS' : 'ERROR',
@@ -284,9 +306,11 @@ export const SupabaseFlowTester: React.FC<SupabaseFlowTesterProps> = ({
                 localCount,
                 message: isRls
                   ? spec.isLegal
-                    ? 'Protegida por RLS (requer sessão Auth para leitura direta)'
+                    ? 'Proteção jurídica ativa (RLS/RPC): leitura direta via anon bloqueada por segurança.'
                     : `Política RLS ativa: ${rawMsg}`
-                  : rawMsg
+                  : isMissing
+                  ? `Tabela ausente no Supabase (${error.code || status}). Execute o SQL de migração.`
+                  : `[${error.code || status || 'ERR'}] ${rawMsg}`
               };
             }
 
@@ -341,10 +365,22 @@ export const SupabaseFlowTester: React.FC<SupabaseFlowTesterProps> = ({
 
   const visibleTables = useMemo(() => {
     if (filterMode === 'ISSUES') {
-      return tableNodes.filter((n) => n.status === 'ERROR' || n.status === 'RLS' || n.status === 'WARNING');
+      return tableNodes.filter((n) => n.status === 'ERROR' || n.status === 'WARNING');
     }
     return tableNodes;
   }, [tableNodes, filterMode]);
+
+  const handleClearStuckOutbox = () => {
+    const cleared = clearPendingWrites();
+    setPendingOutboxCount(0);
+    setOutboxErrors([]);
+    setSyncNode({
+      status: 'OK',
+      latencyMs: 0,
+      detail: `${cleared} pendência(s) travada(s) removida(s) da fila local. Outbox zerada.`,
+      metric: '0 pendente(s)'
+    });
+  };
 
   const gatewayStyle = getStatusClasses(gatewayNode.status);
   const syncStyle = getStatusClasses(syncNode.status);
@@ -399,7 +435,7 @@ export const SupabaseFlowTester: React.FC<SupabaseFlowTesterProps> = ({
               }`}
             >
               <Filter className="w-3 h-3" />
-              <span>Alertas ({summary.errorCount + summary.rlsCount})</span>
+              <span>Erros ({summary.errorCount})</span>
             </button>
           </div>
 
@@ -512,6 +548,23 @@ export const SupabaseFlowTester: React.FC<SupabaseFlowTesterProps> = ({
             <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-2" title={syncNode.detail}>
               {syncNode.detail}
             </p>
+            {pendingOutboxCount > 0 && !isRunning && (
+              <div className="mt-2 pt-2 border-t border-slate-800 space-y-1.5">
+                {outboxErrors.length > 0 && (
+                  <p className="text-[10px] text-amber-300 truncate" title={outboxErrors[0]}>
+                    {outboxErrors[0]}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  onClick={handleClearStuckOutbox}
+                  className="w-full inline-flex items-center justify-center gap-1 px-2 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-200 text-[10px] font-bold cursor-pointer transition-colors"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  <span>Limpar {pendingOutboxCount} Pendência(s)</span>
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="hidden lg:flex lg:col-span-1 justify-center">

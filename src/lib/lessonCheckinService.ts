@@ -297,7 +297,10 @@ export function filterEligibleCheckinLessons(
 }
 
 /**
- * Filtra leituras de GPS para evitar ruído grosseiro de torre celular (>120m) e spam parado.
+ * Filtra leituras de GPS em tempo real para eliminar:
+ * - Ruído grosseiro de torre celular / GPS fraco (> 45m de imprecisão após fix inicial);
+ * - Saltos impossíveis ("teletransporte" > 135 km/h);
+ * - Spam estacionário (< 5m e < 10s).
  */
 export function shouldAcceptGpsPoint(
   existingPoints: LessonGpsPoint[],
@@ -307,9 +310,13 @@ export function shouldAcceptGpsPoint(
     return false;
   }
   if (!existingPoints || existingPoints.length === 0) {
+    // Mesmo no primeiro ponto, rejeita localização de torre celular extremamente imprecisa (> 150m)
+    if (candidate.accuracy !== undefined && Number.isFinite(candidate.accuracy) && candidate.accuracy > 150) {
+      return false;
+    }
     return true;
   }
-  if (candidate.accuracy !== undefined && Number.isFinite(candidate.accuracy) && candidate.accuracy > 120) {
+  if (candidate.accuracy !== undefined && Number.isFinite(candidate.accuracy) && candidate.accuracy > 45) {
     return false;
   }
 
@@ -323,7 +330,66 @@ export function shouldAcceptGpsPoint(
   }
 
   const distMeters = calculateHaversineDistanceKm(last, candidate) * 1000;
+
+  // Filtro anti-teletransporte: rejeita saltos fisicamente impossíveis (> 135 km/h em deslocamento > 45m)
+  if (dtSec > 0 && distMeters > 45) {
+    const impliedSpeedKmh = (distMeters / 1000) / (dtSec / 3600);
+    if (impliedSpeedKmh > 135) {
+      return false;
+    }
+  }
+
   return distMeters >= 5 || dtSec >= 10;
+}
+
+/**
+ * Remove picos anômalos (outliers) e ruído estacionário de uma lista de pontos GPS já capturados.
+ */
+export function sanitizeGpsTrack(points: LessonGpsPoint[]): LessonGpsPoint[] {
+  if (!points || points.length <= 2) return points || [];
+
+  // 1. Filtra leituras com precisão muito ruim (> 65m), preservando início/fim caso todos sejam ruins
+  const accurate = points.filter((p, idx) => {
+    if (idx === 0 || idx === points.length - 1) return true;
+    if (p.accuracy === undefined || !Number.isFinite(p.accuracy)) return true;
+    return p.accuracy <= 65;
+  });
+  const base = accurate.length >= 2 ? accurate : points;
+
+  // 2. Remove spikes isolados (ponto que salta > 120m para longe de ambos os vizinhos enquanto os vizinhos estão próximos)
+  const cleaned: LessonGpsPoint[] = [base[0]];
+  for (let i = 1; i < base.length; i++) {
+    const prev = cleaned[cleaned.length - 1];
+    const curr = base[i];
+    const next = base[i + 1];
+
+    const dPrev = calculateHaversineDistanceKm(prev, curr) * 1000;
+    const tPrev = new Date(prev.timestamp).getTime();
+    const tCurr = new Date(curr.timestamp).getTime();
+    const dtSec = Number.isFinite(tPrev) && Number.isFinite(tCurr) && tCurr > tPrev ? (tCurr - tPrev) / 1000 : 0;
+
+    // Se houve salto absurdo (> 140 km/h em < 15s) e o próximo ponto volta perto do anterior, descarta o spike
+    if (next && dtSec > 0 && dtSec < 15 && dPrev > 80) {
+      const dPrevNext = calculateHaversineDistanceKm(prev, next) * 1000;
+      const impliedKmh = (dPrev / 1000) / (dtSec / 3600);
+      if (impliedKmh > 140 && dPrevNext < dPrev * 0.65) {
+        continue;
+      }
+    }
+
+    // Estabiliza jitter estacionário (< 3.5m com velocidade baixa): mantém coordenada ancorada
+    if (dPrev < 3.5 && (curr.speedKmh === undefined || curr.speedKmh < 2.5)) {
+      cleaned.push({
+        ...curr,
+        lat: prev.lat,
+        lng: prev.lng
+      });
+    } else {
+      cleaned.push(curr);
+    }
+  }
+
+  return cleaned;
 }
 
 /**

@@ -686,7 +686,38 @@ async function runTests() {
   assert.equal(reportAfterFix.score, 100);
   console.log('[OK] Teste 10: Mapa sem Carto API Key, integridade SUPER_ADMIN 100% e remoção de aula órfã validados.');
 
-  console.log('=== Todos os 10 testes automatizados de Ordenação, 25 Despesas, Check-in GPS, Mapa e Integridade passaram com sucesso! ===');
+  // 11. Teste: Motor de Precisão GPS (rejeição > 45m, anti-teletransporte > 135 km/h, limpeza de spikes e amostragem Snap-to-Road)
+  const { sanitizeGpsTrack } = await import('../src/lib/lessonCheckinService');
+  const { sampleWaypointsForRouting } = await import('../src/lib/routeSnapToRoad');
+
+  // Rejeita leitura imprecisa > 45m
+  assert.equal(
+    shouldAcceptGpsPoint([p0], { lat: -19.9675, lng: -44.1981, timestamp: '2026-11-19T10:00:05.000Z', accuracy: 80 }),
+    false,
+    'Leitura GPS com precisão > 45m deve ser descartada para não cortar sobre casas'
+  );
+  // Rejeita teletransporte (> 135 km/h em 3s)
+  assert.equal(
+    shouldAcceptGpsPoint([p0], { lat: -19.9500, lng: -44.1800, timestamp: '2026-11-19T10:00:03.000Z', accuracy: 10 }),
+    false,
+    'Salto GPS impossível (> 135 km/h) deve ser rejeitado'
+  );
+
+  // sanitizeGpsTrack remove spike isolado no meio do trajeto
+  const trackWithSpike = [
+    { lat: -19.9748, lng: -44.1996, timestamp: '2026-11-23T19:00:00.000Z', speedKmh: 20, accuracy: 10 },
+    { lat: -19.9700, lng: -44.1900, timestamp: '2026-11-23T19:00:04.000Z', speedKmh: 20, accuracy: 12 }, // spike de ~1.1km em 4s!
+    { lat: -19.9746, lng: -44.1994, timestamp: '2026-11-23T19:00:08.000Z', speedKmh: 20, accuracy: 10 }
+  ];
+  const sanitized = sanitizeGpsTrack(trackWithSpike);
+  assert.equal(sanitized.length, 2, 'Spike GPS isolado deve ser removido pelo sanitizeGpsTrack');
+
+  const sampled = sampleWaypointsForRouting([p0, p1, { ...p1, lat: -19.9640, lng: -44.1950 }], 10, 50);
+  assert.equal(sampled[0].lat, p0.lat);
+  assert.equal(sampled[sampled.length - 1].lat, -19.9640);
+  console.log('[OK] Teste 11: Motor de precisão GPS (filtro 45m, anti-teletransporte, remoção de spikes e Snap-to-Road) validado.');
+
+  console.log('=== Todos os 11 testes automatizados passaram com sucesso! ===');
 }
 
 runTests().catch((err) => {

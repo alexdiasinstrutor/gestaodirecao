@@ -9,13 +9,17 @@ import {
   RotateCcw,
   Flag,
   PlayCircle,
-  LocateFixed
+  LocateFixed,
+  Sparkles,
+  RefreshCw
 } from 'lucide-react';
 import type { LessonGpsPoint } from '../../types';
 import {
   buildGoogleMapsDirectionsUrl,
-  buildGoogleMapsEmbedUrl
+  buildGoogleMapsEmbedUrl,
+  sanitizeGpsTrack
 } from '../../lib/lessonCheckinService';
+import { snapRouteToRoads, type SnapToRoadResult } from '../../lib/routeSnapToRoad';
 
 interface LessonRouteMapProps {
   points: LessonGpsPoint[];
@@ -79,6 +83,10 @@ export const LessonRouteMap: React.FC<LessonRouteMapProps> = ({
   isLive = false
 }) => {
   const [mapMode, setMapMode] = useState<'ROUTE_CANVAS' | 'GOOGLE_EMBED'>('ROUTE_CANVAS');
+  const [snapToRoadsEnabled, setSnapToRoadsEnabled] = useState<boolean>(true);
+  const [isSnapping, setIsSnapping] = useState<boolean>(false);
+  const [snapResult, setSnapResult] = useState<SnapToRoadResult | null>(null);
+  const lastLiveSnapAtRef = useRef<number>(0);
   const [zoomOffset, setZoomOffset] = useState<number>(0);
   const [panOffsetPx, setPanOffsetPx] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState<boolean>(false);
@@ -112,11 +120,59 @@ export const LessonRouteMap: React.FC<LessonRouteMapProps> = ({
   }, [mapMode]);
 
   const safePoints = points || [];
+  const cleanedPoints = useMemo(() => sanitizeGpsTrack(safePoints), [safePoints]);
+
+  // Motor de Precisão Snap-to-Road (ajusta o trajeto às ruas reais do OpenStreetMap via OSRM)
+  useEffect(() => {
+    if (!snapToRoadsEnabled || cleanedPoints.length < 2) {
+      setSnapResult(null);
+      setIsSnapping(false);
+      return;
+    }
+
+    if (isLive) {
+      const now = Date.now();
+      if (cleanedPoints.length < 3 || now - lastLiveSnapAtRef.current < 12000) {
+        return;
+      }
+      lastLiveSnapAtRef.current = now;
+    }
+
+    const controller = new AbortController();
+    let active = true;
+    setIsSnapping(true);
+
+    snapRouteToRoads(cleanedPoints, { signal: controller.signal })
+      .then((res) => {
+        if (active) {
+          setSnapResult(res);
+          setIsSnapping(false);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setIsSnapping(false);
+        }
+      });
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [cleanedPoints, snapToRoadsEnabled, isLive]);
+
+  const routePoints = useMemo(() => {
+    if (snapToRoadsEnabled && snapResult?.snapped && snapResult.points.length >= 2) {
+      return snapResult.points;
+    }
+    return cleanedPoints;
+  }, [snapToRoadsEnabled, snapResult, cleanedPoints]);
+
   const effectivePoints = useMemo(() => {
-    if (safePoints.length > 0) return safePoints;
+    if (routePoints.length > 0) return routePoints;
     if (previewPoint) return [previewPoint];
     return [];
-  }, [safePoints, previewPoint]);
+  }, [routePoints, previewPoint]);
 
   const baseZoom = useMemo(
     () => computeFitZoom(effectivePoints, viewport.width, viewport.height),
@@ -182,19 +238,19 @@ export const LessonRouteMap: React.FC<LessonRouteMapProps> = ({
   }, [centerTileX, centerTileY, zoom, mapWidth, mapHeight, panOffsetPx]);
 
   const projectedPoints = useMemo(() => {
-    return safePoints.map((p) => {
+    return routePoints.map((p) => {
       const px = mapWidth / 2 + (lonToTileX(p.lng, zoom) - centerTileX) * 256 + panOffsetPx.x;
       const py = mapHeight / 2 + (latToTileY(p.lat, zoom) - centerTileY) * 256 + panOffsetPx.y;
       return { ...p, x: px, y: py };
     });
-  }, [safePoints, zoom, centerTileX, centerTileY, mapWidth, mapHeight, panOffsetPx]);
+  }, [routePoints, zoom, centerTileX, centerTileY, mapWidth, mapHeight, panOffsetPx]);
 
   const projectedPreviewPoint = useMemo(() => {
-    if (!previewPoint || safePoints.length > 0) return null;
+    if (!previewPoint || routePoints.length > 0) return null;
     const x = mapWidth / 2 + (lonToTileX(previewPoint.lng, zoom) - centerTileX) * 256 + panOffsetPx.x;
     const y = mapHeight / 2 + (latToTileY(previewPoint.lat, zoom) - centerTileY) * 256 + panOffsetPx.y;
     return { ...previewPoint, x, y };
-  }, [previewPoint, safePoints.length, zoom, centerTileX, centerTileY, mapWidth, mapHeight, panOffsetPx]);
+  }, [previewPoint, routePoints.length, zoom, centerTileX, centerTileY, mapWidth, mapHeight, panOffsetPx]);
 
   const polylineStr = useMemo(
     () => projectedPoints.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' '),
@@ -261,6 +317,35 @@ export const LessonRouteMap: React.FC<LessonRouteMapProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
+          {cleanedPoints.length >= 2 && mapMode === 'ROUTE_CANVAS' && (
+            <button
+              type="button"
+              onClick={() => setSnapToRoadsEnabled((prev) => !prev)}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold cursor-pointer transition-colors flex items-center gap-1 ${
+                snapToRoadsEnabled
+                  ? snapResult?.snapped
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-cyan-600 text-white'
+                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              }`}
+              title="Ajusta automaticamente o traçado GPS às ruas reais (Snap-to-Road), eliminando desvios sobre casas e quarteirões"
+            >
+              {isSnapping ? (
+                <RefreshCw className="w-3 h-3 animate-spin" />
+              ) : (
+                <Sparkles className="w-3 h-3" />
+              )}
+              <span>
+                {isSnapping
+                  ? 'Ajustando Ruas...'
+                  : snapToRoadsEnabled
+                  ? snapResult?.snapped
+                    ? 'Precisão Ruas: ON'
+                    : 'GPS Filtrado: ON'
+                  : 'GPS Bruto'}
+              </span>
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setMapMode('ROUTE_CANVAS')}
